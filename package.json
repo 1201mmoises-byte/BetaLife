@@ -1,0 +1,16 @@
+{
+  "name": "betalife-engine",
+  "version": "0.1.0",
+  "description": "BetaLife soul engine — Layer 1 (14-axis NPC generation)",
+  "main": "dist/engine/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --loader ts-node/esm scripts/testEngine.ts",
+    "validate": "ts-node scripts/testEngine.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.14.0"
+  }
+}
