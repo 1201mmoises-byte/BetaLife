@@ -1,6 +1,7 @@
 import { generateNPC } from '../src/engine/npcGenerator';
 import { readEmergentTraits } from '../src/engine/axes';
 import { starProbabilities } from '../src/engine/gacha';
+import { ARCHETYPES } from '../src/engine/archetypes';
 
 const SEEDS = [
   'world-alpha:1001',
@@ -26,6 +27,7 @@ for (const seed of SEEDS) {
   names.add(npc.name);
 
   console.log(`--- ${npc.name} (${npc.culture}, ${npc.stars}★) ---`);
+  console.log(`  Origin      : ${npc.originArchetypeId}`);
   console.log(`  Difficulty  : ${npc.difficulty} (hidden)`);
   console.log(`  Birth stamp : ${npc.birthStamp.axisKey} @ band ${npc.birthStamp.bandValue}`);
   console.log(`  Emergent    : ${traits.length ? traits.join(', ') : '(none yet)'}`);
@@ -42,6 +44,54 @@ const a = generateNPC({ seed: SEEDS[0] });
 const b = generateNPC({ seed: SEEDS[0] });
 const deterministic = JSON.stringify(a) === JSON.stringify(b);
 console.log(`Determinism check: ${deterministic ? 'PASS — same seed = same NPC' : 'FAIL — output differs!'}`);
+
+// Coherence: birth stamp must seal the archetype's primary axis (when defined),
+// and the matching emergent trait should fire for the large majority.
+const SAMPLE = 2000;
+const archMap = new Map(ARCHETYPES.map((arch) => [arch.id, arch]));
+// Born-emergent readings per archetype. 'erudito' is intentionally absent:
+// per the master, 'estratega' emerges from diverse EXPERIENCE (Fase 4+),
+// not from birth — a scholar is born curious, not yet a strategist.
+const emergentForArchetype: Record<string, string> = {
+  honor: 'honor',
+  imprudente: 'imprudencia extrema',
+  calido: 'nobleza',
+  rencoroso: 'rencor',
+};
+let stampCoherent = 0;
+let stampTotalWithPrimary = 0;
+const emergentHits: Record<string, { hit: number; total: number }> = {};
+
+for (let i = 0; i < SAMPLE; i++) {
+  const npc = generateNPC({ seed: `coherence:${i}` });
+  const arch = archMap.get(npc.originArchetypeId)!;
+  if (arch.primaryAxis) {
+    stampTotalWithPrimary++;
+    if (npc.birthStamp.axisKey === arch.primaryAxis) stampCoherent++;
+  }
+  const expected = emergentForArchetype[npc.originArchetypeId];
+  if (expected) {
+    emergentHits[npc.originArchetypeId] ??= { hit: 0, total: 0 };
+    emergentHits[npc.originArchetypeId].total++;
+    if (readEmergentTraits(npc.axes).includes(expected)) {
+      emergentHits[npc.originArchetypeId].hit++;
+    }
+  }
+}
+
+const stampPass = stampCoherent === stampTotalWithPrimary;
+console.log(
+  `Stamp↔origin coherence: ${stampPass ? 'PASS' : 'FAIL'} — ` +
+  `${stampCoherent}/${stampTotalWithPrimary} stamps seal the archetype's primary axis`,
+);
+console.log('Emergent↔origin coherence (expected trait fires):');
+for (const [id, { hit, total }] of Object.entries(emergentHits)) {
+  const rate = ((hit / total) * 100).toFixed(0);
+  console.log(`  ${id.padEnd(11)} → ${expectedTrait(id)}: ${rate}% (${hit}/${total})`);
+}
+function expectedTrait(id: string): string {
+  return emergentForArchetype[id] ?? '(none)';
+}
 
 // Gacha distribution across 200 rolls (mixed difficulties from seed)
 const starCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };

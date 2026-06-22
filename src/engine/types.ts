@@ -30,6 +30,7 @@ export interface NPC {
   seed: string;
   name: string;
   culture: Culture;
+  originArchetypeId: string; // root of the soul (derived from seed, not persisted)
   stars: StarRating;
   difficulty: number;   // 1-1000, never shown to player
   axes: SoulAxes;

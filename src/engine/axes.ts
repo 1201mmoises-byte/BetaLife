@@ -1,7 +1,8 @@
 import { SoulAxes, Stamp } from './types';
 import { Seeder } from './seeder';
+import { OriginArchetype } from './archetypes';
 
-const AXIS_KEYS: (keyof SoulAxes)[] = [
+export const AXIS_KEYS: (keyof SoulAxes)[] = [
   'caution', 'passivity', 'submission', 'warmth', 'trust',
   'altruism', 'sociability', 'integrity', 'loyalty', 'optimism',
   'discipline', 'curiosity', 'confidence', 'forgiveness',
@@ -18,10 +19,19 @@ function generateAxisValue(seeder: Seeder): number {
     : 1 - 0.5 * Math.pow((1 - raw) / 0.5, 0.7);
 }
 
-export function generateAxes(seeder: Seeder): SoulAxes {
+/**
+ * Generates the 14 axes. When an archetype is given, its signature axes are
+ * drawn from biased ranges (ejes ponderados) while the rest stay free —
+ * preserving uniqueness. Without an archetype, every axis is free.
+ */
+export function generateAxes(seeder: Seeder, archetype?: OriginArchetype): SoulAxes {
   const axisSeed = seeder.branch('axes');
   return AXIS_KEYS.reduce((acc, key) => {
-    acc[key] = parseFloat(generateAxisValue(axisSeed).toFixed(4));
+    const range = archetype?.signature[key];
+    const value = range
+      ? axisSeed.nextFloat(range[0], range[1])
+      : generateAxisValue(axisSeed);
+    acc[key] = parseFloat(value.toFixed(4));
     return acc;
   }, {} as SoulAxes);
 }
@@ -35,23 +45,39 @@ function nearestBand(value: number): number {
   );
 }
 
-export function generateBirthStamp(axes: SoulAxes): Stamp {
-  // Dominant axis = the one furthest from center (0.5)
-  let maxDist = -1;
-  let dominantKey: keyof SoulAxes = 'caution';
+/**
+ * Seals the birth stamp — the permanent "acento de origen". When the archetype
+ * declares a primary axis, the stamp seals it (so stamp ↔ history always agree).
+ * Otherwise (difuso origin) it falls on the most extreme axis.
+ * `sealedAt` is provided by the caller; pure generation uses 0 for determinism
+ * (the persistence layer assigns a real timestamp on first summon).
+ */
+export function generateBirthStamp(
+  axes: SoulAxes,
+  archetype?: OriginArchetype,
+  sealedAt = 0,
+): Stamp {
+  let key: keyof SoulAxes;
 
-  for (const key of AXIS_KEYS) {
-    const dist = Math.abs(axes[key] - 0.5);
-    if (dist > maxDist) {
-      maxDist = dist;
-      dominantKey = key;
+  if (archetype?.primaryAxis) {
+    key = archetype.primaryAxis;
+  } else {
+    // Most extreme axis = the one furthest from center (0.5)
+    let maxDist = -1;
+    key = 'caution';
+    for (const k of AXIS_KEYS) {
+      const dist = Math.abs(axes[k] - 0.5);
+      if (dist > maxDist) {
+        maxDist = dist;
+        key = k;
+      }
     }
   }
 
   return {
-    axisKey: dominantKey,
-    bandValue: nearestBand(axes[dominantKey]),
-    sealedAt: Date.now(),
+    axisKey: key,
+    bandValue: nearestBand(axes[key]),
+    sealedAt,
   };
 }
 

@@ -4,6 +4,7 @@ import { generateAxes, generateBirthStamp } from './axes';
 import { generateCulture, generateName } from './nameGenerator';
 import { generateHistory, generateObservation } from './historyGenerator';
 import { rollDifficulty, rollStars } from './gacha';
+import { pickArchetype } from './archetypes';
 
 export function generateNPC(options: GenerationOptions): NPC {
   const { seed } = options;
@@ -14,17 +15,21 @@ export function generateNPC(options: GenerationOptions): NPC {
   const difficulty = options.difficulty ?? rollDifficulty(seeder);
   const stars   = options.stars ?? rollStars(seeder, difficulty);
   const culture = generateCulture(seeder);
-  const axes    = generateAxes(seeder);
-  const name    = generateName(seeder, culture, axes);
-  const birthStamp = generateBirthStamp(axes);
-  const history    = generateHistory(seeder, axes, culture, stars);
+
+  // Soul causality (master rule): historia → ejes ponderados → estampa.
+  const archetype  = pickArchetype(seeder);
+  const axes       = generateAxes(seeder, archetype);
+  const birthStamp = generateBirthStamp(axes, archetype);
+  const history    = generateHistory(seeder, archetype, stars);
   const observation = generateObservation(seeder, axes);
+  const name       = generateName(seeder, culture, axes);
 
   return {
     id: `npc-${seed}`,
     seed,
     name,
     culture,
+    originArchetypeId: archetype.id,
     stars,
     difficulty,
     axes,
@@ -34,7 +39,7 @@ export function generateNPC(options: GenerationOptions): NPC {
     level: 1,
     floorReached: 0,
     isAlive: true,
-    createdAt: Date.now(),
+    createdAt: 0, // assigned by the persistence layer on first summon
   };
 }
 
@@ -45,30 +50,32 @@ export function regenerateNPC(
   partial: Partial<Pick<NPC, 'level' | 'floorReached' | 'isAlive' | 'birthStamp'>>
 ): NPC {
   const seeder = createSeeder(seed);
-  // Difficulty and stars regenerate deterministically from the seed,
-  // matching the original generation order (difficulty → stars).
+  // Regenerate deterministically from the seed, matching generation order:
+  // difficulty → stars → culture → archetype.
   const difficulty = rollDifficulty(seeder);
   const stars   = rollStars(seeder, difficulty);
   const culture = generateCulture(seeder);
+  const archetype = pickArchetype(seeder);
   // Axes come from storage (they may have evolved), not from regeneration
-  const name    = generateName(seeder, culture, storedAxes);
-  const history    = generateHistory(seeder, storedAxes, culture, stars);
+  const history    = generateHistory(seeder, archetype, stars);
   const observation = generateObservation(seeder, storedAxes);
+  const name    = generateName(seeder, culture, storedAxes);
 
   return {
     id: `npc-${seed}`,
     seed,
     name,
     culture,
+    originArchetypeId: archetype.id,
     stars,
     difficulty,
     axes: storedAxes,
-    birthStamp: partial.birthStamp ?? generateBirthStamp(storedAxes),
+    birthStamp: partial.birthStamp ?? generateBirthStamp(storedAxes, archetype),
     history,
     observation,
     level: partial.level ?? 1,
     floorReached: partial.floorReached ?? 0,
     isAlive: partial.isAlive ?? true,
-    createdAt: Date.now(),
+    createdAt: 0,
   };
 }
