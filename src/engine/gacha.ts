@@ -2,12 +2,16 @@ import { StarRating } from './types';
 import { Seeder } from './seeder';
 
 // --- Gacha tunables -------------------------------------------------------
-// Base weights at difficulty → 0 (a "soft" world). Roughly 50/28/15/6/1%.
+// Base weights at difficulty 1 (the easiest world, where penalty = 0, so
+// these ARE the visible probabilities). Anchored by design:
+//   5★ = 1%  (ceiling — extremely rare even at the easiest difficulty)
+//   3★ = 10% (the "normal rare")
+// 1★/2★/4★ fill the rest with a clean monotonic descent.
 const BASE_WEIGHTS: Record<StarRating, number> = {
-  1: 0.50,
-  2: 0.28,
-  3: 0.15,
-  4: 0.06,
+  1: 0.60,
+  2: 0.25,
+  3: 0.10,
+  4: 0.04,
   5: 0.01,
 };
 
