@@ -1,5 +1,7 @@
 import { generateNPC } from '../src/engine/npcGenerator';
 import { readEmergentTraits } from '../src/engine/axes';
+import { readBehavior } from '../src/engine/behavior';
+import { createSeeder } from '../src/engine/seeder';
 import { starProbabilities } from '../src/engine/gacha';
 import { ARCHETYPES } from '../src/engine/archetypes';
 
@@ -116,3 +118,14 @@ for (const d of [1, 100, 300, 500, 700, 900, 999]) {
 }
 const p999 = starProbabilities(999)[5] * 100;
 console.log(`\n  → P(5★ | difficulty 999) = ${p999.toExponential(2)}%  (target ≈ 0.00001%)`);
+
+// --- Fase 2 demo: ejes leídos como comportamiento -------------------------
+console.log('\n=== Fase 2 — Ejes leídos como comportamiento ===\n');
+for (const seed of SEEDS) {
+  const npc = generateNPC({ seed });
+  const behavior = readBehavior(createSeeder(seed), npc.axes, 4);
+  console.log(`--- ${npc.name} (origen: ${npc.originArchetypeId}) ---`);
+  for (const line of behavior) console.log(`  • ${line}`);
+  console.log(`  (sin etiquetas, sin números — el jugador infiere)`);
+  console.log();
+}

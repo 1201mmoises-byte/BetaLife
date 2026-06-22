@@ -2,7 +2,8 @@ import { NPC, GenerationOptions } from './types';
 import { createSeeder } from './seeder';
 import { generateAxes, generateBirthStamp } from './axes';
 import { generateCulture, generateName } from './nameGenerator';
-import { generateHistory, generateObservation } from './historyGenerator';
+import { generateHistory } from './historyGenerator';
+import { firstImpression } from './behavior';
 import { rollDifficulty, rollStars } from './gacha';
 import { pickArchetype } from './archetypes';
 
@@ -21,7 +22,7 @@ export function generateNPC(options: GenerationOptions): NPC {
   const axes       = generateAxes(seeder, archetype);
   const birthStamp = generateBirthStamp(axes, archetype);
   const history    = generateHistory(seeder, archetype, stars);
-  const observation = generateObservation(seeder, axes);
+  const observation = firstImpression(seeder, axes);
   const name       = generateName(seeder, culture, axes);
 
   return {
@@ -58,7 +59,7 @@ export function regenerateNPC(
   const archetype = pickArchetype(seeder);
   // Axes come from storage (they may have evolved), not from regeneration
   const history    = generateHistory(seeder, archetype, stars);
-  const observation = generateObservation(seeder, storedAxes);
+  const observation = firstImpression(seeder, storedAxes);
   const name    = generateName(seeder, culture, storedAxes);
 
   return {
