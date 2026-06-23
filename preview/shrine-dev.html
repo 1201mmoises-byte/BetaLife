@@ -375,7 +375,7 @@ function placeNPC(npc, slotIdx, spawning){
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
+function init(){
   // Stars
   const scene = document.getElementById('scene');
   for (let i=0;i<80;i++){
@@ -413,7 +413,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Inspector close
   document.getElementById('inspector-close').addEventListener('click', closeInspector);
-});
+}
+
+// Si el DOM ya está listo (visores que inyectan el HTML después de cargar),
+// corre init de inmediato; si no, espera a DOMContentLoaded. Sin esta guarda,
+// en un visor embebido el listener nunca dispara y nada responde a los clics.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
 
 // ── Summon ───────────────────────────────────────────────────────────────
 function summonNext(){
