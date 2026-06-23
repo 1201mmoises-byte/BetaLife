@@ -115,13 +115,14 @@ const html = /* html */`<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>BetaLife DEV — Shrine</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background:#05050d; display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; font-family:Georgia, serif; }
 
-/* ── SCENE ── (idéntico a shrine.html) */
-.scene { position:relative; width:860px; height:560px; }
+/* ── SCENE ── (idéntico a shrine.html, pero escalable a la pantalla) */
+.scene { position:relative; width:860px; height:560px; transform-origin:center center; }
 
 .star { position:absolute; background:#fff; border-radius:50%; animation:twinkle var(--d) ease-in-out infinite var(--delay); pointer-events:none; }
 @keyframes twinkle { 0%,100%{opacity:.15;} 50%{opacity:1;} }
@@ -134,7 +135,9 @@ body { background:#05050d; display:flex; justify-content:center; align-items:cen
 @keyframes pillar-flicker { 0%,100%{opacity:.3;} 50%{opacity:.9;} }
 
 /* SHRINE */
-.shrine { position:absolute; bottom:88px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; cursor:pointer; z-index:5; transition:filter .25s; }
+.shrine { position:absolute; bottom:88px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; cursor:pointer; z-index:5; transition:filter .25s; touch-action:manipulation; }
+/* Zona táctil ampliada del santuario para tocar fácil en móvil. */
+.shrine::before { content:''; position:absolute; inset:-20px; border-radius:18px; z-index:-1; }
 .shrine:hover { filter:brightness(1.25) drop-shadow(0 0 14px rgba(180,120,255,.5)); }
 .crystal-wrap { position:relative; margin-bottom:4px; }
 .crystal { width:22px; height:40px; background:linear-gradient(160deg,#e0c8ff 0%,#9060e0 45%,#3a1870 100%); clip-path:polygon(50% 0%,90% 55%,75% 100%,25% 100%,10% 55%); animation:crystal-glow 3.5s ease-in-out infinite; filter:drop-shadow(0 0 6px #b080ff); }
@@ -156,7 +159,9 @@ body { background:#05050d; display:flex; justify-content:center; align-items:cen
 @keyframes hint-pulse { 0%,100%{opacity:.35;} 50%{opacity:.7;} }
 
 /* NPC */
-.npc { position:absolute; bottom:90px; display:flex; flex-direction:column; align-items:center; animation:npc-idle var(--speed) ease-in-out infinite; cursor:pointer; z-index:4; }
+.npc { position:absolute; bottom:90px; display:flex; flex-direction:column; align-items:center; animation:npc-idle var(--speed) ease-in-out infinite; cursor:pointer; z-index:4; touch-action:manipulation; }
+/* Zona táctil ampliada e invisible — clic/touch fácil aunque la escena esté escalada en móvil. */
+.npc::before { content:''; position:absolute; inset:-22px -18px; border-radius:14px; }
 .npc:hover .npc-figure { filter:brightness(1.3); }
 .npc.selected .npc-figure { filter:brightness(1.4) drop-shadow(0 0 10px #c0a0ff); }
 .npc.spawning { animation:npc-spawn .85s cubic-bezier(.2,1.3,.5,1) forwards; }
@@ -487,8 +492,20 @@ function placeNPC(npc, slotIdx, spawning){
   visibleNpcs.push(npc);
 }
 
+// ── Escala la escena para que quepa completa en la pantalla (clave en móvil:
+// sin esto, los NPC de los extremos quedan fuera de cuadro y los toques diminutos).
+function fitScene(){
+  const scene = document.getElementById('scene');
+  const m = 16; // margen
+  const s = Math.min((window.innerWidth - m) / 860, (window.innerHeight - m) / 560, 1);
+  scene.style.transform = 'scale(' + s + ')';
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────
 function init(){
+  fitScene();
+  window.addEventListener('resize', fitScene);
+
   // Stars
   const scene = document.getElementById('scene');
   for (let i=0;i<80;i++){
