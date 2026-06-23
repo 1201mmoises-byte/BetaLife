@@ -6,6 +6,7 @@ import { starProbabilities } from '../src/engine/gacha';
 import { ARCHETYPES } from '../src/engine/archetypes';
 import { sealIfBandCrossed, bandOf, softCeiling } from '../src/engine/stamps';
 import { rollConversation, conversationAffinity, CONVERSATION_COOLDOWN } from '../src/engine/conversations';
+import { inspectNPC, revealConversation, setDevMode } from '../src/engine/debug';
 
 const SEEDS = [
   'world-alpha:1001',
@@ -217,4 +218,39 @@ console.log('\n=== Fase 3b — Conversaciones de fondo (efectos onda) ===\n');
   simulate(social, 'pareja sociable ');
   simulate(distant, 'pareja reservada');
   console.log(`  (rareza + cooldown: casi nunca, y nunca se ve el texto)`);
+}
+
+// --- Modo desarrollo: ver lo que el juego oculta ---------------------------
+// Solo durante el desarrollo. Se auto-apaga en producción (NODE_ENV) y se
+// retira borrando src/engine/debug.ts + su export en index.ts.
+console.log('\n=== Modo desarrollo — internos ocultos (se quitan antes del lanzamiento) ===\n');
+{
+  // Dump completo de un NPC: dificultad, ejes crudos, estampas, emergentes.
+  console.log(inspectNPC(generateNPC({ seed: SEEDS[0] })));
+
+  // Revelar el CONTENIDO de una conversación de fondo (el jugador nunca lo ve).
+  console.log('\n  Conversaciones reveladas (contenido real):');
+  const a = generateNPC({ seed: 'conv:social-a' });
+  const b = generateNPC({ seed: 'conv:social-b' });
+  a.axes.sociability = 0.9; a.axes.curiosity = 0.85; a.axes.trust = 0.15; a.axes.optimism = 0.2;
+  b.axes.sociability = 0.85; b.axes.curiosity = 0.8; b.axes.trust = 0.18; b.axes.optimism = 0.25;
+  const world = createSeeder('conv-world');
+  let cooldown = 0;
+  let shown = 0;
+  for (let t = 0; t < 500 && shown < 3; t++) {
+    cooldown = Math.max(0, cooldown - 1);
+    const r = rollConversation(world.branch(`tick:${t}`), a, b, { proximity: 0.9, cooldownRemaining: cooldown });
+    if (r) {
+      cooldown = CONVERSATION_COOLDOWN;
+      console.log(`    jugador ve : "${r.observable}"`);
+      console.log(`    dev ve     : ${revealConversation(a, b, r, world.branch(`reveal:${t}`))}`);
+      shown++;
+    }
+  }
+
+  // Con el modo apagado (juego lanzado), inspectNPC calla y revelar = onda vaga.
+  setDevMode(false);
+  const silent = inspectNPC(generateNPC({ seed: SEEDS[0] }));
+  console.log(`\n  Con DEV_MODE=false (juego lanzado): inspectNPC => ${silent === '' ? '"" (oculto)' : '¡FUGA!'}`);
+  setDevMode(true);
 }
