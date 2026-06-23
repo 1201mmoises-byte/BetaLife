@@ -5,6 +5,7 @@ export * from './archetypes';
 export * from './behavior';
 export * from './conversations';
 export * from './debug';
+export * from './experience';
 export * from './gacha';
 export * from './stamps';
 export * from './nameGenerator';

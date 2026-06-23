@@ -7,6 +7,7 @@ import { ARCHETYPES } from '../src/engine/archetypes';
 import { sealIfBandCrossed, bandOf, softCeiling } from '../src/engine/stamps';
 import { rollConversation, conversationAffinity, CONVERSATION_COOLDOWN } from '../src/engine/conversations';
 import { inspectNPC, revealConversation, setDevMode } from '../src/engine/debug';
+import { applyExperience } from '../src/engine/experience';
 
 const SEEDS = [
   'world-alpha:1001',
@@ -253,4 +254,73 @@ console.log('\n=== Modo desarrollo — internos ocultos (se quitan antes del lan
   const silent = inspectNPC(generateNPC({ seed: SEEDS[0] }));
   console.log(`\n  Con DEV_MODE=false (juego lanzado): inspectNPC => ${silent === '' ? '"" (oculto)' : '¡FUGA!'}`);
   setDevMode(true);
+}
+
+// --- Fase 4: Ejes en movimiento (desarrollo por exposición) -----------------
+console.log('\n=== Fase 4 — Ejes en movimiento (desarrollo por exposición) ===\n');
+{
+  const npc = generateNPC({ seed: SEEDS[0] });
+  const birthAxis = npc.stamps[0].axisKey;
+
+  console.log(`NPC: ${npc.name} (origen: ${npc.originArchetypeId}, acento: ${birthAxis})`);
+  console.log(`Conducta inicial:`);
+  const behaviorSeed = createSeeder(SEEDS[0]);
+  for (const line of readBehavior(behaviorSeed, npc.axes, 3)) console.log(`  • ${line}`);
+
+  // Simular 10 combates exitosos consecutivos
+  let axes = { ...npc.axes };
+  let stamps = [...npc.stamps];
+  const growthStamps: typeof npc.stamps = [];
+  const trackedAxes: (keyof typeof axes)[] = ['confidence', 'passivity', 'caution'];
+
+  console.log(`\nAntes de combates: ${trackedAxes.map((k) => `${k}=${axes[k]}`).join('  ')}`);
+
+  for (let i = 0; i < 10; i++) {
+    const es = createSeeder(`combat-sim:${i}`);
+    const result = applyExperience(es, axes, stamps, { kind: 'combat', intensity: 0.8, outcome: 'success' });
+    axes = result.axes;
+    if (result.newStamps.length) {
+      stamps = [...stamps, ...result.newStamps];
+      growthStamps.push(...result.newStamps);
+    }
+  }
+
+  console.log(`Tras 10 combates exitosos: ${trackedAxes.map((k) => `${k}=${axes[k]}`).join('  ')}`);
+  if (growthStamps.length) {
+    console.log(`  → Growth stamps sellados: ${growthStamps.map((s) => `${s.axisKey}@${s.bandValue}`).join(', ')}`);
+  } else {
+    console.log(`  → Sin cruces de banda (movimiento gradual, como se espera)`);
+  }
+
+  console.log(`\nConducta tras 10 combates exitosos:`);
+  const behaviorSeed2 = createSeeder(SEEDS[0] + '-post');
+  for (const line of readBehavior(behaviorSeed2, axes, 3)) console.log(`  • ${line}`);
+
+  // El eje firma (birthStamp) debe moverse menos que los demás — verificar
+  const birthDelta = Math.abs(axes[birthAxis] - npc.axes[birthAxis]);
+  const freeDelta = trackedAxes
+    .filter((k) => k !== birthAxis)
+    .map((k) => Math.abs(axes[k] - npc.axes[k]));
+  const avgFreeDelta = freeDelta.length ? freeDelta.reduce((a, b) => a + b, 0) / freeDelta.length : 0;
+  const accentResists = birthDelta <= avgFreeDelta + 0.001;
+  console.log(`\nResistencia del acento de origen (${birthAxis}):`);
+  console.log(`  delta acento  = ${birthDelta.toFixed(4)}`);
+  console.log(`  delta libre Ø = ${avgFreeDelta.toFixed(4)}`);
+  console.log(`  acento resiste más: ${accentResists ? 'PASS' : 'FAIL — el acento debería moverse menos'}`);
+
+  // Verificar que softCeiling funciona: 100 combates no llevan ningún eje al extremo
+  let axesStress = { ...npc.axes };
+  const stampsStress = [...npc.stamps];
+  for (let i = 0; i < 100; i++) {
+    const es = createSeeder(`stress:${i}`);
+    axesStress = applyExperience(es, axesStress, stampsStress, { kind: 'combat', intensity: 1.0, outcome: 'success' }).axes;
+  }
+  const noExtreme = Object.values(axesStress).every((v) => v > 0.01 && v < 0.99);
+  console.log(`\nTecho suave (100 combates max intensity): ${noExtreme ? 'PASS — ningún eje llegó al extremo absoluto' : 'FAIL'}`);
+
+  // Verificar determinismo: mismo seed + mismo evento = mismo resultado
+  const r1 = applyExperience(createSeeder('det-test'), npc.axes, npc.stamps, { kind: 'scout', intensity: 0.7, outcome: 'success' });
+  const r2 = applyExperience(createSeeder('det-test'), npc.axes, npc.stamps, { kind: 'scout', intensity: 0.7, outcome: 'success' });
+  const detPass = JSON.stringify(r1) === JSON.stringify(r2);
+  console.log(`Determinismo de experiencia: ${detPass ? 'PASS' : 'FAIL'}`);
 }
