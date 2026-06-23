@@ -413,12 +413,53 @@ console.log('\n=== La entidad (hada) — única voz al jefe, reactiva ===\n');
   console.log('\nJefe da una orden (jefe → entidad → NPC):');
   console.log(`  hada → ${relay(roster[1], 'sube al siguiente piso con cautela')}`);
 
-  // Susurro raro: la ÚNICA vez que habla sin que le pregunten. Casi nunca.
-  let whispers = 0;
-  const TRIES = 2000;
-  for (let i = 0; i < TRIES; i++) {
-    if (rareWhisper(createSeeder(`whisper:${i}`), roster)) whispers++;
-  }
-  const rate = ((whispers / TRIES) * 100).toFixed(1);
-  console.log(`\nSusurro proactivo (excepción rara): ${whispers}/${TRIES} = ${rate}% (objetivo ~2%)`);
+  // Susurro condicional: la entidad habla SIN que le pregunten, pero solo cuando
+  // el estado del mundo cruza un umbral real — no por porcentaje ni azar.
+  console.log('\nSusurro condicional (influenciado por el mundo, no por azar):');
+
+  // (1) Miedo colectivo: más de la mitad del roster con confianza y optimismo bajos.
+  const fearRoster = [
+    generateNPC({ seed: 'fear:1' }),
+    generateNPC({ seed: 'fear:2' }),
+    generateNPC({ seed: 'fear:3' }),
+  ];
+  fearRoster.forEach((n) => { n.axes.confidence = 0.20; n.axes.optimism = 0.18; });
+  const wFear = rareWhisper(fearRoster);
+  console.log(`  miedo colectivo    → "${wFear ?? '(silencio)'}"`);
+  console.log(`    ${wFear !== null ? 'PASS — disparó' : 'FAIL — debería disparar'}`);
+
+  // (2) Tensión entre dos NPC: ambos rencorosos, desconfiados y fríos.
+  const conflictRoster = [
+    generateNPC({ seed: 'conflict:1' }),
+    generateNPC({ seed: 'conflict:2' }),
+  ];
+  conflictRoster[0].axes.forgiveness = 0.10; conflictRoster[0].axes.trust = 0.15; conflictRoster[0].axes.warmth = 0.12;
+  conflictRoster[1].axes.forgiveness = 0.12; conflictRoster[1].axes.trust = 0.18; conflictRoster[1].axes.warmth = 0.20;
+  const wConflict = rareWhisper(conflictRoster);
+  console.log(`  tensión entre dos  → "${wConflict ?? '(silencio)'}"`);
+  console.log(`    ${wConflict !== null ? 'PASS — disparó' : 'FAIL — debería disparar'}`);
+
+  // (3) NPC aislado: sociabilidad y calidez en extremo inferior.
+  const isoRoster = [
+    generateNPC({ seed: 'iso:1' }),
+    generateNPC({ seed: 'iso:2' }),
+  ];
+  isoRoster[0].axes.sociability = 0.10; isoRoster[0].axes.warmth = 0.12;
+  const wIso = rareWhisper(isoRoster);
+  console.log(`  NPC aislado        → "${wIso ?? '(silencio)'}"`);
+  console.log(`    ${wIso !== null ? 'PASS — disparó' : 'FAIL — debería disparar'}`);
+
+  // (4) Roster sano: ninguna condición supera el umbral — silencio correcto.
+  const healthyRoster = [
+    generateNPC({ seed: 'healthy:1' }),
+    generateNPC({ seed: 'healthy:2' }),
+  ];
+  healthyRoster.forEach((n) => {
+    n.axes.confidence = 0.60; n.axes.optimism = 0.65;
+    n.axes.forgiveness = 0.55; n.axes.trust = 0.60; n.axes.warmth = 0.60;
+    n.axes.sociability = 0.55;
+  });
+  const wHealthy = rareWhisper(healthyRoster);
+  console.log(`  roster sano        → "${wHealthy ?? '(silencio — correcto)'}"`);
+  console.log(`    ${wHealthy === null ? 'PASS — sin alertas, silencio' : 'FAIL — no debería disparar'}`);
 }
