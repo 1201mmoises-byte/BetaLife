@@ -1,6 +1,7 @@
 import { NPC, GenerationOptions } from './types';
 import { createSeeder } from './seeder';
-import { generateAxes, generateBirthStamp } from './axes';
+import { generateAxes } from './axes';
+import { sealBirthStamp } from './stamps';
 import { generateCulture, generateName } from './nameGenerator';
 import { generateHistory } from './historyGenerator';
 import { firstImpression } from './behavior';
@@ -22,7 +23,7 @@ export function generateNPC(options: GenerationOptions): NPC {
   // Soul causality (master rule): historia → ejes ponderados → estampa.
   const archetype  = pickArchetype(seeder);
   const axes       = generateAxes(seeder, archetype);
-  const birthStamp = generateBirthStamp(axes, archetype);
+  const birthStamp = sealBirthStamp(axes, archetype);
   const history    = generateHistory(seeder, archetype, stars);
   const observation = firstImpression(seeder, axes);
   const name       = generateName(seeder, culture, axes);
@@ -37,7 +38,7 @@ export function generateNPC(options: GenerationOptions): NPC {
     difficulty,
     rosterFloorAtSummon: rosterFloor,
     axes,
-    birthStamp,
+    stamps: [birthStamp],
     history,
     observation,
     level: 1,
@@ -53,7 +54,7 @@ export function generateNPC(options: GenerationOptions): NPC {
 export function regenerateNPC(
   seed: string,
   storedAxes: NPC['axes'],
-  partial: Partial<Pick<NPC, 'level' | 'floorReached' | 'isAlive' | 'birthStamp' | 'rosterFloorAtSummon'>>
+  partial: Partial<Pick<NPC, 'level' | 'floorReached' | 'isAlive' | 'stamps' | 'rosterFloorAtSummon'>>
 ): NPC {
   const seeder = createSeeder(seed);
   const rosterFloorAtSummon = partial.rosterFloorAtSummon ?? 0;
@@ -78,7 +79,8 @@ export function regenerateNPC(
     difficulty,
     rosterFloorAtSummon,
     axes: storedAxes,
-    birthStamp: partial.birthStamp ?? generateBirthStamp(storedAxes, archetype),
+    // Stored stamps accumulate over a life; default to just the birth stamp.
+    stamps: partial.stamps ?? [sealBirthStamp(storedAxes, archetype)],
     history,
     observation,
     level: partial.level ?? 1,

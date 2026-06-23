@@ -20,9 +20,10 @@ export type Culture = 'hispano' | 'nordico' | 'celta' | 'eslavo' | 'greco' | 'af
 export type StarRating = 1 | 2 | 3 | 4 | 5;
 
 export interface Stamp {
+  kind: 'birth' | 'growth'; // birth = acento de origen; growth = banda cruzada después
   axisKey: keyof SoulAxes;
   bandValue: number;  // 0.0 | 0.25 | 0.5 | 0.75 | 1.0
-  sealedAt: number;   // timestamp ms
+  sealedAt: number;   // timestamp ms (0 in pure generation)
 }
 
 export interface NPC {
@@ -35,7 +36,7 @@ export interface NPC {
   difficulty: number;   // 1-1000, never shown to player
   rosterFloorAtSummon: number; // global roster progress when summoned; persisted so stars regenerate deterministically
   axes: SoulAxes;
-  birthStamp: Stamp;
+  stamps: Stamp[]; // sealed chapters; stamps[0] is the birth stamp (acento de origen)
   history: string;
   observation: string;
   level: number;

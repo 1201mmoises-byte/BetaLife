@@ -1,4 +1,4 @@
-import { SoulAxes, Stamp } from './types';
+import { SoulAxes } from './types';
 import { Seeder } from './seeder';
 import { OriginArchetype } from './archetypes';
 
@@ -36,50 +36,7 @@ export function generateAxes(seeder: Seeder, archetype?: OriginArchetype): SoulA
   }, {} as SoulAxes);
 }
 
-// Birth stamp: the band the soul starts in for its dominant axis
-const BANDS = [0.0, 0.25, 0.5, 0.75, 1.0];
-
-function nearestBand(value: number): number {
-  return BANDS.reduce((prev, curr) =>
-    Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
-  );
-}
-
-/**
- * Seals the birth stamp — the permanent "acento de origen". When the archetype
- * declares a primary axis, the stamp seals it (so stamp ↔ history always agree).
- * Otherwise (difuso origin) it falls on the most extreme axis.
- * `sealedAt` is provided by the caller; pure generation uses 0 for determinism
- * (the persistence layer assigns a real timestamp on first summon).
- */
-export function generateBirthStamp(
-  axes: SoulAxes,
-  archetype?: OriginArchetype,
-  sealedAt = 0,
-): Stamp {
-  let key: keyof SoulAxes;
-
-  if (archetype?.primaryAxis) {
-    key = archetype.primaryAxis;
-  } else {
-    // Most extreme axis = the one furthest from center (0.5)
-    let maxDist = -1;
-    key = 'caution';
-    for (const k of AXIS_KEYS) {
-      const dist = Math.abs(axes[k] - 0.5);
-      if (dist > maxDist) {
-        maxDist = dist;
-        key = k;
-      }
-    }
-  }
-
-  return {
-    axisKey: key,
-    bandValue: nearestBand(axes[key]),
-    sealedAt,
-  };
-}
+// Birth-stamp logic moved to stamps.ts (Fase 3). See sealBirthStamp().
 
 // Emergent readings — computed from axis combinations, never stored
 export function readEmergentTraits(axes: SoulAxes): string[] {
