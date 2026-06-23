@@ -7,6 +7,7 @@ export * from './conversations';
 export * from './debug';
 export * from './experience';
 export * from './gacha';
+export * from './mediator';
 export * from './stamps';
 export * from './nameGenerator';
 export * from './historyGenerator';

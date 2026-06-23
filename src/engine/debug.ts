@@ -1,8 +1,7 @@
 import { NPC, SoulAxes } from './types';
-import { Seeder } from './seeder';
 import { AXIS_KEYS, readEmergentTraits } from './axes';
 import { bandOf } from './stamps';
-import { Ripple, ConversationParticipant } from './conversations';
+import { Exchange, ConversationTopic, AxisNudges } from './conversations';
 
 /**
  * MODO DESARROLLO — visor de internos OCULTOS.
@@ -92,74 +91,36 @@ export function inspectNPC(npc: NPC): string {
   ].join('\n');
 }
 
-// Temas de charla anclados a los ejes: [temas polo bajo, temas polo alto].
-// Solo se usan en DEV_MODE; el juego oficial nunca materializa el contenido.
-const CONVO_TOPICS: Partial<Record<keyof SoulAxes, [string[], string[]]>> = {
-  warmth: [
-    ['lo poco fiable que es la calidez ajena', 'mantener la distancia con cierta gente'],
-    ['alguien que les importa', 'un gesto amable que recibieron'],
-  ],
-  trust: [
-    ['una traición que no terminan de soltar', 'a quién conviene vigilar'],
-    ['en quién vale la pena apoyarse', 'una confianza recién ganada'],
-  ],
-  curiosity: [
-    ['un rumor que prefieren ignorar', 'por qué no vale la pena preguntar'],
-    ['algo que vieron y no logran explicar', 'una puerta que nadie ha abierto'],
-  ],
-  loyalty: [
-    ['a quién conviene seguir ahora', 'qué bando rinde más esta semana'],
-    ['un pacto que ninguno piensa romper', 'cubrirse las espaldas mutuamente'],
-  ],
-  optimism: [
-    ['todo lo que puede salir mal', 'la ruina que ven venir'],
-    ['un plan que podría salir bien', 'que mañana pinta mejor'],
-  ],
-  forgiveness: [
-    ['una cuenta vieja sin saldar', 'un agravio que aún arde'],
-    ['dejar atrás algo viejo', 'tender una mano que costó'],
-  ],
-  altruism: [
-    ['cómo sacar ventaja de la próxima vuelta', 'lo que cada quien puede ganar'],
-    ['a quién hay que ayudar primero', 'repartir lo poco que queda'],
-  ],
-  sociability: [
-    ['lo cansados que están de la gente', 'por qué prefieren el rincón'],
-    ['quién falta en la próxima reunión', 'armar un encuentro pronto'],
-  ],
+// Contenido llano de una charla por tema — SOLO para el desarrollador. En el
+// juego el jugador no ve nada de esto; se entera por la entidad si pregunta.
+const TOPIC_REVEAL: Record<ConversationTopic, string> = {
+  training: 'comparan técnicas y lo aprendido en los pisos',
+  survival: 'calculan riesgos y cómo seguir vivos',
+  social:   'algo personal — alguien del pueblo, un vínculo',
+  hobby:    'un pasatiempo en común, sin urgencia',
+  casual:   'cháchara sin agenda, solo acompañarse',
 };
 
+function formatNudges(n: AxisNudges): string {
+  const entries = Object.entries(n).filter(([, v]) => v);
+  if (entries.length === 0) return '—';
+  return entries
+    .map(([k, v]) => `${k} ${v >= 0 ? '+' : ''}${(v as number).toFixed(3)}`)
+    .join(', ');
+}
+
 /**
- * Materializa el CONTENIDO de una conversación de fondo — algo que el jugador
- * jamás verá en el juego. El tema se ancla al eje donde AMBOS se inclinan al
- * mismo polo y más lejos del centro (es de lo que dos almas así hablarían). El
- * tono sale de la intensidad de la onda. Determinista vía el seeder dado.
- *
- * Fuera de DEV_MODE devuelve la onda vaga original (lo que ve el jugador).
+ * Inspecciona una charla silenciosa (Exchange) — tema y nudges crudos a cada
+ * participante. SOLO para desarrollo: en el juego nadie ve esto. Devuelve ''
+ * cuando DEV_MODE está apagado.
  */
-export function revealConversation(
-  a: ConversationParticipant,
-  b: ConversationParticipant,
-  ripple: Ripple,
-  seeder: Seeder,
-): string {
-  if (!DEV_MODE) return ripple.observable;
-
-  let best: { key: keyof SoulAxes; side: 0 | 1; score: number } | null = null;
-  for (const key of Object.keys(CONVO_TOPICS) as (keyof SoulAxes)[]) {
-    const va = a.axes[key];
-    const vb = b.axes[key];
-    const sideA: 0 | 1 = va < 0.5 ? 0 : 1;
-    const sideB: 0 | 1 = vb < 0.5 ? 0 : 1;
-    if (sideA !== sideB) continue; // solo temas donde ambos coinciden de polo
-    const score = Math.abs(va - 0.5) + Math.abs(vb - 0.5);
-    if (!best || score > best.score) best = { key, side: sideA, score };
-  }
-
-  const topic = best
-    ? seeder.branch('topic').nextChoice(CONVO_TOPICS[best.key]![best.side])
-    : 'nada que dejara un hilo claro';
-  const tone = ripple.intensity > 0.5 ? 'tensa' : 'en voz baja';
-
-  return `[${a.id} ↔ ${b.id}] charla ${tone} sobre ${topic}.`;
+export function revealExchange(ex: Exchange, nameOf?: (id: string) => string): string {
+  if (!DEV_MODE) return '';
+  const a = nameOf ? nameOf(ex.participants[0]) : ex.participants[0];
+  const b = nameOf ? nameOf(ex.participants[1]) : ex.participants[1];
+  return (
+    `[${a} ↔ ${b}] ${ex.topic} — ${TOPIC_REVEAL[ex.topic]} (intensidad ${ex.intensity}).\n` +
+    `    nudges ${a}: ${formatNudges(ex.nudges.a)}\n` +
+    `    nudges ${b}: ${formatNudges(ex.nudges.b)}`
+  );
 }

@@ -6,8 +6,9 @@ import { starProbabilities } from '../src/engine/gacha';
 import { ARCHETYPES } from '../src/engine/archetypes';
 import { sealIfBandCrossed, bandOf, softCeiling } from '../src/engine/stamps';
 import { rollConversation, conversationAffinity, CONVERSATION_COOLDOWN } from '../src/engine/conversations';
-import { inspectNPC, revealConversation, setDevMode } from '../src/engine/debug';
-import { applyExperience } from '../src/engine/experience';
+import { inspectNPC, revealExchange, setDevMode } from '../src/engine/debug';
+import { applyExperience, applyConversationNudges } from '../src/engine/experience';
+import { briefRoster, describeNPC, reportActivity, explainRule, relay, rareWhisper } from '../src/engine/mediator';
 
 const SEEDS = [
   'world-alpha:1001',
@@ -181,8 +182,8 @@ console.log('=== Fase 3a — Estampas (nacimiento + cruce de banda) ===\n');
   console.log(`  techo suave: +0.10 en centro=${dMid.toFixed(3)}, cerca del extremo=${dEdge.toFixed(3)} (casi se detiene)`);
 }
 
-// --- Fase 3b: conversaciones de fondo --------------------------------------
-console.log('\n=== Fase 3b — Conversaciones de fondo (efectos onda) ===\n');
+// --- Conversaciones de fondo SILENCIOSAS ------------------------------------
+console.log('\n=== Conversaciones de fondo (silenciosas — sin ripples) ===\n');
 {
   // Pareja sociable+curiosa vs pareja reservada; misma proximidad alta
   const social = [generateNPC({ seed: 'conv:social-a' }), generateNPC({ seed: 'conv:social-b' })];
@@ -200,25 +201,26 @@ console.log('\n=== Fase 3b — Conversaciones de fondo (efectos onda) ===\n');
   function simulate(pair: ReturnType<typeof generateNPC>[], label: string) {
     const world = createSeeder('conv-world');
     let cooldown = 0;
-    let ripples = 0;
-    let firstRipple = '';
+    let count = 0;
+    const topicTally: Record<string, number> = {};
     for (let t = 0; t < TICKS; t++) {
       cooldown = Math.max(0, cooldown - 1);
-      const r = rollConversation(world.branch(`tick:${t}`), pair[0], pair[1], {
+      const ex = rollConversation(world.branch(`tick:${t}`), pair[0], pair[1], {
         proximity: 0.9,
         cooldownRemaining: cooldown,
       });
-      if (r) {
-        ripples++;
+      if (ex) {
+        count++;
         cooldown = CONVERSATION_COOLDOWN;
-        if (!firstRipple) firstRipple = r.observable;
+        topicTally[ex.topic] = (topicTally[ex.topic] ?? 0) + 1;
       }
     }
-    console.log(`  ${label}: ${ripples} ondas en ${TICKS} ticks` + (firstRipple ? `\n      ej: "${firstRipple}"` : ''));
+    const topics = Object.entries(topicTally).map(([k, v]) => `${k}:${v}`).join(' ') || '—';
+    console.log(`  ${label}: ${count} charlas en ${TICKS} ticks   temas → ${topics}`);
   }
   simulate(social, 'pareja sociable ');
   simulate(distant, 'pareja reservada');
-  console.log(`  (rareza + cooldown: casi nunca, y nunca se ve el texto)`);
+  console.log(`  (rareza + cooldown: casi nunca; el jugador no ve NADA de esto)`);
 }
 
 // --- Modo desarrollo: ver lo que el juego oculta ---------------------------
@@ -229,22 +231,24 @@ console.log('\n=== Modo desarrollo — internos ocultos (se quitan antes del lan
   // Dump completo de un NPC: dificultad, ejes crudos, estampas, emergentes.
   console.log(inspectNPC(generateNPC({ seed: SEEDS[0] })));
 
-  // Revelar el CONTENIDO de una conversación de fondo (el jugador nunca lo ve).
-  console.log('\n  Conversaciones reveladas (contenido real):');
+  // Inspeccionar charlas silenciosas (tema + nudges). El jugador no ve nada;
+  // el dev sí, para afinar el balance de la influencia mutua.
+  console.log('\n  Charlas silenciosas inspeccionadas (solo dev):');
   const a = generateNPC({ seed: 'conv:social-a' });
   const b = generateNPC({ seed: 'conv:social-b' });
   a.axes.sociability = 0.9; a.axes.curiosity = 0.85; a.axes.trust = 0.15; a.axes.optimism = 0.2;
   b.axes.sociability = 0.85; b.axes.curiosity = 0.8; b.axes.trust = 0.18; b.axes.optimism = 0.25;
+  const nameOf = (id: string) => (id === a.id ? a.name : id === b.id ? b.name : id);
   const world = createSeeder('conv-world');
   let cooldown = 0;
   let shown = 0;
   for (let t = 0; t < 500 && shown < 3; t++) {
     cooldown = Math.max(0, cooldown - 1);
-    const r = rollConversation(world.branch(`tick:${t}`), a, b, { proximity: 0.9, cooldownRemaining: cooldown });
-    if (r) {
+    const ex = rollConversation(world.branch(`tick:${t}`), a, b, { proximity: 0.9, cooldownRemaining: cooldown });
+    if (ex) {
       cooldown = CONVERSATION_COOLDOWN;
-      console.log(`    jugador ve : "${r.observable}"`);
-      console.log(`    dev ve     : ${revealConversation(a, b, r, world.branch(`reveal:${t}`))}`);
+      console.log(`    jugador ve : (nada)`);
+      console.log(`    dev ve     : ${revealExchange(ex, nameOf)}`);
       shown++;
     }
   }
@@ -323,4 +327,98 @@ console.log('\n=== Fase 4 — Ejes en movimiento (desarrollo por exposición) ==
   const r2 = applyExperience(createSeeder('det-test'), npc.axes, npc.stamps, { kind: 'scout', intensity: 0.7, outcome: 'success' });
   const detPass = JSON.stringify(r1) === JSON.stringify(r2);
   console.log(`Determinismo de experiencia: ${detPass ? 'PASS' : 'FAIL'}`);
+}
+
+// --- Sabiduría mutua: NPCs influyéndose en silencio -------------------------
+console.log('\n=== Sabiduría mutua — los NPC se mejoran entre ellos (en silencio) ===\n');
+{
+  // Erudito (muy curioso) entrena con un imprudente (nada curioso). Hablan de
+  // training repetidamente; la curiosidad debería converger con el tiempo.
+  const erudito = generateNPC({ seed: 'wisdom:scholar' });
+  const novato = generateNPC({ seed: 'wisdom:reckless' });
+  erudito.axes.curiosity = 0.90; erudito.axes.discipline = 0.85; erudito.axes.sociability = 0.7;
+  novato.axes.curiosity = 0.12; novato.axes.discipline = 0.20; novato.axes.sociability = 0.7;
+
+  let axesA = { ...erudito.axes };
+  let axesB = { ...novato.axes };
+  const stampsA = [...erudito.stamps];
+  const stampsB = [...novato.stamps];
+  let crossings = 0;
+
+  console.log(`Inicio:  erudito.curiosity=${axesA.curiosity.toFixed(3)}  novato.curiosity=${axesB.curiosity.toFixed(3)}`);
+
+  const world = createSeeder('wisdom-world');
+  let cooldown = 0;
+  let charlas = 0;
+  for (let t = 0; t < 4000 && charlas < 30; t++) {
+    cooldown = Math.max(0, cooldown - 1);
+    // Participantes con los ejes ACTUALES (van cambiando)
+    const pa = { id: erudito.id, axes: axesA };
+    const pb = { id: novato.id, axes: axesB };
+    const ex = rollConversation(world.branch(`tick:${t}`), pa, pb, { proximity: 1.0, cooldownRemaining: cooldown });
+    if (!ex || ex.topic !== 'training') continue; // enfocamos la demo en training
+    cooldown = CONVERSATION_COOLDOWN;
+    charlas++;
+    const ra = applyConversationNudges(axesA, stampsA, ex.nudges.a);
+    const rb = applyConversationNudges(axesB, stampsB, ex.nudges.b);
+    axesA = ra.axes; axesB = rb.axes;
+    crossings += ra.newStamps.length + rb.newStamps.length;
+  }
+
+  console.log(`Tras ${charlas} charlas de training:`);
+  console.log(`         erudito.curiosity=${axesA.curiosity.toFixed(3)}  novato.curiosity=${axesB.curiosity.toFixed(3)}`);
+  const converged = axesB.curiosity > novato.axes.curiosity && axesA.curiosity < erudito.axes.curiosity;
+  console.log(`  convergencia (novato sube, erudito baja): ${converged ? 'PASS' : 'FAIL'}`);
+  console.log(`  growth stamps sellados en el proceso: ${crossings}`);
+  console.log(`  (el jugador no vio ni una sola de estas charlas)`);
+}
+
+// --- La entidad mediadora (la hada) -----------------------------------------
+console.log('\n=== La entidad (hada) — única voz al jefe, reactiva ===\n');
+{
+  const roster = [
+    generateNPC({ seed: 'roster:1' }),
+    generateNPC({ seed: 'roster:2' }),
+    generateNPC({ seed: 'roster:3' }),
+  ];
+  roster[0].floorReached = 12;
+  roster[1].floorReached = 5;
+  roster[2].floorReached = 8; roster[2].isAlive = false; // uno cayó
+
+  const seeder = createSeeder('mediator-demo');
+
+  console.log('Jefe pregunta "¿estado del roster?":');
+  console.log(`  hada → ${briefRoster(roster)}`);
+
+  console.log('\nJefe pregunta por uno:');
+  console.log(`  hada → ${describeNPC(seeder, roster[0])}`);
+
+  console.log('\nJefe pregunta "¿qué han estado haciendo?":');
+  const exchanges = [];
+  const cw = createSeeder('activity');
+  let cd = 0;
+  for (let t = 0; t < 1500 && exchanges.length < 8; t++) {
+    cd = Math.max(0, cd - 1);
+    const ex = rollConversation(cw.branch(`t:${t}`),
+      { id: roster[0].id, axes: roster[0].axes },
+      { id: roster[1].id, axes: roster[1].axes },
+      { proximity: 0.95, cooldownRemaining: cd });
+    if (ex) { exchanges.push(ex); cd = CONVERSATION_COOLDOWN; }
+  }
+  console.log('  hada → ' + reportActivity(exchanges, roster).split('\n').join('\n         '));
+
+  console.log('\nJefe pregunta una regla ("difficulty"):');
+  console.log(`  hada → ${explainRule('difficulty')}`);
+
+  console.log('\nJefe da una orden (jefe → entidad → NPC):');
+  console.log(`  hada → ${relay(roster[1], 'sube al siguiente piso con cautela')}`);
+
+  // Susurro raro: la ÚNICA vez que habla sin que le pregunten. Casi nunca.
+  let whispers = 0;
+  const TRIES = 2000;
+  for (let i = 0; i < TRIES; i++) {
+    if (rareWhisper(createSeeder(`whisper:${i}`), roster)) whispers++;
+  }
+  const rate = ((whispers / TRIES) * 100).toFixed(1);
+  console.log(`\nSusurro proactivo (excepción rara): ${whispers}/${TRIES} = ${rate}% (objetivo ~2%)`);
 }

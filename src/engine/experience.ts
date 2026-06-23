@@ -138,3 +138,25 @@ export function applyExperience(
 
   return { axes: updated, newStamps };
 }
+
+/**
+ * Aplica los nudges de una charla de fondo (conversations.ts) a un participante.
+ * Reutiliza moveAxis, así que el acento de origen resiste y el techo suave actúa
+ * igual que en applyExperience. No recibe seeder: los nudges ya vienen calculados
+ * en el Exchange (la charla decidió su efecto al ocurrir). Puro: devuelve copias.
+ */
+export function applyConversationNudges(
+  axes: SoulAxes,
+  stamps: Stamp[],
+  nudges: Partial<Record<keyof SoulAxes, number>>,
+): ExperienceResult {
+  const updated = { ...axes };
+  const newStamps: Stamp[] = [];
+  for (const [key, delta] of Object.entries(nudges) as [keyof SoulAxes, number][]) {
+    if (!delta) continue;
+    const { newValue, stamp } = moveAxis(key, updated, stamps, delta);
+    updated[key] = newValue;
+    if (stamp) newStamps.push(stamp);
+  }
+  return { axes: updated, newStamps };
+}
