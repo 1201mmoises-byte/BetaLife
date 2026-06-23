@@ -107,8 +107,8 @@ for (const [s, c] of Object.entries(starCounts)) {
   console.log(`  ${s}★: ${String(c).padStart(3)} ${bar}`);
 }
 
-// Difficulty-conditioned star probabilities — the new behavior
-console.log('\nStar probability vs difficulty (theoretical):');
+// Difficulty-conditioned star probabilities at floor 0 (fresh world)
+console.log('\nStar probability vs difficulty (floor 0):');
 console.log('  diff │      1★        2★        3★        4★         5★');
 console.log('  ─────┼──────────────────────────────────────────────────────');
 for (const d of [1, 100, 300, 500, 700, 900, 999]) {
@@ -116,8 +116,34 @@ for (const d of [1, 100, 300, 500, 700, 900, 999]) {
   const pct = (x: number) => (x * 100).toFixed(x < 0.0001 ? 6 : 2).padStart(10);
   console.log(`  ${String(d).padStart(4)} │${pct(p[1])}${pct(p[2])}${pct(p[3])}${pct(p[4])}${pct(p[5])}`);
 }
-const p999 = starProbabilities(999)[5] * 100;
-console.log(`\n  → P(5★ | difficulty 999) = ${p999.toExponential(2)}%  (target ≈ 0.00001%)`);
+
+// Floor bonus: P(5★) across difficulty × roster floor
+console.log('\nP(5★) vs difficulty × roster floor (meta-progresión):');
+const floors = [0, 30, 60, 90, 100, 150];
+console.log('  diff │' + floors.map((f) => `piso ${f}`.padStart(11)).join(''));
+console.log('  ─────┼' + '─'.repeat(11 * floors.length));
+for (const d of [1, 300, 500, 1000]) {
+  const cells = floors.map((f) => {
+    const v = starProbabilities(d, f)[5] * 100;
+    return (v < 0.0001 ? v.toExponential(1) : v.toFixed(2) + '%').padStart(11);
+  });
+  console.log(`  ${String(d).padStart(4)} │${cells.join('')}`);
+}
+
+// Anchor verification
+const a1 = starProbabilities(1, 90)[5] * 100;
+const a2 = starProbabilities(1000, 100)[5] * 100;
+const a3 = starProbabilities(999, 0)[5] * 100;
+const pct2 = (x: number) => x.toFixed(2);
+console.log('\nAnchor checks:');
+console.log(`  dif 1   / piso 90  → ${pct2(a1)}% 5★  ${a1 >= 24 && a1 <= 26 ? 'PASS' : 'FAIL'} (objetivo 25%)`);
+console.log(`  dif 1000/ piso 100 → ${pct2(a2)}% 5★  ${a2 >= 0.9 && a2 <= 1.1 ? 'PASS' : 'FAIL'} (objetivo 1%)`);
+console.log(`  dif 999 / piso 0   → ${a3.toExponential(2)}% 5★  ${a3 < 0.0001 ? 'PASS' : 'FAIL'} (objetivo ≈0.00001%)`);
+
+// Determinism with rosterFloor: same seed + same floor = same NPC
+const d1 = generateNPC({ seed: 'floor-det', rosterFloor: 50 });
+const d2 = generateNPC({ seed: 'floor-det', rosterFloor: 50 });
+console.log(`  determinismo con rosterFloor: ${JSON.stringify(d1) === JSON.stringify(d2) ? 'PASS' : 'FAIL'}`);
 
 // --- Fase 2 demo: ejes leídos como comportamiento -------------------------
 console.log('\n=== Fase 2 — Ejes leídos como comportamiento ===\n');

@@ -33,6 +33,7 @@ export interface NPC {
   originArchetypeId: string; // root of the soul (derived from seed, not persisted)
   stars: StarRating;
   difficulty: number;   // 1-1000, never shown to player
+  rosterFloorAtSummon: number; // global roster progress when summoned; persisted so stars regenerate deterministically
   axes: SoulAxes;
   birthStamp: Stamp;
   history: string;
@@ -47,4 +48,5 @@ export interface GenerationOptions {
   seed: string;
   stars?: StarRating;
   difficulty?: number;
+  rosterFloor?: number; // deepest floor the roster has reached at summon time (meta-progression)
 }
