@@ -192,6 +192,13 @@
 
   /* durante el tutorial: nada de escapar — la Hada conduce paso a paso */
   body.tut .sheet-close, body.tut .sheet-grip, body.tut .hud-btn{ display:none; }
+  /* cartel-guía del tutorial: dice qué TOCAR en el mundo (no lo hace por ti) */
+  #tut-hint{position:fixed;top:56px;left:50%;transform:translateX(-50%) translateY(-8px);z-index:30;
+       background:rgba(14,11,26,.94);border:1px solid var(--violet);border-radius:22px;
+       padding:9px 18px;font-size:12.5px;letter-spacing:.5px;color:var(--violet-soft);text-align:center;
+       max-width:86%;box-shadow:0 0 22px rgba(120,70,200,.45);opacity:0;pointer-events:none;transition:.3s;}
+  #tut-hint.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  #tut-hint b{color:var(--gold);}
 </style>
 </head>
 <body>
@@ -208,6 +215,7 @@
 </div>
 
 <div class="place-toast" id="place-toast"></div>
+<div id="tut-hint"></div>
 <div id="speech-layer"></div>
 
 <!-- ░░ Hada · conversación ░░ -->
@@ -869,10 +877,14 @@ function panBy(sx, sy){
 function doPick(e){
   pointerToScene(e);
   if(TUTORIAL){
-    // sólo responden la Hada y la acción que el tutorial está pidiendo
-    if(ray.intersectObject(hada, true).length){ openSheet('sheet-hada'); return; }
+    // sólo responde la estructura que el tutorial pide que TOQUES tú mismo
     if(tutStep==='summon' && pickPlace()==='shrine'){ tutDoSummon(); return; }
-    if(tutStep==='fusion' && pickPlace()==='fusion'){ openSheet('sheet-merge'); return; }
+    if(tutStep==='fusion' && pickPlace()==='fusion'){ tutHintClear(); clearHighlight(); openSheet('sheet-merge'); return; }
+    // tocar la Hada en pasos de "ve y toca" sólo recuerda la indicación
+    if(ray.intersectObject(hada, true).length){
+      if(tutStep==='summon' || tutStep==='fusion') tutHintPulse(); else openSheet('sheet-hada');
+      return;
+    }
     return;
   }
   if(ray.intersectObject(hada, true).length){ openHada(); return; }
@@ -1281,6 +1293,12 @@ hlRing.rotation.x = -Math.PI/2; hlRing.position.y = 0.06; hlRing.visible = false
 function highlightPlace(key){ const p = PLACES[key].pos; hlRing.position.set(p.x, 0.06, p.z); hlRing.visible = true; }
 function clearHighlight(){ hlRing.visible = false; }
 
+// cartel-guía: dice qué TOCAR en el mundo. El jugador hace la acción, no la Hada.
+const tutHintEl = document.getElementById('tut-hint');
+function tutHint(html){ tutHintEl.innerHTML = html; tutHintEl.classList.add('show'); }
+function tutHintPulse(){ tutHintEl.classList.remove('show'); requestAnimationFrame(()=>tutHintEl.classList.add('show')); }
+function tutHintClear(){ tutHintEl.classList.remove('show'); }
+
 const TUT_SUMMON_LINES = [
   'Ahí está — <b>{n}</b>. Un alma recién llamada, sin pulir, pero ya respira con nosotros.',
   '<b>{n}</b> se les une. Fíjate: cada uno carga su propia manera de ser.',
@@ -1294,23 +1312,28 @@ function startTutorial(){
   const sub = document.getElementById('hud-sub'); if(sub) sub.textContent = 'la Hada te guía';
   openSheet('sheet-hada');
   fairySays('Despiertas como una presencia sobre este pueblo. No eres su héroe ni su titiritero — eres quien lo observa y lo moldea.', ()=>{
-    fairySays('Yo soy <b>la Hada</b>: tu única voz hacia ellos. Pero mira… el pueblo está vacío. Hay que llamar a los primeros.', ()=>{
-      tutStep = 'summon'; highlightPlace('shrine');
-      setIntents([{ label:'Invocar al primero ✦', act:tutDoSummon }]);
+    fairySays('Yo soy <b>la Hada</b>: tu única voz hacia ellos. Pero mira… el pueblo está vacío. Hay que llamar a los primeros — y eso lo haces <b>tú</b>.', ()=>{
+      setIntents([{ label:'¿Cómo? ✦', act:tutBeginSummon }]);
     });
   });
+}
+// Muestra DÓNDE se invoca (el Shrine) y deja que el jugador lo toque él mismo.
+function tutBeginSummon(){
+  tutStep = 'summon';
+  closeSheets();                 // libera la vista: el mundo queda tocable
+  highlightPlace('shrine');
+  tutHint('✦ Toca el <b>Shrine</b> para llamar a tu primer héroe');
 }
 function tutDoSummon(){
   if(tutStep !== 'summon') return;
   const d = summonNext(); if(!d) return;
   tutSummoned++;
-  openSheet('sheet-hada');
-  const line = TUT_SUMMON_LINES[tutSummoned-1].replace('{n}', d.name);
   if(tutSummoned < 4){
-    fairySays(line, ()=> setIntents([{ label:'Invocar a otro ✦', act:tutDoSummon }]));
+    tutHint('✦ <b>'+d.name+'</b> despierta. Toca el <b>Shrine</b> otra vez — faltan '+(4-tutSummoned));
   } else {
-    clearHighlight();
-    fairySays(line, ()=> setIntents([{ label:'Continuar', act:tutExplain }]));
+    tutHintClear(); clearHighlight();
+    tutStep = 'explain';
+    setTimeout(tutExplain, 650);  // deja ver al cuarto aparecer, luego la Hada retoma
   }
 }
 function tutExplain(){
@@ -1336,11 +1359,16 @@ function tutTryAsk(){
 function tutFusionIntro(){
   tutStep = 'fusion'; openSheet('sheet-hada');
   fairySays('Queda lo más pesado. <b>El Eco</b>, en la Cámara de los Ecos: mi <b>única orden que nadie puede rechazar</b>. Un héroe se pierde para que otro guarde su eco. No es un atajo — el valor se transfiere <em>a pérdida</em>.', ()=>{
-    fairySays('Debes sentir su peso al menos una vez. Ven: elige quién se sacrifica y quién recibe.', ()=>{
-      highlightPlace('fusion');
-      setIntents([{ label:'Ir a la Cámara de los Ecos', cls:'danger', act:()=>openSheet('sheet-merge') }]);
+    fairySays('Debes sentir su peso al menos una vez. Ve <b>tú misma</b> a la Cámara de los Ecos — está al otro lado del pueblo.', ()=>{
+      setIntents([{ label:'Muéstrame dónde ❖', cls:'danger', act:tutGoFusion }]);
     });
   });
+}
+// Muestra DÓNDE está la Cámara de los Ecos y deja que el jugador entre él mismo.
+function tutGoFusion(){
+  closeSheets();                 // libera la vista hacia la Cámara
+  highlightPlace('fusion');
+  tutHint('❖ Toca la <b>Cámara de los Ecos</b> para entrar');
 }
 function tutAfterFusion(){
   clearHighlight(); openSheet('sheet-hada');
@@ -1352,7 +1380,7 @@ function tutAfterFusion(){
 }
 function tutDone(){
   TUTORIAL = false; tutStep = null;
-  document.body.classList.remove('tut'); clearHighlight(); closeSheets();
+  document.body.classList.remove('tut'); clearHighlight(); tutHintClear(); closeSheets();
   thread.innerHTML = ''; hadaOpened = false; window.__catchupMins = 0;
   const sub = document.getElementById('hud-sub'); if(sub) sub.textContent = 'el pueblo vive';
 }

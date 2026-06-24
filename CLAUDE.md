@@ -15,13 +15,16 @@ Diseño completo en `docs/DISENO-VERTICAL-SLICE.md`. Primera versión jugable:
   motor). NO hay log previo horneado. **Panel de dev** (botón "dev"): feed de charlas en
   vivo de la sesión + 14 ejes por héroe (barra=ahora, marca=al nacer) + necesidades.
   Token `__BETALIFE_DATA__`. **Onboarding (tutorial):** el pueblo arranca VACÍO
-  (`start()` pone `inRoster=false` a todos) y la Hada conduce paso a paso —
-  `startTutorial()`→`tutDoSummon()`×4 (invocar los primeros 4, anillo dorado de
-  resalte en el sitio) → `tutExplain()`/`tutTryAsk()` (única voz, sin números;
-  prueba a preguntar por uno) → `tutFusionIntro()` + `tutAfterFusion()` (obliga a
-  sentir UN Eco/Merger). Durante el tutorial `body.tut` oculta cierres/HUD y
-  `doPick` deja el mundo inerte salvo la acción pedida. Termina en `tutDone()`.
-  Corre en cada carga (el roster no se persiste).
+  (`start()` pone `inRoster=false` a todos) y la Hada **señala dónde, el jugador
+  toca la estructura real** (no lo hace ella por ti). `startTutorial()`→
+  `tutBeginSummon()` cierra la hoja, resalta el Shrine (anillo dorado) y muestra
+  el cartel `#tut-hint` "Toca el Shrine"; cada tap al Shrine = `tutDoSummon()`
+  (×4) → `tutExplain()`/`tutTryAsk()` (única voz, sin números; prueba a preguntar
+  por uno) → `tutFusionIntro()`+`tutGoFusion()` resalta la Cámara de los Ecos y
+  pide tocarla (tap = abre el Merger) → `tutAfterFusion()` (obliga a sentir UN
+  Eco). Durante el tutorial `body.tut` oculta cierres/HUD y `doPick` sólo responde
+  a la estructura pedida (tocar la Hada re-pulsa el cartel). Termina en
+  `tutDone()`. Corre en cada carga (el roster no se persiste).
 - `scripts/buildSlice.ts` — corre `runPreviewSim()`, hornea héroes (ejes nacimiento+ahora,
   emergentes, cues, necesidades) + **voz CUALITATIVA de la Hada compuesta aquí** (sin
   números: deriva de ejes = "ha ido aprendiendo", `confidence` = miedo a la Torre, y teje
