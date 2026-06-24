@@ -446,7 +446,7 @@ const P_PLAZA  = place('plaza',  0,   1);
       new THREE.MeshStandardMaterial({ color:0x6a4aa0, emissive:0x9060e0, emissiveIntensity:1.2 }));
     w.position.set(0, 3+i*2.2, 2.1); g.add(w);
   }
-  const tip = new THREE.PointLight(0xb080ff, 1.4, 18); tip.position.set(0,15,0); g.add(tip);
+  const tip = new THREE.PointLight(0xb080ff, 12, 22, 1.5); tip.position.set(0,15,0); g.add(tip);
   g.position.copy(P_TORRE); scene.add(g);
   const lbl = makeLabel('La Torre', '#b080ff'); lbl.position.set(0, 17, 0); g.add(lbl);
   PLACES.torre.group = g;
@@ -461,7 +461,7 @@ const P_PLAZA  = place('plaza',  0,   1);
   const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.7),
     new THREE.MeshStandardMaterial({ color:0xc8a8ff, emissive:0x9060e0, emissiveIntensity:1.6, flatShading:true }));
   crystal.position.y=1.8; g.add(crystal);
-  const cl = new THREE.PointLight(0xb080ff, 2, 10); cl.position.y=1.8; g.add(cl);
+  const cl = new THREE.PointLight(0xc0a0ff, 10, 14, 1.6); cl.position.y=1.8; g.add(cl);
   g.position.copy(P_SHRINE); scene.add(g);
   const lbl = makeLabel('Shrine', '#c8a8ff'); lbl.position.set(0,3.4,0); g.add(lbl);
   PLACES.shrine.group = g; PLACES.shrine.crystal = crystal;
@@ -479,7 +479,7 @@ const P_PLAZA  = place('plaza',  0,   1);
   const win = new THREE.Mesh(new THREE.BoxGeometry(0.7,0.7,0.1),
     new THREE.MeshStandardMaterial({ color:0xd0a050, emissive:0xf0b040, emissiveIntensity:1 }));
   win.position.set(0,1.1,1.35); g.add(win);
-  const wl = new THREE.PointLight(0xf0b040, 0.8, 7); wl.position.set(0,1.2,2); g.add(wl);
+  const wl = new THREE.PointLight(0xf0b040, 8, 11, 1.7); wl.position.set(0,1.2,2); g.add(wl);
   g.position.copy(P_POSADA); scene.add(g);
   const lbl = makeLabel('Posada', '#f0c87a'); lbl.position.set(0,4.1,0); g.add(lbl);
   PLACES.posada.group = g;
@@ -514,7 +514,7 @@ const P_PLAZA  = place('plaza',  0,   1);
   const arch = new THREE.Mesh(new THREE.TorusGeometry(1.1,0.18,8,24,Math.PI),
     new THREE.MeshStandardMaterial({ color:0x3a1424, emissive:0xc0506a, emissiveIntensity:0.9, flatShading:true }));
   arch.position.y=1.0; g.add(arch);
-  const gl = new THREE.PointLight(0xc0506a, 1.2, 9); gl.position.y=1.4; g.add(gl);
+  const gl = new THREE.PointLight(0xc0506a, 9, 12, 1.6); gl.position.y=1.4; g.add(gl);
   g.position.copy(P_FUSION); scene.add(g);
   const lbl = makeLabel('Fusión', '#ff7090'); lbl.position.set(0,3.2,0); g.add(lbl);
   PLACES.fusion.group = g;
@@ -525,7 +525,7 @@ const hada = new THREE.Group();
 const hadaOrb = new THREE.Mesh(new THREE.SphereGeometry(0.42,16,16),
   new THREE.MeshStandardMaterial({ color:0xffffff, emissive:0xb080ff, emissiveIntensity:1.8 }));
 hada.add(hadaOrb);
-const hadaLight = new THREE.PointLight(0xc8a8ff, 1.6, 9); hada.add(hadaLight);
+const hadaLight = new THREE.PointLight(0xc8a8ff, 8, 12, 1.6); hada.add(hadaLight);
 hada.position.set(P_SHRINE.x+1.6, 2.4, P_SHRINE.z+0.5);
 scene.add(hada);
 
@@ -533,20 +533,27 @@ scene.add(hada);
 const fires = [];   // { light, flame, base, mat }
 function makeFire(x, y, z, scale, baseInt, color){
   const g = new THREE.Group();
-  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.16*scale, 0.5*scale, 7),
-    new THREE.MeshBasicMaterial({ color: color||0xffb050, transparent:true, opacity:0.95 }));
-  flame.position.y = 0.3*scale; g.add(flame);
-  const light = new THREE.PointLight(color||0xffa040, baseInt, 7*scale);
-  light.position.y = 0.4*scale; g.add(light);
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.18*scale, 0.62*scale, 7),
+    new THREE.MeshBasicMaterial({ color: color||0xffb050, transparent:true, opacity:0.95,
+      blending:THREE.AdditiveBlending, depthWrite:false }));
+  flame.position.y = 0.32*scale; g.add(flame);
+  // halo suave alrededor del fuego
+  const halo = new THREE.Mesh(new THREE.SphereGeometry(0.34*scale, 10, 10),
+    new THREE.MeshBasicMaterial({ color: color||0xffa040, transparent:true, opacity:0.25,
+      blending:THREE.AdditiveBlending, depthWrite:false }));
+  halo.position.y = 0.34*scale; g.add(halo);
+  // luz real: decay bajo + buen alcance para que ilumine de verdad
+  const light = new THREE.PointLight(color||0xffa040, baseInt, 16*scale, 1.6);
+  light.position.y = 0.5*scale; g.add(light);
   g.position.set(x, y, z); scene.add(g);
-  fires.push({ light, flame, base:baseInt, mat:flame.material, phase:Math.random()*9 });
+  fires.push({ light, flame, base:baseInt, mat:flame.material, hmat:halo.material, phase:Math.random()*9 });
   return g;
 }
 function makeTorch(x, z){
   const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.09,1.5,6),
     new THREE.MeshStandardMaterial({ color:0x3a2a1a, roughness:.9, flatShading:true }));
   post.position.set(x, 0.75, z); post.castShadow=true; scene.add(post);
-  makeFire(x, 1.55, z, 0.8, 1.1, 0xffb050);
+  makeFire(x, 1.55, z, 0.8, 16, 0xffb050);
 }
 
 // Muralla circular de fondo, en SEGMENTOS para poder desvanecer los de enfrente
@@ -574,7 +581,7 @@ const wallPieces = [];   // piezas con material propio (opacidad independiente)
     const tmat = new THREE.MeshStandardMaterial({ color:0x1e1830, roughness:.95, flatShading:true, transparent:true, depthWrite:false });
     const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.9,1.0,H+1.6,8), tmat);
     tower.position.set(tx, (H+1.6)/2, tz); tower.castShadow=true; scene.add(tower); wallPieces.push(tower);
-    makeFire(tx, H+1.7, tz, 0.9, 0.9, 0xffa840);
+    makeFire(tx, H+1.7, tz, 0.9, 11, 0xffa840);
   }
 })();
 
@@ -594,7 +601,7 @@ const wallPieces = [];   // piezas con material propio (opacidad independiente)
     log.rotation.z = 0.5; log.rotation.y = a; g.add(log);
   }
   g.position.copy(P_PLAZA); scene.add(g);
-  makeFire(P_PLAZA.x, 0.45, P_PLAZA.z, 1.8, 2.2, 0xff8a30);
+  makeFire(P_PLAZA.x, 0.45, P_PLAZA.z, 1.8, 48, 0xff8a30);
 })();
 
 // ── Héroes ───────────────────────────────────────────────────────────────────
@@ -1069,11 +1076,12 @@ function animate(){
   // ciclo día/noche
   const tod = ((worldT / DAY_LENGTH) + START_TOD) % 1;
   updateSky(tod);
-  // fuegos: parpadean y se encienden de noche
+  // fuegos: parpadean; SIEMPRE iluminan algo, mucho más de noche
   for(const f of fires){
-    const flick = 0.72 + Math.sin(worldT*9 + f.phase)*0.16 + Math.random()*0.08;
-    f.light.intensity = f.base * NIGHT * flick;
-    f.mat.opacity = (0.15 + 0.85*NIGHT) * flick;
+    const flick = 0.8 + Math.sin(worldT*9 + f.phase)*0.14 + Math.random()*0.06;
+    f.light.intensity = f.base * (0.35 + 0.65*NIGHT) * flick;
+    f.mat.opacity = (0.55 + 0.45*NIGHT) * flick;
+    if(f.hmat) f.hmat.opacity = (0.15 + 0.3*NIGHT) * flick;
     f.flame.scale.set(1, 0.85+0.3*flick, 1);
   }
   // etiqueta del HUD (día / anochece / noche)
