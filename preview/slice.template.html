@@ -1254,6 +1254,14 @@ function updateSpeeches(dt){
 
 // Comida pobre del pueblo (para las quejas de hambre).
 const FOODS = ['papas','papa hervida','pan duro','sopa aguada','raíces','gachas frías'];
+// Armas por rol (para las charlas de entrenamiento: probar, comparar, rivalizar).
+const WEAPONS = {
+  warrior:['la espada','el hacha','la lanza'],
+  archer: ['el arco','la lanza','la jabalina'],
+  rogue:  ['las dagas','el estoque','los cuchillos'],
+  mage:   ['el báculo','la vara','los conjuros'],
+  default:['la espada','la lanza','el arco'],
+};
 // Bancos de charla por "beat" (de qué hablan). Alternan hablante 1 y 2. Huecos:
 // {1t}/{2t}=oficio de antes · {1p}/{2p}=lugar de antes · {food}=comida · {frag}=sueño.
 const BANKS = {
@@ -1276,6 +1284,14 @@ const BANKS = {
     ['¿Vienes a "entrenar"? Mira el ejercicio: picar madera.','Ja. Como en casa, pero con público.','Al menos la madera no devuelve los golpes.','Eso lo dices hasta que te clavas una astilla.'],
     ['¿Quieres ver esto? Llevo toda la mañana con el hacha.','¿Eso es entrenamiento o leña para la noche?','Las dos cosas, si me sale bien.','Práctico. Me caes bien.'],
   ],
+  // Charlas de experiencia: probar armas, rivalizar sano, descubrir técnica.
+  training: [
+    ['Hoy voy a probar {1w}. ¿Tú con qué te quedas?','Yo le entro a {2w}. A ver a quién le luce más.','Trato hecho: el que pierda carga la leña.','Ya estás cargando, entonces.'],
+    ['Me paso a {1w}, lo de antes no me cuadraba.','Yo sigo con {2w}, le voy agarrando el modo.','Midámonos sin hacernos daño, ¿va?','Sin daño. Pero gano yo.'],
+    ['Oye, me di cuenta de algo: el golpe entra mejor cruzado que de frente.','¿Cruzado? A ver, enséñame eso.','Giras la cadera primero; el brazo va detrás.','…ah. Así pega casi solo. Qué cosa.'],
+    ['Por fin le hallé el ritmo a {1w}.','¿Sí? Yo todavía llego tarde al segundo tiempo.','Cuenta dos y entra al tercero. A mí me costó igual.','Voy a probar. Si me sale, te debo una.'],
+    ['Cada día me sale un poco mejor. Las manos aprenden solas.','Eso dicen. Yo aún me siento torpe.','Ayer también te veías torpe. Hoy menos. Cuenta.','…gracias. Lo necesitaba.'],
+  ],
   dream: [
     ['Anoche soñé… {frag}.','¿Otra vez con eso? Yo no quiero soñar nada.','No lo elijo. Llega y ya.','Tú duerme. Yo vigilo, por si acaso.'],
     ['¿A ti también te pasa? Sueño cosas que no viví. {frag}.','…a veces. No se lo cuento a nadie.','¿Crees que significan algo?','Creo que es mejor no saberlo.'],
@@ -1287,11 +1303,13 @@ const BANKS = {
     ['Hace frío hoy.','Sí. Bueno para no hacer nada y mirar el fuego.','¿Otra noche en vela?','Eso parece. Al menos no solo.'],
   ],
 };
-function fillTokens(t,s1,s2,food,frag){
+function fillTokens(t,s1,s2,food,frag,w1,w2){
   return t.split('{1t}').join(s1.data.trade||'alguien').split('{2t}').join(s2.data.trade||'alguien')
           .split('{1p}').join(s1.data.place||'su tierra').split('{2p}').join(s2.data.place||'su tierra')
+          .split('{1w}').join(w1||'la espada').split('{2w}').join(w2||'la lanza')
           .split('{food}').join(food).split('{frag}').join(frag||'algo que no entendía');
 }
+function pickWeapon(role){ const p=WEAPONS[role]||WEAPONS.default; return p[Math.floor(Math.random()*p.length)]; }
 // Micro-planner: elige de qué hablan según su estado del momento (idea minada de
 // AutoChatManager: cada quien trae algo "en la cabeza"). Devuelve líneas con su autor.
 const TIER_W = { core:4, secondary:3, peripheral:2, mundane:1 };
@@ -1313,7 +1331,8 @@ function composeExchange(A,B){
   add('hunger', (hungry(A)||hungry(B))?4:0);
   add('tired',  (tired(A)||tired(B))?2:0);
   add('disoriented', (disor(A)||disor(B))?3:0);
-  add('field',  (atField(A)||atField(B))?3:0);
+  add('training', (atField(A)||atField(B))?4:1);   // ganar experiencia: armas, técnica
+  add('field',  (atField(A)||atField(B))?2:0);      // el chiste seco de picar madera
   add('pastlife',2);
   add('bond',   (warm(A)&&warm(B))?2:0);
   add('idle',1);
@@ -1326,9 +1345,12 @@ function composeExchange(A,B){
   if(beat==='dream' && dreamer===B){ s1=B; s2=A; }
   const frag = beat==='dream' ? dreamer.data.memories[Math.floor(Math.random()*dreamer.data.memories.length)] : null;
   const food = FOODS[Math.floor(Math.random()*FOODS.length)];
+  // armas para las charlas de entrenamiento (distintas, para que la rivalidad tenga sentido)
+  let w1 = pickWeapon(s1.data.role), w2 = pickWeapon(s2.data.role);
+  if(w1===w2){ const alt=(WEAPONS[s2.data.role]||WEAPONS.default).filter(x=>x!==w1); if(alt.length) w2=alt[Math.floor(Math.random()*alt.length)]; }
   const arr = BANKS[beat] || BANKS.idle;
   const tmpl = arr[Math.floor(Math.random()*arr.length)];
-  const lines = tmpl.map((t,i)=>({ hero:(i%2===0)?s1:s2, text:fillTokens(t,s1,s2,food,frag) }));
+  const lines = tmpl.map((t,i)=>({ hero:(i%2===0)?s1:s2, text:fillTokens(t,s1,s2,food,frag,w1,w2) }));
   return { beat, lines };
 }
 const liveChats = [];
