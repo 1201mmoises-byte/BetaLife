@@ -30,10 +30,16 @@ const { town, pool, roster, currentAxes, log: rawLog } = runPreviewSim();
 
 // Diálogo IA horneado: leer la caché generada por generateDialogue.ts. Si falta
 // una clave (caché aún no generada), usar el fallback redactado para no romper.
+// Formato de caché: { [key]: { via: 'gemini'|'fallback', lines: DialogueLine[] } }
 const cachePath = path.join(__dirname, '..', 'preview', 'dialogue-cache.json');
-const dialogueCache: Record<string, DialogueLine[]> =
+const rawCache: Record<string, any> =
   fs.existsSync(cachePath) ? JSON.parse(fs.readFileSync(cachePath, 'utf8')) : {};
-const log = rawLog.map((e) => ({ ...e, dialogue: dialogueCache[e.key] ?? fallbackDialogue(e) }));
+const log = rawLog.map((e) => {
+  const entry = rawCache[e.key];
+  const dialogue: DialogueLine[] =
+    entry?.lines ?? (Array.isArray(entry) ? entry : null) ?? fallbackDialogue(e);
+  return { ...e, dialogue };
+});
 
 // ── 3. Datos para el HTML ─────────────────────────────────────────────────────
 const whisperMsg = rareWhisper(roster.map(n => ({ ...n, axes: currentAxes[n.id] })));

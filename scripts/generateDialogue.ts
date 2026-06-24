@@ -7,6 +7,13 @@
  *   - los rebuilds NO vuelvan a llamar a la API (gratis + reproducible), y
  *   - devPreview solo lea la caché y hornee el texto en el HTML (estático).
  *
+ * Formato de caché: { [key]: { via: 'gemini'|'fallback', lines: DialogueLine[] } }
+ * Modo por defecto: solo regenera entradas ausentes o marcadas via:'fallback'.
+ * --force: regenera TODAS las entradas (incluyendo las ya marcadas via:'gemini').
+ *
+ * Guardado incremental: la caché se escribe al disco después de CADA llamada.
+ * Si el proceso se interrumpe, el progreso no se pierde.
+ *
  * IA: la clave vive SOLO como variable de entorno; nunca entra al repo ni al HTML.
  * Solo el TEXTO generado se cachea. Si no hay GEMINI_API_KEY (o la llamada falla),
  * se usa el fallback redactado en previewSim, así el build nunca se rompe.
@@ -27,6 +34,12 @@ import { runPreviewSim, fallbackDialogue, DialogueLine, ExchangeRecord } from '.
 const MODEL = 'gemini-2.5-flash';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 const CACHE_PATH = path.join(__dirname, '..', 'preview', 'dialogue-cache.json');
+
+/** Entrada de caché con metadata de origen. */
+export interface CacheEntry {
+  via: 'gemini' | 'fallback';
+  lines: DialogueLine[];
+}
 
 const TOPIC_DESC: Record<string, string> = {
   training: 'entrenamiento: técnicas y lo que han aprendido subiendo los pisos',
@@ -110,6 +123,22 @@ async function callGemini(apiKey: string, prompt: string, retries = 4): Promise<
   }
 }
 
+function loadCache(): Record<string, CacheEntry> {
+  if (!fs.existsSync(CACHE_PATH)) return {};
+  try { return JSON.parse(fs.readFileSync(CACHE_PATH, 'utf8')); } catch { return {}; }
+}
+
+function saveCache(cache: Record<string, CacheEntry>): void {
+  fs.mkdirSync(path.dirname(CACHE_PATH), { recursive: true });
+  fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2), 'utf8');
+}
+
+function needsGeneration(entry: CacheEntry | undefined, force: boolean): boolean {
+  if (!entry) return true;           // no existe → generar
+  if (force) return true;            // --force → regenerar todo
+  return entry.via === 'fallback';   // es fallback → mejorar con Gemini si hay clave
+}
+
 async function main() {
   const force = process.argv.includes('--force');
   const apiKey = process.env.GEMINI_API_KEY;
@@ -120,38 +149,41 @@ async function main() {
   const byKey = new Map<string, ExchangeRecord>();
   for (const e of log) if (!byKey.has(e.key)) byKey.set(e.key, e);
 
-  const cache: Record<string, DialogueLine[]> =
-    !force && fs.existsSync(CACHE_PATH)
-      ? JSON.parse(fs.readFileSync(CACHE_PATH, 'utf8'))
-      : {};
+  // Carga la caché existente (nunca se descarta al arrancar).
+  const cache = loadCache();
 
-  let viaGemini = 0, viaFallback = 0, cached = 0;
+  let viaGemini = 0, viaFallback = 0, skipped = 0;
 
   if (!apiKey) {
     console.warn('⚠ Sin GEMINI_API_KEY — se usará el fallback redactado para todo.');
   }
 
   for (const [key, e] of byKey) {
-    if (cache[key] && !force) { cached++; continue; }
+    const existing = cache[key];
+    if (!needsGeneration(existing, force)) { skipped++; continue; }
 
     let lines: DialogueLine[] | null = null;
     if (apiKey) {
       lines = await callGemini(apiKey, buildPrompt(e));
-      if (lines) viaGemini++;
-      // Respeta el límite del free tier (~10 RPM): pausa entre llamadas.
-      await new Promise((r) => setTimeout(r, 6500));
+      if (lines) {
+        viaGemini++;
+        cache[key] = { via: 'gemini', lines };
+        saveCache(cache); // guardado incremental: no se pierde progreso si se interrumpe
+        await sleep(7000); // ~8.5 RPM — holgado bajo el límite de 10 RPM del free tier
+        continue;
+      }
     }
-    if (!lines) { lines = fallbackDialogue(e); viaFallback++; }
-    cache[key] = lines;
+    // Gemini no disponible o falló → usar fallback
+    lines = fallbackDialogue(e);
+    viaFallback++;
+    cache[key] = { via: 'fallback', lines };
+    saveCache(cache);
   }
 
-  fs.mkdirSync(path.dirname(CACHE_PATH), { recursive: true });
-  fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2), 'utf8');
-
   console.log(`✓ Charlas únicas: ${byKey.size}`);
-  console.log(`  · Gemini   : ${viaGemini}`);
-  console.log(`  · Fallback : ${viaFallback}`);
-  console.log(`  · Ya en caché: ${cached}`);
+  console.log(`  · Gemini     : ${viaGemini}`);
+  console.log(`  · Fallback   : ${viaFallback}`);
+  console.log(`  · Ya OK (skip): ${skipped}`);
   console.log(`✓ Caché: ${CACHE_PATH}`);
 }
 

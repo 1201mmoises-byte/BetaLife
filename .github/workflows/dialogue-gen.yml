@@ -1,0 +1,60 @@
+name: Dialogue AI + Preview Deploy
+
+on:
+  schedule:
+    - cron: '0 4 * * *'   # 4 AM UTC todos los días
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/previewSim.ts'
+      - 'src/engine/**'
+  workflow_dispatch:       # disparar manualmente desde GitHub → Actions
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # Genera solo las entradas ausentes o marcadas via:'fallback'.
+      # Con GEMINI_API_KEY presente, rellena gradualmente hasta la cuota del día.
+      # Sin ella, solo escribe fallback para las entradas nuevas que aún no existan.
+      - name: Generate dialogue (fill missing/fallback)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: npx ts-node --project tsconfig.json scripts/generateDialogue.ts
+
+      - name: Rebuild preview HTML
+        run: npx ts-node --project tsconfig.json scripts/devPreview.ts
+
+      - name: Commit cache + preview (if changed)
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add preview/dialogue-cache.json preview/shrine-dev.html
+          git diff --cached --quiet && echo "nothing to commit" && exit 0
+          git commit -m "ci: auto-generar diálogo IA + rebuild preview [skip ci]"
+          git push origin main
+
+      - name: Deploy to gh-pages
+        run: |
+          cp preview/shrine-dev.html /tmp/preview-latest.html
+          git checkout gh-pages
+          cp /tmp/preview-latest.html index.html
+          git add index.html
+          git diff --cached --quiet && echo "preview unchanged" && exit 0
+          git commit -m "ci: deploy preview actualizado [skip ci]"
+          git push origin gh-pages
+          git checkout main
