@@ -1,5 +1,22 @@
 # BetaLife — Estado del proyecto para Claude Code
 
+## Fase 1 — Vertical Slice "Pueblo Vivo" (3D) — EN CURSO
+Diseño completo en `docs/DISENO-VERTICAL-SLICE.md`. Primera versión jugable:
+- `preview/slice.template.html` — escena **Three.js isométrica** (CDN, corre en el
+  navegador del jugador). El motor NO se toca: es solo capa de render que lee su estado.
+  Las 5 estructuras (Torre no-enterable, Shrine, Posada, Campo, Cámara de Fusión),
+  4 héroes vivos en tiempo real (caminan/entrenan/descansan solos), la **Hada como
+  orbe tocable** que abre la conversación con burbujas (ramas: saber/pedir/explicar),
+  **Roster**, **Cámara de Fusión (Merger simbólico)**, invocación en el Shrine,
+  catch-up offline (el mundo no para). Token `__BETALIFE_DATA__` = punto de inyección.
+- `scripts/buildSlice.ts` — corre `runPreviewSim()`, hornea héroes + textos de la Hada
+  (`situationBrief`/`consultNPC`/`explainRule`) + conducta observable (`readBehavior`/
+  `firstImpression`), inyecta en la plantilla → `preview/slice.html`.
+- Build: `npx ts-node --project tsconfig.json scripts/buildSlice.ts`
+- **Pendiente:** verificación visual en navegador real (WebGL); afinar comportamiento de
+  héroes; conectar foco/guía a efectos reales; muerte emergente rara (hoy stub: voluntad
+  de vivir = no mueren en la demo). NO incluye Torre jugable ni combate (faltan stats).
+
 ## Fases completadas
 
 ### Fase A — Motor de pueblo + scaffold de estrellas ✓
@@ -67,8 +84,11 @@ Archivos futuros: `src/ai/localDialogue.ts`, `src/ai/playerContext.ts`.
 # Generar diálogo IA (fill-missing, rellena fallback con Gemini si hay clave)
 GEMINI_API_KEY=xxx npx ts-node --project tsconfig.json scripts/generateDialogue.ts
 
-# Regenerar preview HTML
+# Regenerar preview HTML (dev tool 2D)
 npx ts-node --project tsconfig.json scripts/devPreview.ts
+
+# Generar el vertical slice 3D (Fase 1) → preview/slice.html
+npx ts-node --project tsconfig.json scripts/buildSlice.ts
 
 # Ejecutar tests del motor
 npx ts-node --project tsconfig.json scripts/testEngine.ts

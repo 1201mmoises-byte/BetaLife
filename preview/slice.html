@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BetaLife — Pueblo Vivo</title>
+<style>
+  :root{
+    --bg:#05050d; --panel:#0e0b1a; --panel2:#120e22;
+    --violet:#9060e0; --violet-soft:#b080ff; --violet-dim:rgba(176,128,255,.5);
+    --gold:#f0c040; --txt:#d8cdf0; --txt-dim:rgba(190,175,230,.55);
+    --line:#2e2348; --danger:#c0506a; --danger-soft:#ff7090;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;
+       font-family:Georgia,'Times New Roman',serif;color:var(--txt);
+       -webkit-tap-highlight-color:transparent;}
+  #app{position:fixed;inset:0;}
+  canvas{display:block;touch-action:none;}
+
+  /* ── HUD mínimo (la Hada ES el HUD; aquí solo lo esencial) ── */
+  .hud-top{position:fixed;top:0;left:0;right:0;z-index:10;display:flex;
+       align-items:center;justify-content:space-between;padding:12px 16px;
+       background:linear-gradient(to bottom,rgba(5,5,13,.85),transparent);pointer-events:none;}
+  .hud-day{font-size:12px;letter-spacing:2px;color:var(--violet-soft);
+       text-shadow:0 0 10px rgba(160,100,255,.5);}
+  .hud-day small{display:block;font-size:9px;letter-spacing:1px;color:var(--txt-dim);margin-top:2px;}
+  .hud-btn{pointer-events:auto;background:rgba(18,14,34,.8);border:1px solid var(--line);
+       border-radius:20px;color:var(--txt);font-family:inherit;font-size:11px;letter-spacing:1.5px;
+       padding:8px 15px;cursor:pointer;text-transform:uppercase;transition:.15s;}
+  .hud-btn:hover{border-color:var(--violet);background:#1a1230;}
+
+  /* etiqueta flotante al tocar una estructura */
+  .place-toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(8px);
+       z-index:11;background:rgba(14,11,26,.92);border:1px solid var(--line);border-radius:14px;
+       padding:10px 16px;font-size:12px;color:var(--txt);max-width:80%;text-align:center;
+       opacity:0;pointer-events:none;transition:.3s;box-shadow:0 0 18px rgba(80,40,140,.3);}
+  .place-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .place-toast b{color:var(--violet-soft);}
+
+  /* ── Hoja inferior genérica (overlays) ── */
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:20;max-height:82vh;overflow-y:auto;
+       background:linear-gradient(to bottom,var(--panel) 0%,#0a0816 100%);
+       border-top:1px solid var(--line);border-radius:20px 20px 0 0;
+       box-shadow:0 -4px 40px rgba(80,40,140,.25);transform:translateY(102%);transition:transform .32s cubic-bezier(.2,.8,.25,1);}
+  .sheet.open{transform:translateY(0);}
+  .sheet-grip{width:42px;height:4px;background:#3a2b58;border-radius:3px;margin:10px auto 2px;}
+  .sheet-head{display:flex;align-items:center;gap:10px;padding:6px 18px 12px;border-bottom:1px solid var(--line);}
+  .sheet-icon{font-size:18px;}
+  .sheet-title{font-size:14px;letter-spacing:1.5px;flex:1;}
+  .sheet-title small{display:block;font-size:9.5px;letter-spacing:1px;color:var(--txt-dim);margin-top:2px;}
+  .sheet-close{font-size:16px;color:var(--txt-dim);cursor:pointer;padding:4px 8px;}
+  .sheet-close:hover{color:var(--violet-soft);}
+  .sheet-body{padding:15px 16px 26px;}
+  .mw{max-width:440px;margin:0 auto;}
+
+  /* ── Hada: conversación con burbujas ── */
+  .convo-thread{display:flex;flex-direction:column;gap:9px;min-height:40px;}
+  .row{display:flex;align-items:flex-end;gap:7px;animation:rise .25s ease;}
+  @keyframes rise{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+  .row.left{justify-content:flex-start;} .row.right{justify-content:flex-end;}
+  .ava{flex:0 0 auto;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;
+       justify-content:center;font-size:9px;color:#fff;
+       background:radial-gradient(circle at 38% 34%,#fff,#9060d0 70%,#4a2090);
+       box-shadow:0 0 8px rgba(160,100,255,.6);}
+  .bubble{max-width:84%;padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.5;}
+  .bubble.fairy{background:linear-gradient(to bottom,#1a1330,#140e26);border:1px solid var(--line);
+       color:var(--txt);border-bottom-left-radius:5px;box-shadow:0 0 14px rgba(110,70,200,.12);}
+  .bubble.me{background:linear-gradient(to bottom,#241a3c,#1c1430);border:1px solid #3a2b58;
+       color:#e6dcff;border-bottom-right-radius:5px;}
+  .bubble .cd{display:inline-block;font-size:8.5px;letter-spacing:1px;color:var(--gold);
+       border:1px solid rgba(240,192,64,.35);border-radius:20px;padding:1px 7px;margin-left:6px;}
+  .typing span{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--violet-dim);
+       margin:0 1px;animation:dot 1.4s ease-in-out infinite;}
+  .typing span:nth-child(2){animation-delay:.2s;} .typing span:nth-child(3){animation-delay:.4s;}
+  @keyframes dot{0%,60%,100%{opacity:.3;}30%{opacity:1;}}
+  .intents{display:flex;flex-wrap:wrap;gap:8px;margin:13px 0 0 29px;}
+  .intent{background:rgba(28,20,46,.7);border:1px solid var(--line);border-radius:20px;color:var(--txt);
+       font-family:inherit;font-size:12.5px;padding:9px 15px;cursor:pointer;transition:.15s;}
+  .intent:hover{border-color:var(--violet);background:#1c1430;transform:translateY(-1px);}
+  .intent.soft{color:var(--violet-soft);}
+  .intent.danger{border-color:rgba(192,80,106,.45);color:var(--danger-soft);}
+  .intent.back{color:var(--txt-dim);border-style:dashed;}
+
+  /* ── Roster ── */
+  .roster-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .hero-card{background:var(--panel2);border:1px solid var(--line);border-radius:14px;
+       padding:13px 10px 11px;text-align:center;cursor:pointer;transition:.15s;}
+  .hero-card:hover{border-color:var(--violet);transform:translateY(-2px);box-shadow:0 6px 18px rgba(80,40,140,.3);}
+  .portrait{width:62px;height:62px;margin:0 auto 8px;border-radius:14px;position:relative;overflow:hidden;
+       background:radial-gradient(ellipse at 50% 30%,#1c1530 0%,#0a0714 100%);
+       border:1px solid var(--line);display:flex;align-items:flex-end;justify-content:center;}
+  .bust{position:relative;width:42px;height:48px;margin-bottom:-4px;}
+  .b-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,rgba(140,90,220,.18),transparent 65%);}
+  .b-head{width:20px;height:21px;background:var(--skin,#c8a478);border-radius:45% 45% 38% 38%;
+       margin:0 auto;position:relative;box-shadow:inset -2px -2px 5px rgba(0,0,0,.35);z-index:2;}
+  .b-eye{position:absolute;width:3px;height:3px;background:#111;border-radius:50%;top:45%;}
+  .b-eye.l{left:5px;} .b-eye.r{right:5px;}
+  .b-torso{width:30px;height:25px;background:var(--armor,#2a3050);border-radius:6px 6px 3px 3px;
+       margin:-3px auto 0;border:1px solid rgba(255,255,255,.07);box-shadow:inset -3px -4px 8px rgba(0,0,0,.4);
+       position:relative;z-index:1;}
+  .b-helm{position:absolute;top:-7px;left:9px;right:9px;height:13px;
+       background:linear-gradient(to bottom,#708090,#4a5560);border-radius:50% 50% 0 0;z-index:3;}
+  .b-hood{position:absolute;top:-9px;left:7px;right:7px;height:18px;background:var(--robe,#1a1540);
+       border-radius:50% 50% 0 0;z-index:3;}
+  .b-bandana{position:absolute;top:6px;left:9px;right:9px;height:6px;background:#6a2030;border-radius:2px;z-index:3;}
+  .hero-name{font-size:11px;letter-spacing:1.5px;color:var(--txt);text-transform:uppercase;}
+  .hero-class{font-size:8.5px;letter-spacing:1.5px;color:var(--violet-dim);text-transform:uppercase;margin-top:1px;}
+  .hero-stars{color:var(--gold);font-size:10px;letter-spacing:1px;text-shadow:0 0 5px var(--gold);margin-top:2px;}
+  .hero-future{margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);
+       font-size:8.5px;letter-spacing:1px;color:rgba(150,135,190,.4);font-style:italic;}
+
+  /* ── Merger / Cámara de Fusión ── */
+  .merge-flow{display:flex;align-items:center;justify-content:center;gap:6px;margin:6px 0 12px;}
+  .merge-slot{flex:1;background:var(--panel2);border:1px dashed var(--line);border-radius:14px;
+       padding:11px 8px 10px;text-align:center;min-height:120px;cursor:pointer;transition:.15s;}
+  .merge-slot:hover{border-color:var(--violet);}
+  .merge-slot.sacrifice.filled{border-color:rgba(192,80,106,.5);border-style:solid;}
+  .merge-slot.receive.filled{border-color:rgba(120,200,140,.45);border-style:solid;}
+  .slot-label{font-size:8.5px;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+  .slot-label.s{color:var(--danger-soft);} .slot-label.r{color:#7cc88c;}
+  .slot-empty{font-size:10px;color:var(--txt-dim);font-style:italic;padding-top:24px;}
+  .merge-arrow{color:var(--violet-soft);font-size:22px;text-shadow:0 0 10px var(--violet-soft);}
+  .slot-name{font-size:11px;color:var(--txt);margin-top:7px;letter-spacing:1px;}
+  .slot-stars{color:var(--gold);font-size:9px;letter-spacing:1px;text-shadow:0 0 5px var(--gold);}
+  .merge-warn{text-align:center;font-size:10.5px;color:var(--danger-soft);letter-spacing:.5px;
+       margin:2px 0 12px;font-style:italic;}
+  .reaction-box{background:rgba(20,14,34,.7);border:1px solid var(--line);border-radius:10px;
+       padding:9px 12px;font-size:10.5px;color:var(--txt-dim);line-height:1.55;margin-bottom:14px;min-height:20px;}
+  .reaction-box b{color:var(--violet-soft);font-weight:normal;}
+  .btn-merge{display:block;width:100%;background:linear-gradient(to bottom,#3a1422,#260c16);
+       border:1px solid var(--danger);color:var(--danger-soft);font-family:inherit;font-size:12px;
+       letter-spacing:2px;text-transform:uppercase;padding:12px;border-radius:12px;cursor:pointer;
+       text-shadow:0 0 8px rgba(255,112,144,.5);transition:.15s;opacity:.45;pointer-events:none;}
+  .btn-merge.ready{opacity:1;pointer-events:auto;}
+  .btn-merge.ready:hover{background:linear-gradient(to bottom,#4c1a2e,#30101c);box-shadow:0 0 18px rgba(192,80,106,.4);}
+  .picker{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+  .pick-chip{background:var(--panel2);border:1px solid var(--line);border-radius:20px;
+       font-family:inherit;font-size:11px;color:var(--txt);padding:7px 12px;cursor:pointer;transition:.15s;}
+  .pick-chip:hover{border-color:var(--violet);}
+  .pick-chip .ps{color:var(--gold);font-size:8px;margin-left:4px;}
+  .picker-label{font-size:9px;letter-spacing:2px;color:var(--violet-dim);text-transform:uppercase;margin:14px 2px 4px;}
+
+  .note{font-size:10px;color:var(--txt-dim);line-height:1.6;text-align:center;margin:14px 6px 0;font-style:italic;}
+
+  /* loader */
+  #loader{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+       background:var(--bg);color:var(--violet-soft);font-size:13px;letter-spacing:3px;
+       text-transform:uppercase;transition:opacity .6s;}
+  #loader.hide{opacity:0;pointer-events:none;}
+  #loader .pulse{animation:lp 1.6s ease-in-out infinite;}
+  @keyframes lp{0%,100%{opacity:.35;}50%{opacity:1;}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="loader"><span class="pulse">✦ despertando el pueblo</span></div>
+
+<div class="hud-top">
+  <div class="hud-day" id="hud-day">Día 1<small id="hud-sub">el pueblo vive</small></div>
+  <button class="hud-btn" id="btn-roster">los héroes</button>
+</div>
+
+<div class="place-toast" id="place-toast"></div>
+
+<!-- ░░ Hada · conversación ░░ -->
+<div class="sheet" id="sheet-hada">
+  <div class="sheet-grip"></div>
+  <div class="sheet-head">
+    <span class="sheet-icon" style="color:var(--violet-soft);text-shadow:0 0 10px var(--violet-soft);">✦</span>
+    <div class="sheet-title">La Hada<small>está contigo</small></div>
+    <span class="sheet-close" data-close="sheet-hada">✕</span>
+  </div>
+  <div class="sheet-body mw">
+    <div class="convo-thread" id="hada-thread"></div>
+    <div class="intents" id="hada-intents"></div>
+  </div>
+</div>
+
+<!-- ░░ Roster ░░ -->
+<div class="sheet" id="sheet-roster">
+  <div class="sheet-grip"></div>
+  <div class="sheet-head">
+    <span class="sheet-icon">☰</span>
+    <div class="sheet-title">Los Héroes<small>toca uno para enfocarlo</small></div>
+    <span class="sheet-close" data-close="sheet-roster">✕</span>
+  </div>
+  <div class="sheet-body mw">
+    <div class="roster-grid" id="roster-grid"></div>
+    <p class="note">La imagen es el héroe tal como vive en el pueblo. El bloque punteado es donde irán lvl y stats.</p>
+  </div>
+</div>
+
+<!-- ░░ Cámara de Fusión / Merger ░░ -->
+<div class="sheet" id="sheet-merge">
+  <div class="sheet-grip"></div>
+  <div class="sheet-head">
+    <span class="sheet-icon" style="color:var(--danger-soft);text-shadow:0 0 10px var(--danger-soft);">❖</span>
+    <div class="sheet-title">Cámara de Fusión<small>la única orden irrechazable</small></div>
+    <span class="sheet-close" data-close="sheet-merge">✕</span>
+  </div>
+  <div class="sheet-body mw">
+    <div class="merge-flow">
+      <div class="merge-slot sacrifice" id="slot-sac"><div class="slot-label s">se pierde</div><div class="slot-empty" id="sac-empty">toca un héroe abajo</div></div>
+      <div class="merge-arrow">➜</div>
+      <div class="merge-slot receive" id="slot-rec"><div class="slot-label r">recibe</div><div class="slot-empty" id="rec-empty">toca un héroe abajo</div></div>
+    </div>
+    <p class="merge-warn">— quien se sacrifica no puede negarse. nadie puede. —</p>
+    <div class="reaction-box" id="merge-reaction">Elige a quién sacrificas y quién recibe. El valor se transfiere <em>a pérdida</em>: un impulso leve, nunca un atajo.</div>
+    <button class="btn-merge" id="btn-do-merge">Ordenar Fusión</button>
+    <div class="picker-label">elegir</div>
+    <div class="picker" id="merge-picker"></div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Datos del MOTOR (horneados por scripts/buildSlice.ts). El motor no se toca:
+// esto es solo la capa de render que lee su estado.
+// ─────────────────────────────────────────────────────────────────────────────
+const DATA = {"town":{"difficulty":521},"initial":4,"heroes":[{"id":"npc-shrine-dev-town:npc:1","name":"Kwaemasi","role":"warrior","stars":2,"inRoster":true,"alive":true,"emergent":[],"cues":["Salta de un impulso a otro sin acabar ninguno.","Promete con facilidad y olvida con la misma.","Retira lo que dijo en cuanto alguien frunce el ceño."],"impression":"Salta de un impulso a otro sin acabar ninguno. Toma el atajo aunque sepa que no le toca."},{"id":"npc-shrine-dev-town:npc:2","name":"Osibo","role":"mage","stars":1,"inRoster":true,"alive":true,"emergent":[],"cues":["Sigue el ruido extraño en vez de alejarse de él.","Mide cada lealtad por lo que rinde hoy.","Comparte sin que se lo pidan."],"impression":"Abre cada caja solo para ver qué guarda. Abandona al aliado en cuanto deja de servirle."},{"id":"npc-shrine-dev-town:npc:3","name":"krasrakuk","role":"rogue","stars":1,"inRoster":true,"alive":true,"emergent":[],"cues":["Sigue el ruido extraño en vez de alejarse de él.","No se inmuta cuando la sala entera lo contradice.","Mantiene su horario sin que nadie se lo pida."],"impression":"Sigue el ruido extraño en vez de alejarse de él. No se inmuta cuando la sala entera lo contradice."},{"id":"npc-shrine-dev-town:npc:4","name":"Bjorgaron","role":"archer","stars":2,"inRoster":true,"alive":true,"emergent":["nobleza"],"cues":["Se interpone cuando alguien más va a salir herido.","Recuerda detalles pequeños de quienes acaba de conocer.","Abandona al aliado en cuanto deja de servirle."],"impression":"Se interpone cuando alguien más va a salir herido. Recuerda detalles pequeños de quienes acaba de conocer."},{"id":"npc-shrine-dev-town:npc:5","name":"Erura","role":"warrior","stars":1,"inRoster":false,"alive":true,"emergent":["rencor","ingenuidad"],"cues":["Cuenta las monedas dos veces aunque se las dé un amigo.","Baja la voz cuando alguien con más peso entra.","Abandona al aliado en cuanto deja de servirle."],"impression":"Busca el motivo oculto detrás de cada favor. Acomoda sus planes a los de cualquiera que insista."},{"id":"npc-shrine-dev-town:npc:6","name":"Kyriposon","role":"mage","stars":1,"inRoster":false,"alive":true,"emergent":["rencor"],"cues":["Busca el rincón más lejano de cualquier multitud.","Se queda junto al que cae aunque ardan los puentes.","Cede el paso aunque tenga la razón."],"impression":"Busca el rincón más lejano de cualquier multitud. No traiciona ni cuando traicionarlo sería sensato."},{"id":"npc-shrine-dev-town:npc:7","name":"Zubemako","role":"rogue","stars":2,"inRoster":false,"alive":true,"emergent":["estratega"],"cues":["No cede al antojo aunque nadie lo esté mirando.","Trata a los demás como obstáculos o herramientas.","Sigue el ruido extraño en vez de alejarse de él."],"impression":"Repite el mismo gesto mil veces hasta que sale perfecto. Trata a los demás como obstáculos o herramientas."},{"id":"npc-shrine-dev-town:npc:8","name":"Bjoralda","role":"archer","stars":1,"inRoster":false,"alive":true,"emergent":[],"cues":["Mide cada lealtad por lo que rinde hoy.","Cree primero y comprueba después, si acaso.","Abre cada caja solo para ver qué guarda."],"impression":"Abandona al aliado en cuanto deja de servirle. Cree primero y comprueba después, si acaso."}],"hada":{"situation":"Roster: 4 vivos. el más alto en piso 0.\nActividad reciente: krasrakuk y Bjorgaron: entrenan juntos (32). Osibo y krasrakuk: pasan tiempo cerca; algo personal (31). Osibo y Bjorgaron: comparten un pasatiempo (29).","reports":{"npc-shrine-dev-town:npc:1":"Kwaemasi (2★, piso 1). 58 charlas. Lo que más lo ocupa: entrenan juntos. Habla más con Bjorgaron (25 veces). Salta de un impulso a otro sin acabar ninguno. Promete con facilidad y olvida con la misma.","npc-shrine-dev-town:npc:2":"Osibo (1★, piso 1). 75 charlas. Lo que más lo ocupa: entrenan juntos. Habla más con krasrakuk (31 veces). Sigue el ruido extraño en vez de alejarse de él. Abandona al aliado en cuanto deja de servirle.","npc-shrine-dev-town:npc:3":"krasrakuk (1★, piso 1). 81 charlas. Lo que más lo ocupa: entrenan juntos. Habla más con Bjorgaron (32 veces). Abre cada caja solo para ver qué guarda. Habla como si sus palabras ya hubieran sido aprobadas.","npc-shrine-dev-town:npc:4":"Bjorgaron (2★, piso 1). 86 charlas. Lo que más lo ocupa: entrenan juntos. Habla más con krasrakuk (32 veces). Se interpone cuando alguien más va a salir herido. Recuerda detalles pequeños de quienes acaba de conocer.","npc-shrine-dev-town:npc:5":"Erura (1★, piso 1). Sin charlas registradas. Busca el motivo oculto detrás de cada favor. Baja la voz cuando alguien con más peso entra.","npc-shrine-dev-town:npc:6":"Kyriposon (1★, piso 1). Sin charlas registradas. Desaparece de las reuniones sin que nadie lo note. No traiciona ni cuando traicionarlo sería sensato.","npc-shrine-dev-town:npc:7":"Zubemako (2★, piso 1). Sin charlas registradas. Repite el mismo gesto mil veces hasta que sale perfecto. Su saludo es un trámite, no un gesto.","npc-shrine-dev-town:npc:8":"Bjoralda (1★, piso 1). Sin charlas registradas. Mide cada lealtad por lo que rinde hoy. Cree primero y comprueba después, si acaso."},"rules":[{"k":"growth","label":"El crecimiento","text":"Crecen por exposición, filtrada por quiénes son. La misma experiencia forja almas distintas."},{"k":"death","label":"La muerte","text":"La muerte es permanente. Quien cae no vuelve."},{"k":"promotion","label":"El ascenso","text":"Promover tiene riesgo real: éxito, parcial, corrupción o muerte. Los recursos son escasos."},{"k":"start","label":"El comienzo","text":"Todos empiezan en el piso 1, sin importar la dificultad de su mundo."}]},"catchup":["Kwaemasi y Osibo compartieron un rato","Kwaemasi y Bjorgaron charlaron sin prisa","krasrakuk y Bjorgaron compartieron un rato","Kwaemasi y krasrakuk entrenaron juntos"]};
+
+// Paleta visual por rol (espejo de ROLE_VIS en devPreview.ts).
+const ROLE_VIS = {
+  warrior:{ skin:'#c09060', armor:'#3a4860', leg:'#22223a', accent:'#8fa6c8', kind:'helm' },
+  mage:{    skin:'#b08868', armor:'#2a1f6e', leg:'#161046', accent:'#b48cff', kind:'hood' },
+  rogue:{   skin:'#c09a74', armor:'#3a2f1c', leg:'#1a1510', accent:'#caa15a', kind:'bandana' },
+  archer:{  skin:'#b07850', armor:'#2a3820', leg:'#1a2012', accent:'#8fc88c', kind:'plain' },
+};
+const hx = (c)=>new THREE.Color(c);
+
+// ── Escena, cámara isométrica, renderer ──────────────────────────────────────
+const app = document.getElementById('app');
+const scene = new THREE.Scene();
+scene.background = hx('#05050d');
+scene.fog = new THREE.FogExp2(0x05050d, 0.022);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+app.appendChild(renderer.domElement);
+
+// Ortográfica = look isométrico. Encadrada por un "frustum size" que controla zoom.
+let frustum = 22;
+const cam = new THREE.OrthographicCamera(-1,1,1,-1,0.1,200);
+function framedCamera(){
+  const a = window.innerWidth / window.innerHeight;
+  cam.left=-frustum*a/2; cam.right=frustum*a/2; cam.top=frustum/2; cam.bottom=-frustum/2;
+  cam.updateProjectionMatrix();
+}
+framedCamera();
+// posición isométrica clásica
+let camAzimuth = Math.PI*0.25;          // rotación horizontal (drag)
+const camRadius = 26, camHeight = 20;
+const camTarget = new THREE.Vector3(0, 0.5, 0);
+function placeCamera(){
+  cam.position.set(
+    camTarget.x + Math.cos(camAzimuth)*camRadius,
+    camHeight,
+    camTarget.z + Math.sin(camAzimuth)*camRadius
+  );
+  cam.lookAt(camTarget);
+}
+placeCamera();
+
+// ── Luces: luna fría + relleno + la Hada calienta su rincón ──────────────────
+scene.add(new THREE.AmbientLight(0x2a2348, 1.1));
+const moon = new THREE.DirectionalLight(0x9f86d8, 0.9);
+moon.position.set(-12, 22, 8); moon.castShadow = true;
+moon.shadow.mapSize.set(1024,1024);
+moon.shadow.camera.left=-20; moon.shadow.camera.right=20;
+moon.shadow.camera.top=20; moon.shadow.camera.bottom=-20;
+scene.add(moon);
+const fill = new THREE.HemisphereLight(0x4a3a7a, 0x0a0814, 0.5);
+scene.add(fill);
+
+// ── Estrellas en el cielo ────────────────────────────────────────────────────
+(function stars(){
+  const g = new THREE.BufferGeometry();
+  const N = 600, pos = new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    const r = 70 + Math.random()*40;
+    const th = Math.random()*Math.PI*2, ph = Math.random()*Math.PI*0.5;
+    pos[i*3]   = Math.cos(th)*Math.sin(ph+0.2)*r;
+    pos[i*3+1] = Math.cos(ph)*r*0.6 + 8;
+    pos[i*3+2] = Math.sin(th)*Math.sin(ph+0.2)*r;
+  }
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  const m = new THREE.PointsMaterial({ color:0xffffff, size:0.35, sizeAttenuation:true,
+    transparent:true, opacity:0.85 });
+  scene.add(new THREE.Points(g, m));
+})();
+
+// ── Suelo ────────────────────────────────────────────────────────────────────
+(function ground(){
+  const geo = new THREE.CircleGeometry(20, 64);
+  const mat = new THREE.MeshStandardMaterial({ color:0x0c0b18, roughness:1, metalness:0 });
+  const m = new THREE.Mesh(geo, mat);
+  m.rotation.x = -Math.PI/2; m.receiveShadow = true;
+  scene.add(m);
+  // anillo tenue alrededor del Shrine
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(2.0, 3.4, 48),
+    new THREE.MeshBasicMaterial({ color:0x5a3aa0, transparent:true, opacity:0.18, side:THREE.DoubleSide })
+  );
+  ring.rotation.x = -Math.PI/2; ring.position.set(-6, 0.02, 3);
+  scene.add(ring);
+})();
+
+// Sprite de etiqueta (nombre de estructura / héroe) generado por canvas.
+function makeLabel(text, color){
+  const c = document.createElement('canvas'); c.width=256; c.height=64;
+  const ctx = c.getContext('2d');
+  ctx.font = '600 30px Georgia, serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.shadowColor = color; ctx.shadowBlur = 12; ctx.fillStyle = color;
+  ctx.fillText(text, 128, 34);
+  const tex = new THREE.CanvasTexture(c); tex.minFilter = THREE.LinearFilter;
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true, depthTest:false }));
+  spr.scale.set(4.2, 1.05, 1);
+  return spr;
+}
+
+// ── Estructuras (las 5) ──────────────────────────────────────────────────────
+const PLACES = {};   // nombre → { group, pos }
+function place(name, x, z){ const p = new THREE.Vector3(x, 0, z); PLACES[name] = { pos:p }; return p; }
+
+// posiciones en el suelo
+const P_TORRE  = place('torre',  0,  -8);
+const P_SHRINE = place('shrine', -6,  3);
+const P_POSADA = place('posada', 7,  -2);
+const P_CAMPO  = place('campo',  6,   5);
+const P_FUSION = place('fusion', -7, -4);
+const P_PLAZA  = place('plaza',  0,   1);
+
+// Torre — ancla visual dominante, NO enterable
+(function torre(){
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.0, 2.8, 13, 6),
+    new THREE.MeshStandardMaterial({ color:0x141026, roughness:.9, flatShading:true }));
+  body.position.y = 6.5; body.castShadow = true; g.add(body);
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(2.6, 3, 6),
+    new THREE.MeshStandardMaterial({ color:0x0e0b1c, roughness:.9, flatShading:true }));
+  roof.position.y = 14.5; g.add(roof);
+  // ventanas que brillan (emisivas)
+  for(let i=0;i<5;i++){
+    const w = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.7,0.2),
+      new THREE.MeshStandardMaterial({ color:0x6a4aa0, emissive:0x9060e0, emissiveIntensity:1.2 }));
+    w.position.set(0, 3+i*2.2, 2.1); g.add(w);
+  }
+  const tip = new THREE.PointLight(0xb080ff, 1.4, 18); tip.position.set(0,15,0); g.add(tip);
+  g.position.copy(P_TORRE); scene.add(g);
+  const lbl = makeLabel('La Torre', '#b080ff'); lbl.position.set(0, 17, 0); g.add(lbl);
+  PLACES.torre.group = g;
+})();
+
+// Shrine — Hada + invocación
+(function shrine(){
+  const g = new THREE.Group();
+  const dais = new THREE.Mesh(new THREE.CylinderGeometry(1.6,1.9,0.5,8),
+    new THREE.MeshStandardMaterial({ color:0x1a1430, roughness:.8, flatShading:true }));
+  dais.position.y=0.25; dais.castShadow=true; dais.receiveShadow=true; g.add(dais);
+  const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.7),
+    new THREE.MeshStandardMaterial({ color:0xc8a8ff, emissive:0x9060e0, emissiveIntensity:1.6, flatShading:true }));
+  crystal.position.y=1.8; g.add(crystal);
+  const cl = new THREE.PointLight(0xb080ff, 2, 10); cl.position.y=1.8; g.add(cl);
+  g.position.copy(P_SHRINE); scene.add(g);
+  const lbl = makeLabel('Shrine', '#c8a8ff'); lbl.position.set(0,3.4,0); g.add(lbl);
+  PLACES.shrine.group = g; PLACES.shrine.crystal = crystal;
+})();
+
+// Posada — viven / descansan / socializan
+(function posada(){
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(3.2,2.2,2.6),
+    new THREE.MeshStandardMaterial({ color:0x241a30, roughness:.95, flatShading:true }));
+  body.position.y=1.1; body.castShadow=true; g.add(body);
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(2.6,1.4,4),
+    new THREE.MeshStandardMaterial({ color:0x3a2030, roughness:.9, flatShading:true }));
+  roof.position.y=2.9; roof.rotation.y=Math.PI/4; g.add(roof);
+  const win = new THREE.Mesh(new THREE.BoxGeometry(0.7,0.7,0.1),
+    new THREE.MeshStandardMaterial({ color:0xd0a050, emissive:0xf0b040, emissiveIntensity:1 }));
+  win.position.set(0,1.1,1.35); g.add(win);
+  const wl = new THREE.PointLight(0xf0b040, 0.8, 7); wl.position.set(0,1.2,2); g.add(wl);
+  g.position.copy(P_POSADA); scene.add(g);
+  const lbl = makeLabel('Posada', '#f0c87a'); lbl.position.set(0,4.1,0); g.add(lbl);
+  PLACES.posada.group = g;
+})();
+
+// Campo de Entrenamiento — crecimiento observable
+(function campo(){
+  const g = new THREE.Group();
+  const pad = new THREE.Mesh(new THREE.CircleGeometry(2.6,24),
+    new THREE.MeshStandardMaterial({ color:0x14160e, roughness:1 }));
+  pad.rotation.x=-Math.PI/2; pad.position.y=0.02; pad.receiveShadow=true; g.add(pad);
+  // muñecos de entrenamiento
+  for(const dx of [-1.2,1.2]){
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.14,1.6,6),
+      new THREE.MeshStandardMaterial({ color:0x4a3420, roughness:.9, flatShading:true }));
+    post.position.set(dx,0.8,0.6); post.castShadow=true; g.add(post);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.32,8,8),
+      new THREE.MeshStandardMaterial({ color:0x6a5038, roughness:.9, flatShading:true }));
+    head.position.set(dx,1.7,0.6); g.add(head);
+  }
+  g.position.copy(P_CAMPO); scene.add(g);
+  const lbl = makeLabel('Campo', '#9fc88c'); lbl.position.set(0,2.8,0); g.add(lbl);
+  PLACES.campo.group = g;
+})();
+
+// Cámara de Fusión — Merger (sombría)
+(function fusion(){
+  const g = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.7,2.0,1,6),
+    new THREE.MeshStandardMaterial({ color:0x1c1020, roughness:.85, flatShading:true }));
+  base.position.y=0.5; base.castShadow=true; g.add(base);
+  const arch = new THREE.Mesh(new THREE.TorusGeometry(1.1,0.18,8,24,Math.PI),
+    new THREE.MeshStandardMaterial({ color:0x3a1424, emissive:0xc0506a, emissiveIntensity:0.9, flatShading:true }));
+  arch.position.y=1.0; g.add(arch);
+  const gl = new THREE.PointLight(0xc0506a, 1.2, 9); gl.position.y=1.4; g.add(gl);
+  g.position.copy(P_FUSION); scene.add(g);
+  const lbl = makeLabel('Fusión', '#ff7090'); lbl.position.set(0,3.2,0); g.add(lbl);
+  PLACES.fusion.group = g;
+})();
+
+// ── La Hada — orbe alado tocable ─────────────────────────────────────────────
+const hada = new THREE.Group();
+const hadaOrb = new THREE.Mesh(new THREE.SphereGeometry(0.42,16,16),
+  new THREE.MeshStandardMaterial({ color:0xffffff, emissive:0xb080ff, emissiveIntensity:1.8 }));
+hada.add(hadaOrb);
+const hadaLight = new THREE.PointLight(0xc8a8ff, 1.6, 9); hada.add(hadaLight);
+hada.position.set(P_SHRINE.x+1.6, 2.4, P_SHRINE.z+0.5);
+scene.add(hada);
+
+// ── Héroes ───────────────────────────────────────────────────────────────────
+function buildHero(role){
+  const v = ROLE_VIS[role] || ROLE_VIS.archer;
+  const g = new THREE.Group();
+  const legs = new THREE.Mesh(new THREE.BoxGeometry(0.34,0.5,0.24),
+    new THREE.MeshStandardMaterial({ color:hx(v.leg), roughness:.9, flatShading:true }));
+  legs.position.y=0.25; legs.castShadow=true; g.add(legs);
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5,0.6,0.32),
+    new THREE.MeshStandardMaterial({ color:hx(v.armor), roughness:.85, flatShading:true }));
+  torso.position.y=0.78; torso.castShadow=true; g.add(torso);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.24,10,10),
+    new THREE.MeshStandardMaterial({ color:hx(v.skin), roughness:.8, flatShading:true }));
+  head.position.y=1.25; head.castShadow=true; g.add(head);
+  // toque de clase
+  if(v.kind==='helm'){
+    const h=new THREE.Mesh(new THREE.SphereGeometry(0.26,10,10,0,Math.PI*2,0,Math.PI/2),
+      new THREE.MeshStandardMaterial({color:hx(v.accent),metalness:.4,roughness:.5,flatShading:true}));
+    h.position.y=1.30; g.add(h);
+  } else if(v.kind==='hood'){
+    const h=new THREE.Mesh(new THREE.ConeGeometry(0.30,0.5,8),
+      new THREE.MeshStandardMaterial({color:hx(v.armor),roughness:.9,flatShading:true}));
+    h.position.y=1.40; g.add(h);
+  } else if(v.kind==='bandana'){
+    const h=new THREE.Mesh(new THREE.TorusGeometry(0.24,0.05,6,12),
+      new THREE.MeshStandardMaterial({color:hx('#6a2030'),roughness:.8,flatShading:true}));
+    h.position.y=1.28; h.rotation.x=Math.PI/2; g.add(h);
+  }
+  return g;
+}
+
+const ACTIVITY_SPOTS = ['campo','posada','plaza','shrine'];
+const heroes = [];   // { data, group, state, target, timer, speed, phase, alive }
+function spawnHero(data, atIndex){
+  const role = data.role;
+  const group = buildHero(role);
+  // dispersión inicial alrededor de la plaza
+  const ang = (atIndex/4)*Math.PI*2;
+  group.position.set(P_PLAZA.x+Math.cos(ang)*2.5, 0, P_PLAZA.z+Math.sin(ang)*2.5);
+  scene.add(group);
+  const lbl = makeLabel(data.name, '#c8b8f0'); lbl.position.y=2.0; lbl.scale.set(2.4,0.6,1);
+  group.add(lbl);
+  const h = { data, group, state:'idle', target:null, timer:1+Math.random()*2,
+              speed:0.9+Math.random()*0.5, phase:Math.random()*Math.PI*2, alive:true };
+  heroes.push(h);
+  return h;
+}
+
+// estado de actividad por héroe — derivado un poco de las "cues" del motor
+function pickActivity(h){
+  // sesgo simple por rol y por azar; el motor define la persona (cues), aquí solo se ve.
+  const r = Math.random();
+  let spot;
+  if(h.data.role==='warrior' || h.data.role==='archer') spot = r<0.5?'campo':(r<0.75?'plaza':'posada');
+  else if(h.data.role==='mage') spot = r<0.45?'shrine':(r<0.75?'campo':'plaza');
+  else spot = r<0.4?'plaza':(r<0.7?'posada':'campo');
+  h.target = spot;
+  h.state = 'walking';
+}
+
+// ── Catch-up offline: el mundo no para ───────────────────────────────────────
+const LS_KEY = 'betalife_slice_lastSeen';
+let dayBase = 1;
+(function offline(){
+  const now = Date.now();
+  const last = parseInt(localStorage.getItem(LS_KEY)||'0', 10);
+  if(last){
+    const mins = Math.floor((now-last)/60000);
+    if(mins >= 1){
+      // 1 minuto real ≈ avanzar el "ánimo" del pueblo; resumen de la Hada al volver.
+      window.__catchupMins = mins;
+    }
+  }
+  localStorage.setItem(LS_KEY, String(now));
+})();
+
+// ── Picking (raycaster): clic en Hada / estructuras / héroes ─────────────────
+const ray = new THREE.Raycaster();
+const ptr = new THREE.Vector2();
+function pointerToScene(ev){
+  const x = (ev.clientX/window.innerWidth)*2-1;
+  const y = -(ev.clientY/window.innerHeight)*2+1;
+  ptr.set(x,y); ray.setFromCamera(ptr, cam);
+}
+function pickHero(){
+  for(const h of heroes){ if(!h.alive) continue;
+    if(ray.intersectObject(h.group, true).length) return h; }
+  return null;
+}
+function pickPlace(){
+  const dist = {};
+  for(const k of ['shrine','fusion','torre','posada','campo']){
+    const grp = PLACES[k].group; if(!grp) continue;
+    if(ray.intersectObject(grp, true).length) return k;
+  }
+  return null;
+}
+
+// ── Interacción de cámara (drag = rotar; rueda/pinza = zoom) ──────────────────
+let dragging=false, dragMoved=false, lastX=0;
+renderer.domElement.addEventListener('pointerdown', (e)=>{ dragging=true; dragMoved=false; lastX=e.clientX; pointerToScene(e); });
+renderer.domElement.addEventListener('pointermove', (e)=>{
+  if(!dragging) return;
+  const dx = e.clientX-lastX; lastX=e.clientX;
+  if(Math.abs(dx)>2){ dragMoved=true; camAzimuth -= dx*0.005; placeCamera(); }
+});
+renderer.domElement.addEventListener('pointerup', (e)=>{
+  dragging=false;
+  if(dragMoved) return;       // fue arrastre, no clic
+  pointerToScene(e);
+  // prioridad: Hada > héroe > estructura
+  if(ray.intersectObject(hada, true).length){ openHada(); return; }
+  const h = pickHero(); if(h){ heroReading(h); return; }
+  const p = pickPlace(); if(p){ onPlace(p); return; }
+});
+renderer.domElement.addEventListener('wheel', (e)=>{
+  e.preventDefault();
+  frustum = Math.max(12, Math.min(40, frustum + Math.sign(e.deltaY)*1.6));
+  framedCamera();
+}, { passive:false });
+
+window.addEventListener('resize', ()=>{ renderer.setSize(innerWidth,innerHeight); framedCamera(); });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OVERLAYS (HTML) — la Hada conversación, roster, merger
+// ─────────────────────────────────────────────────────────────────────────────
+function openSheet(id){
+  ['sheet-hada','sheet-roster','sheet-merge'].forEach(s=>{
+    document.getElementById(s).classList.toggle('open', s===id);
+  });
+}
+function closeSheets(){ ['sheet-hada','sheet-roster','sheet-merge'].forEach(s=>document.getElementById(s).classList.remove('open')); }
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeSheets()));
+
+// toast de estructura
+let toastT=null;
+function toast(html){
+  const t = document.getElementById('place-toast');
+  t.innerHTML = html; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('show'), 3400);
+}
+
+// ── La Hada: conversación ramificada (pocas opciones, como hablar) ───────────
+const thread = document.getElementById('hada-thread');
+const intentsEl = document.getElementById('hada-intents');
+function bub(side, html){
+  const row = document.createElement('div'); row.className='row '+side;
+  row.innerHTML = (side==='left'?'<span class="ava">✦</span>':'') + '<div class="bubble '+(side==='left'?'fairy':'me')+'">'+html+'</div>';
+  thread.appendChild(row);
+  const body = thread.closest('.sheet-body'); if(body) body.scrollTop = body.scrollHeight;
+}
+function fairySays(html, after){
+  // burbuja "escribiendo" → reemplaza por el texto
+  const row = document.createElement('div'); row.className='row left';
+  row.innerHTML = '<span class="ava">✦</span><div class="bubble fairy"><span class="typing"><span></span><span></span><span></span></span></div>';
+  thread.appendChild(row);
+  const body = thread.closest('.sheet-body'); if(body) body.scrollTop = body.scrollHeight;
+  setTimeout(()=>{ row.querySelector('.bubble').innerHTML = html; if(after) after(); if(body) body.scrollTop=body.scrollHeight; }, 520);
+}
+function setIntents(list){
+  intentsEl.innerHTML='';
+  list.forEach(it=>{
+    const b=document.createElement('button');
+    b.className='intent '+(it.cls||'soft'); b.innerHTML=it.label;
+    b.addEventListener('click', it.act); intentsEl.appendChild(b);
+  });
+}
+const ROSTER = DATA.heroes.filter(h=>h.inRoster);
+function heroPickIntents(then){
+  setIntents(ROSTER.map(h=>({ label:h.name, act:()=>{ bub('right', h.name); then(h); } }))
+    .concat([{ label:'volver', cls:'back', act:hadaRoot }]));
+}
+function hadaRoot(){
+  setIntents([
+    { label:'Saber cómo van', act:()=>{ bub('right','Saber cómo van'); askKnow(); } },
+    { label:'Pedirte algo',   act:()=>{ bub('right','Pedirte algo'); askRequest(); } },
+    { label:'Explícame algo', act:()=>{ bub('right','Explícame algo'); askExplain(); } },
+  ]);
+}
+function askKnow(){
+  fairySays('¿De qué quieres que te hable?', ()=> setIntents([
+    { label:'Del pueblo', act:()=>{ bub('right','Del pueblo'); fairySays(DATA.hada.situation, hadaRoot); } },
+    { label:'De alguien', act:()=>heroPickIntents(h=>fairySays(DATA.hada.reports[h.id]||'No tengo nada claro de '+h.name+' ahora.', hadaRoot)) },
+    { label:'¿Qué hay arriba?', cls:'back', act:()=>{ bub('right','¿Qué hay en la Torre?'); fairySays('No puedo ver eso. La Torre no me habla — solo sé que llama.', hadaRoot); } },
+    { label:'volver', cls:'back', act:hadaRoot },
+  ]));
+}
+function askRequest(){
+  fairySays('Dime qué deseas. No todo lo aceptarán — son suyas las decisiones.', ()=> setIntents([
+    { label:'Enfoca a la comunidad', act:()=>{ bub('right','Enfoca a la comunidad'); focusCommunity(); } },
+    { label:'Enfoca a un héroe', act:()=>heroPickIntents(h=>fairySays('Le diré a '+h.name+' hacia dónde mirar. Si su alma lo permite, irá.', hadaRoot)) },
+    { label:'Guía a un héroe', act:()=>heroPickIntents(h=>fairySays('Hablaré con '+h.name+' con calma — para cuando el ánimo flaquea. <span class="cd">vuelve en 2 días</span>', hadaRoot)) },
+    { label:'Fusión…', cls:'danger', act:()=>{ bub('right','Una Fusión'); fairySays('Eso es una orden, no un consejo. Ven a la Cámara.', ()=>{ setTimeout(()=>{ openSheet('sheet-merge'); }, 400); }); } },
+    { label:'volver', cls:'back', act:hadaRoot },
+  ]));
+}
+function focusCommunity(){
+  fairySays('¿En qué los enfoco a todos?', ()=> setIntents(
+    [['Entrenar','entrenarse'],['Descansar','descansar'],['Socializar','acercarse'],['Sobrevivir','cuidarse']]
+    .map(([lbl,word])=>({ label:lbl, act:()=>{ bub('right',lbl); fairySays('Lo difundiré como un susurro: que el pueblo piense en '+word+'. Lo seguirán según quienes son.', hadaRoot); } }))
+    .concat([{ label:'volver', cls:'back', act:hadaRoot }])
+  ));
+}
+function askExplain(){
+  fairySays('¿El qué?', ()=> setIntents(
+    DATA.hada.rules.map(r=>({ label:r.label, act:()=>{ bub('right',r.label); fairySays(r.text, hadaRoot); } }))
+    .concat([{ label:'volver', cls:'back', act:hadaRoot }])
+  ));
+}
+let hadaOpened=false;
+function openHada(){
+  openSheet('sheet-hada');
+  if(!hadaOpened){
+    hadaOpened=true;
+    if(window.__catchupMins){
+      fairySays('Volviste. Mientras no estabas, el pueblo siguió: '+(DATA.catchup[0]||'la vida continuó, sin pausa.')+' Nada se detiene aquí.', hadaRoot);
+    } else {
+      fairySays('Aquí estoy. ¿Qué deseas hacer… o quieres que te explique algo?', hadaRoot);
+    }
+  }
+}
+
+// ── Lectura de un héroe (clic directo) — la Hada lo interpreta ───────────────
+function heroReading(h){
+  camTarget.lerp(h.group.position, 0.6); placeCamera();
+  openSheet('sheet-hada');
+  bub('right','¿Cómo está '+h.data.name+'?');
+  fairySays(DATA.hada.reports[h.data.id] || ('Veo a '+h.data.name+': '+(h.data.impression||'nada destaca ahora mismo.')), hadaRoot);
+  if(!hadaOpened) hadaOpened=true;
+}
+
+// ── Estructuras ──────────────────────────────────────────────────────────────
+function onPlace(k){
+  if(k==='shrine'){ invoke(); }
+  else if(k==='fusion'){ openSheet('sheet-merge'); }
+  else if(k==='torre'){ toast('<b>La Torre</b> — algo llama desde lo alto. Aún no se puede entrar.'); }
+  else if(k==='posada'){ toast('<b>Posada</b> — aquí descansan, comen y se cuentan cosas.'); }
+  else if(k==='campo'){ toast('<b>Campo de Entrenamiento</b> — crecen practicando. Tiene su techo y su riesgo.'); }
+}
+
+// ── Invocación (Shrine) — ritual con coste, héroe sin desarrollar ────────────
+let invokeIdx = 0;
+function invoke(){
+  const pool = DATA.heroes.filter(h=>!h.inRoster);
+  if(invokeIdx >= pool.length){ toast('<b>Shrine</b> — no queda esencia para invocar por ahora.'); return; }
+  const d = pool[invokeIdx++];
+  d.inRoster = true;
+  // destello del cristal
+  const cr = PLACES.shrine.crystal;
+  if(cr){ cr.material.emissiveIntensity = 4; setTimeout(()=>cr.material.emissiveIntensity=1.6, 350); }
+  spawnHero(d, heroes.length);
+  toast('<b>Ritual</b> — llega <b>'+d.name+'</b> ('+('★'.repeat(d.stars))+'). Cuesta esencia; vendrá sin desarrollar.');
+}
+
+// ── Roster ───────────────────────────────────────────────────────────────────
+function bustHTML(d){
+  const v = ROLE_VIS[d.role]||ROLE_VIS.archer;
+  let cap='';
+  if(v.kind==='helm') cap='<div class="b-helm"></div>';
+  else if(v.kind==='hood') cap='<div class="b-hood" style="--robe:'+v.armor+'"></div>';
+  else if(v.kind==='bandana') cap='<div class="b-bandana"></div>';
+  return '<div class="bust" style="--skin:'+v.skin+';--armor:'+v.armor+'"><div class="b-glow"></div>'+cap+
+    '<div class="b-head"><span class="b-eye l"></span><span class="b-eye r"></span></div><div class="b-torso"></div></div>';
+}
+const CLASS_ES = { warrior:'guerrero', mage:'mago', rogue:'pícaro', archer:'arquero' };
+function renderRoster(){
+  const grid = document.getElementById('roster-grid'); grid.innerHTML='';
+  DATA.heroes.filter(h=>h.inRoster).forEach(d=>{
+    const card = document.createElement('div'); card.className='hero-card';
+    card.innerHTML = '<div class="portrait">'+bustHTML(d)+'</div>'+
+      '<div class="hero-name">'+d.name+'</div>'+
+      '<div class="hero-class">'+(CLASS_ES[d.role]||d.role)+'</div>'+
+      '<div class="hero-stars">'+('★'.repeat(d.stars))+'</div>'+
+      '<div class="hero-future">lvl · stats — próximamente</div>';
+    card.addEventListener('click', ()=>{
+      const h = heroes.find(x=>x.data.id===d.id);
+      closeSheets();
+      if(h){ camTarget.lerp(h.group.position,0.7); placeCamera(); setTimeout(()=>heroReading(h),260); }
+    });
+    grid.appendChild(card);
+  });
+}
+document.getElementById('btn-roster').addEventListener('click', ()=>{ renderRoster(); openSheet('sheet-roster'); });
+
+// ── Merger / Cámara de Fusión ────────────────────────────────────────────────
+let sac=null, rec=null;
+function renderPicker(){
+  const pk = document.getElementById('merge-picker'); pk.innerHTML='';
+  DATA.heroes.filter(h=>h.inRoster && h.alive!==false).forEach(d=>{
+    const c=document.createElement('button'); c.className='pick-chip';
+    c.innerHTML=d.name+'<span class="ps">'+('★'.repeat(d.stars))+'</span>';
+    c.addEventListener('click', ()=>{
+      if(!sac || (sac && rec)){ sac=d; rec=null; }   // reinicia ciclo
+      else if(d.id!==sac.id){ rec=d; }
+      paintMerge();
+    });
+    pk.appendChild(c);
+  });
+}
+function slotFill(elId, emptyId, d, kind){
+  const slot=document.getElementById(elId), empty=document.getElementById(emptyId);
+  slot.querySelectorAll('.slot-name,.slot-stars,.bust-wrap').forEach(n=>n.remove());
+  if(d){ slot.classList.add('filled'); empty.style.display='none';
+    const w=document.createElement('div'); w.className='bust-wrap'; w.style.transform='scale(.8)'; w.innerHTML=bustHTML(d);
+    const nm=document.createElement('div'); nm.className='slot-name'; nm.textContent=d.name;
+    const st=document.createElement('div'); st.className='slot-stars'; st.textContent='★'.repeat(d.stars);
+    slot.appendChild(w); slot.appendChild(nm); slot.appendChild(st);
+  } else { slot.classList.remove('filled'); empty.style.display='block'; }
+}
+function paintMerge(){
+  slotFill('slot-sac','sac-empty',sac,'s');
+  slotFill('slot-rec','rec-empty',rec,'r');
+  const rx=document.getElementById('merge-reaction'), btn=document.getElementById('btn-do-merge');
+  if(sac && rec){
+    rx.innerHTML='<b>'+rec.name+'</b> recibirá lo que fue <b>'+sac.name+'</b> — un impulso <em>leve</em>, transferido a pérdida. La comunidad lo sentirá: los leales callan, los rebeldes lo resienten, los temerosos obedecen.';
+    btn.classList.add('ready');
+  } else {
+    rx.innerHTML='Elige a quién sacrificas y quién recibe. El valor se transfiere <em>a pérdida</em>: un impulso leve, nunca un atajo.';
+    btn.classList.remove('ready');
+  }
+}
+document.getElementById('btn-do-merge').addEventListener('click', ()=>{
+  if(!sac||!rec) return;
+  const victim = heroes.find(x=>x.data.id===sac.id);
+  // versión simbólica: el sacrificado se desvanece; el receptor pulsa.
+  if(victim){
+    victim.alive=false; victim.data.alive=false;
+    const vg=victim.group; let o=1;
+    const fade=setInterval(()=>{ o-=0.08; vg.traverse(m=>{ if(m.material){ m.material.transparent=true; m.material.opacity=Math.max(0,o);} });
+      if(o<=0){ clearInterval(fade); scene.remove(vg); } }, 40);
+  }
+  const recH = heroes.find(x=>x.data.id===rec.id);
+  if(recH){ const t=recH.group; t.scale.set(1.18,1.18,1.18); setTimeout(()=>t.scale.set(1,1,1), 500); }
+  sac.inRoster=false;
+  toast('<b>Fusión</b> — '+rec.name+' guarda ahora algo de '+sac.name+'. El pueblo calla.');
+  closeSheets();
+  sac=null; rec=null;
+});
+// abrir picker al abrir la Cámara
+const mergeSheet = document.getElementById('sheet-merge');
+new MutationObserver(()=>{ if(mergeSheet.classList.contains('open')){ renderPicker(); paintMerge(); } })
+  .observe(mergeSheet, { attributes:true, attributeFilter:['class'] });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bucle: tiempo real. El mundo vive (los héroes se mueven solos).
+// ─────────────────────────────────────────────────────────────────────────────
+const clock = new THREE.Clock();
+let worldT = 0;
+const SPOT_RADIUS = { campo:1.6, posada:1.8, plaza:2.2, shrine:1.6 };
+function spotPos(k){ const p=PLACES[k].pos; return p; }
+
+function updateHero(h, dt){
+  h.phase += dt*2.4;
+  // respiración / bob
+  h.group.position.y = Math.abs(Math.sin(h.phase))*0.06;
+  if(h.state==='idle' || h.state==='train' || h.state==='rest'){
+    h.timer -= dt;
+    if(h.state==='train'){ h.group.rotation.y += dt*0.6; }   // gira practicando
+    if(h.timer<=0) pickActivity(h);
+    return;
+  }
+  if(h.state==='walking'){
+    const dest = spotPos(h.target);
+    const r = SPOT_RADIUS[h.target]||1.6;
+    const tx = dest.x + Math.cos(h.phase*0.3 + h.speed)*r*0.6;
+    const tz = dest.z + Math.sin(h.phase*0.5 + h.speed)*r*0.6;
+    const dx = tx-h.group.position.x, dz = tz-h.group.position.z;
+    const d = Math.hypot(dx,dz);
+    if(d < 0.25){
+      h.state = (h.target==='campo')?'train':(h.target==='posada')?'rest':'idle';
+      h.timer = 3+Math.random()*5;
+    } else {
+      const sp = h.speed*dt*1.6;
+      h.group.position.x += dx/d*sp;
+      h.group.position.z += dz/d*sp;
+      h.group.rotation.y = Math.atan2(dx,dz);
+    }
+  }
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  worldT += dt;
+  // Hada flota
+  hada.position.y = 2.4 + Math.sin(worldT*1.3)*0.18;
+  hadaOrb.rotation.y += dt*0.8;
+  // cristal del shrine pulsa
+  const cr = PLACES.shrine.crystal; if(cr){ cr.rotation.y += dt*0.5; cr.position.y = 1.8 + Math.sin(worldT*1.6)*0.06; }
+  for(const h of heroes){ if(h.alive) updateHero(h, dt); }
+  renderer.render(scene, cam);
+}
+
+// ── Arranque ─────────────────────────────────────────────────────────────────
+function start(){
+  DATA.heroes.forEach((d,i)=>{ if(d.inRoster) spawnHero(d, heroes.filter(x=>true).length); });
+  // día simulado (cosmético)
+  const dnum = dayBase + (window.__catchupMins? Math.min(9, Math.floor(window.__catchupMins/3)) : 0);
+  document.getElementById('hud-day').firstChild.textContent = 'Día '+dnum;
+  if(window.__catchupMins){ document.getElementById('hud-sub').textContent = 'siguió sin ti'; }
+  animate();
+  setTimeout(()=>document.getElementById('loader').classList.add('hide'), 500);
+  // guarda timestamp al salir
+  window.addEventListener('beforeunload', ()=>localStorage.setItem(LS_KEY, String(Date.now())));
+}
+start();
+</script>
+</body>
+</html>
