@@ -13,8 +13,10 @@
  *   npx ts-node --project tsconfig.json scripts/devPreview.ts
  */
 
-import { rareWhisper }        from '../src/engine/mediator';
-import { readEmergentTraits } from '../src/engine/axes';
+import { rareWhisper, consultNPC, situationBrief } from '../src/engine/mediator';
+import { readEmergentTraits }                      from '../src/engine/axes';
+import { Exchange, ConversationTopic }             from '../src/engine/conversations';
+import { createSeeder }                            from '../src/engine/seeder';
 import {
   runPreviewSim, fallbackDialogue, DialogueLine,
   ROLES, INITIAL, TICKS,

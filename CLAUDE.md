@@ -42,6 +42,15 @@ Fuente: `preview/shrine-dev.html` generado por `scripts/devPreview.ts`
 - La hada (`mediator.ts`) es la única voz hacia el jugador.
 - El texto de diálogo es SOLO para el preview de dev, nunca en el juego real.
 
+## Fase 6 — Entidad interactiva (próxima)
+- La entidad (hada/mediador) ya existe en `src/engine/mediator.ts` con funciones pasivas.
+- Expandir para que responda a consultas del jugador sobre NPC específicos o el roster.
+- Reportar situaciones críticas proactivamente (no solo `rareWhisper`).
+- En el preview: panel "Consultar a la entidad" → resumen del estado actual.
+- **NOTA PENDIENTE:** "Chequear si dos mismos personajes en diferentes ambientes
+  se desarrollan diferente" — verificar que el mismo NPC seed en dos pueblos distintos
+  produce ejes divergentes con el tiempo (por las diferentes interacciones de contexto).
+
 ## Fase 5 — IA local on-device (diseñada, a implementar)
 Integrar `transformers.js` (https://github.com/huggingface/transformers.js) con
 `SmolLM2-360M-Instruct` (~200 MB cuantizado). Corre en el browser del jugador sin
