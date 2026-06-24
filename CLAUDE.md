@@ -10,12 +10,16 @@ Diseño completo en `docs/DISENO-VERTICAL-SLICE.md`. Primera versión jugable:
   **Roster**, **Cámara de Fusión (Merger simbólico)**, invocación en el Shrine,
   catch-up offline (el mundo no para). **Ambiente:** ciclo día/noche (sol + luna),
   muralla circular de fondo, antorchas en cada sitio + fogata central que se encienden
-  de noche. **Panel de dev** (botón "dev"): charlas con diálogo + 14 ejes por héroe
-  (barra=ahora, marca=al nacer → "lo que ha aprendido"). Token `__BETALIFE_DATA__`.
+  de noche. **Charlas EN VIVO:** los héroes se juntan (sobre todo en la plaza) y hablan
+  en tiempo real con burbujas de diálogo flotando sobre ellos (texto del pool real del
+  motor). NO hay log previo horneado. **Panel de dev** (botón "dev"): feed de charlas en
+  vivo de la sesión + 14 ejes por héroe (barra=ahora, marca=al nacer) + necesidades.
+  Token `__BETALIFE_DATA__`.
 - `scripts/buildSlice.ts` — corre `runPreviewSim()`, hornea héroes (ejes nacimiento+ahora,
-  emergentes, cues) + **voz CUALITATIVA de la Hada compuesta aquí** (sin números: usa la
-  deriva de ejes = "ha ido aprendiendo", `confidence` = miedo a la Torre; NO usa
-  `consultNPC`/`situationBrief` del motor porque mencionan conteos) + charlas con diálogo.
+  emergentes, cues, necesidades) + **voz CUALITATIVA de la Hada compuesta aquí** (sin
+  números: deriva de ejes = "ha ido aprendiendo", `confidence` = miedo a la Torre, y teje
+  las necesidades observables; NO usa `consultNPC`/`situationBrief` del motor porque
+  mencionan conteos) + **pool de diálogo por tema** (`dialoguePool`) para las charlas en vivo.
 - Build: `npx ts-node --project tsconfig.json scripts/buildSlice.ts`
 - **Pendiente:** verificación visual en navegador real (WebGL); conectar foco/guía a
   efectos reales; muerte emergente rara (hoy stub: voluntad de vivir = no mueren en la

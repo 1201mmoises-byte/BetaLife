@@ -145,25 +145,34 @@ const situation = hadaSituation(
 const reports: Record<string, string> = {};
 heroes.forEach((h) => { reports[h.id] = h.reading; });
 
-// ── 4. Charlas con diálogo (para el panel de dev) ────────────────────────────
+// ── 4. Pool de diálogo por tema (para charlas EN VIVO, no un log previo) ──────
+// El slice NO hornea charlas pasadas: genera las conversaciones en vivo y dibuja
+// líneas de este pool (texto real del motor: Gemini/fallback agrupado por tema).
 const cachePath = path.join(__dirname, '..', 'preview', 'dialogue-cache.json');
 const rawCache: Record<string, any> =
   fs.existsSync(cachePath) ? JSON.parse(fs.readFileSync(cachePath, 'utf8')) : {};
-const conversationsTotal = rawLog.length;
-const conversations = rawLog.slice(-100).map((e) => {
+const dialoguePool: Record<string, [string, string][]> = {};
+for (const e of rawLog) {
   const entry = rawCache[e.key];
   const lines: DialogueLine[] =
     entry?.lines ?? (Array.isArray(entry) ? entry : null) ?? fallbackDialogue(e);
-  return { tick: e.tick, a: e.aName, b: e.bName, topic: e.topic, intensity: +e.intensity.toFixed(2), lines };
-});
+  const a = lines.find((l) => l.speaker === 'a')?.text;
+  const b = lines.find((l) => l.speaker === 'b')?.text;
+  if (!a || !b) continue;
+  (dialoguePool[e.topic] ||= []);
+  if (dialoguePool[e.topic].length < 12 && !dialoguePool[e.topic].some((p) => p[0] === a)) {
+    dialoguePool[e.topic].push([a, b]);
+  }
+}
+const dialogueLines = Object.values(dialoguePool).reduce((acc, arr) => acc + arr.length, 0);
 
 // resumen offline (cualitativo, sin conteos)
-const catchup = conversations.slice(-5).reverse().slice(0, 3).map((c) => {
+const catchup = rawLog.slice(-5).reverse().slice(0, 3).map((e) => {
   const verb: Record<string, string> = {
     training: 'practicaron lado a lado', survival: 'se cuidaron las espaldas',
     social: 'se fueron acercando', hobby: 'compartieron un rato suyo', casual: 'hablaron sin prisa',
   };
-  return `${c.a} y ${c.b} ${verb[c.topic] || 'cruzaron palabras'}`;
+  return `${e.aName} y ${e.bName} ${verb[e.topic] || 'cruzaron palabras'}`;
 });
 
 const DATA = {
@@ -171,8 +180,7 @@ const DATA = {
   initial: INITIAL,
   heroes,
   hada: { situation, reports, rules },
-  conversations,
-  conversationsTotal,
+  dialoguePool,
   catchup,
 };
 
@@ -188,6 +196,6 @@ fs.writeFileSync(outPath, tpl.replace('__BETALIFE_DATA__', JSON.stringify(DATA))
 console.log('✓ slice.html generado:', JSON.stringify({
   heroes: heroes.length, roster: rosterHeroes.length,
   invocables: heroes.length - rosterHeroes.length,
-  conversations: conversations.length, difficulty: town.difficulty,
+  dialogueLines, difficulty: town.difficulty,
 }, null, 0));
 console.log('  héroes:', heroes.map((h) => `${h.name}(${h.role},${'★'.repeat(h.stars)})`).join(' '));
