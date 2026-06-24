@@ -9,6 +9,8 @@ export * from './experience';
 export * from './gacha';
 export * from './mediator';
 export * from './needs';
+export * from './world';
+export * from './dreams';
 export * from './stamps';
 export * from './nameGenerator';
 export * from './historyGenerator';

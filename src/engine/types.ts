@@ -26,6 +26,41 @@ export interface Stamp {
   sealedAt: number;   // timestamp ms (0 in pure generation)
 }
 
+// ── Mundo perdido (por SEMILLA, no por NPC) ──────────────────────────────────
+// Cada semilla engendra un mundo con su propia caída; el misterio del juego es
+// cómo terminó. Texto = canon del mundo (identidad), generado en world.ts.
+export interface WorldStory {
+  id: string;          // tipo de catástrofe (grieta/guerra/ruina/olvido/marea/sol-muerto)
+  name: string;        // nombre del mundo perdido
+  nature: string;      // qué clase de mundo era (una línea)
+  cataclysm: string;   // cómo terminó (el misterio central, una frase)
+  beats: string[];     // la "verdad" ordenada que la Torre revelará piso a piso
+  // Fragmentos impresionistas por profundidad de la catástrofe (de qué tan
+  // adentro estuvo el héroe, según sus estrellas).
+  shards: { core: string[]; secondary: string[]; peripheral: string[] };
+}
+
+// ── Identidad civil + lugar del héroe en la historia del mundo ───────────────
+export interface PastLife {
+  trade: string;   // oficio civil de antes (obrero, leñador, cocinero…)
+  place: string;   // de dónde venía (humilde, sembrado por semilla)
+}
+
+// Un recuerdo OLVIDADO del mundo perdido; aflora en sueños (dreams.ts).
+export interface Memory {
+  text: string;            // fragmento impresionista (no la verdad literal)
+  axis: keyof SoulAxes;    // eje del alma que ese recuerdo "remueve"
+  weight: number;          // 0..1: qué tan central/insistente es
+  surfaced: boolean;       // ¿ya afloró en un sueño?
+}
+
+// El lugar del héroe en la caída del mundo, derivado de sus estrellas.
+export interface HeroLore {
+  tier: 'core' | 'secondary' | 'peripheral' | 'mundane'; // 5★/4★/3★/1-2★
+  role: string;            // su papel en la historia (explica su saber de batalla)
+  memories: Memory[];      // fragmentos olvidados (vacío de "verdad" para fillers)
+}
+
 export interface NPC {
   id: string;
   seed: string;
@@ -35,10 +70,13 @@ export interface NPC {
   stars: StarRating;
   difficulty: number;   // 1-1000, never shown to player; comes from the TOWN (shared), not rolled per-NPC. Persisted so stars regenerate deterministically.
   rosterFloorAtSummon: number; // global roster progress when summoned; persisted so stars regenerate deterministically
+  worldSeed: string;    // semilla del MUNDO del que proviene (= town.seed). Persisted so el mundo (y su lore) se reproduce en regen.
   axes: SoulAxes;
   stamps: Stamp[]; // sealed chapters; stamps[0] is the birth stamp (acento de origen)
   history: string;
   observation: string;
+  pastLife: PastLife;   // quién era antes (vida civil, oculta tras el olvido)
+  lore: HeroLore;       // su lugar en la caída del mundo (por estrellas) + recuerdos
   level: number;
   floorReached: number;
   isAlive: boolean;
@@ -50,4 +88,6 @@ export interface GenerationOptions {
   stars?: StarRating;
   difficulty?: number;
   rosterFloor?: number; // deepest floor the roster has reached at summon time (meta-progression)
+  world?: WorldStory;   // mundo compartido del pueblo (de summonInTown); si falta se deriva de worldSeed
+  worldSeed?: string;   // semilla del mundo (= town.seed); por defecto = seed del NPC (mundo propio)
 }

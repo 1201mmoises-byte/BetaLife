@@ -1,6 +1,7 @@
-import { NPC } from './types';
+import { NPC, WorldStory } from './types';
 import { createSeeder } from './seeder';
 import { rollDifficulty } from './gacha';
+import { generateWorld } from './world';
 import { generateNPC } from './npcGenerator';
 
 /**
@@ -20,6 +21,7 @@ export interface Town {
   seed: string;
   difficulty: number;   // 1-1000, única para el pueblo; oculta al jugador
   rosterFloor: number;  // piso más profundo que el roster ha alcanzado (meta-progresión)
+  world: WorldStory;    // el mundo perdido del que vienen TODOS los héroes del pueblo
 }
 
 /**
@@ -28,8 +30,10 @@ export interface Town {
  * arranca en 0 y la capa de persistencia lo va subiendo conforme el roster sube.
  */
 export function createTown(seed: string, rosterFloor = 0): Town {
-  const difficulty = rollDifficulty(createSeeder(seed));
-  return { id: seed, seed, difficulty, rosterFloor };
+  const seeder = createSeeder(seed);
+  const difficulty = rollDifficulty(seeder);
+  const world = generateWorld(seeder);   // rama 'world' aislada → no perturba la dificultad
+  return { id: seed, seed, difficulty, rosterFloor, world };
 }
 
 /**
@@ -42,5 +46,7 @@ export function summonInTown(town: Town, index: number): NPC {
     seed: `${town.seed}:npc:${index}`,
     difficulty: town.difficulty,
     rosterFloor: town.rosterFloor,
+    world: town.world,      // todos los héroes del pueblo comparten el MISMO mundo
+    worldSeed: town.seed,   // persistido en el NPC para reproducir el mundo en regen
   });
 }

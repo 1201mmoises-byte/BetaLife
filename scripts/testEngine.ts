@@ -10,6 +10,10 @@ import { inspectNPC, revealExchange, setDevMode } from '../src/engine/debug';
 import { applyExperience, applyConversationNudges } from '../src/engine/experience';
 import { briefRoster, describeNPC, reportActivity, explainRule, relay, rareWhisper } from '../src/engine/mediator';
 import { createNeeds, tickNeeds, needsStatus, criticalNeed } from '../src/engine/needs';
+import { createTown, summonInTown } from '../src/engine/town';
+import { generateWorld } from '../src/engine/world';
+import { surfaceDream, dreamChance } from '../src/engine/dreams';
+import { StarRating } from '../src/engine/types';
 
 const SEEDS = [
   'world-alpha:1001',
@@ -498,4 +502,75 @@ console.log('\n=== La entidad (hada) — única voz al jefe, reactiva ===\n');
   // Comer restaura la saciedad.
   const fed = tickNeeds({ satiety: 0.1, energy: 0.6, health: 0.7 }, hero.axes, 'eat', 5);
   console.log(`  comer 5t restaura saciedad: ${fed.satiety > 0.1 ? 'PASS' : 'FAIL'} (0.1 → ${fed.satiety})`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mundo por semilla + lugar del héroe por estrellas + sueños
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  console.log('\n=== El mundo perdido (por semilla) ===\n');
+
+  // 1) Determinismo: misma semilla → mismo mundo (catástrofe + beats).
+  const wa = generateWorld(createSeeder('seed-omega'));
+  const wb = generateWorld(createSeeder('seed-omega'));
+  const worldDet = JSON.stringify(wa) === JSON.stringify(wb);
+  console.log(`  mundo determinista (misma semilla → mismo mundo): ${worldDet ? 'PASS' : 'FAIL'}`);
+  console.log(`    "${wa.name}" — ${wa.cataclysm}`);
+
+  // 2) Dos pueblos, misma semilla → mismo mundo; semillas distintas → distinto.
+  const t1 = createTown('villa-eco'), t2 = createTown('villa-eco'), t3 = createTown('villa-otra');
+  const sameWorld = JSON.stringify(t1.world) === JSON.stringify(t2.world);
+  const diffWorld = JSON.stringify(t1.world) !== JSON.stringify(t3.world);
+  console.log(`  misma semilla, dos pueblos → mismo mundo:        ${sameWorld ? 'PASS' : 'FAIL'}`);
+  console.log(`  semillas distintas → mundos distintos:           ${diffWorld ? 'PASS' : 'FAIL'}`);
+
+  // 3) Unicidad: variedad de catástrofes a lo largo de muchas semillas.
+  const kinds = new Set<string>();
+  for (let i = 0; i < 80; i++) kinds.add(generateWorld(createSeeder('uniq:' + i)).id);
+  console.log(`  variedad de catástrofes en 80 semillas:          ${kinds.size >= 4 ? 'PASS' : 'FAIL'} (${kinds.size} tipos: ${[...kinds].join(', ')})`);
+
+  console.log('\n=== Estrellas ↔ lugar en la historia + memorias ===\n');
+  const town = createTown('lore-town');
+  const tierByStar: Record<number, string> = { 1: 'mundane', 2: 'mundane', 3: 'peripheral', 4: 'secondary', 5: 'core' };
+  let tierOk = true, memOk = true;
+  for (const stars of [1, 2, 3, 4, 5] as StarRating[]) {
+    const npc = generateNPC({ seed: `lore-town:hero:${stars}`, difficulty: town.difficulty, world: town.world, worldSeed: town.seed, stars });
+    if (npc.lore.tier !== tierByStar[stars]) tierOk = false;
+    // memorias coherentes con la profundidad:
+    if (stars >= 3) {
+      const pool = town.world.shards[npc.lore.tier as 'core' | 'secondary' | 'peripheral'];
+      if (!npc.lore.memories.every((m) => pool.includes(m.text))) memOk = false;
+    } else {
+      // fillers: recuerdan su vida civil (oficio o lugar), no la catástrofe.
+      if (!npc.lore.memories.some((m) => m.text.includes(npc.pastLife.trade) || m.text.includes('de '))) memOk = false;
+    }
+    console.log(`  ${stars}★ → ${npc.lore.tier.padEnd(10)} | era ${npc.pastLife.trade}, de ${npc.pastLife.place}`);
+    console.log(`      papel: ${npc.lore.role}`);
+    console.log(`      recuerda: ${npc.lore.memories.map((m) => '«' + m.text + '»').join('  ')}`);
+  }
+  console.log(`  tier por estrellas (5★ core … 1-2★ mundane):     ${tierOk ? 'PASS' : 'FAIL'}`);
+  console.log(`  memorias coherentes con la profundidad:          ${memOk ? 'PASS' : 'FAIL'}`);
+
+  // pastLife reproducible por seed.
+  const pa = generateNPC({ seed: 'lore-town:hero:5', difficulty: town.difficulty, world: town.world, worldSeed: town.seed, stars: 5 });
+  const pb = generateNPC({ seed: 'lore-town:hero:5', difficulty: town.difficulty, world: town.world, worldSeed: town.seed, stars: 5 });
+  console.log(`  pastLife + lore reproducibles por seed:          ${JSON.stringify(pa.pastLife) === JSON.stringify(pb.pastLife) && JSON.stringify(pa.lore) === JSON.stringify(pb.lore) ? 'PASS' : 'FAIL'}`);
+
+  console.log('\n=== Sueños (la fuga del misterio) ===\n');
+  // Reproducible: misma "noche" + mismo NPC → mismo sueño (o ambos null).
+  const dreamerA = summonInTown(town, 5);
+  const dreamerB = summonInTown(town, 5);
+  const dA = surfaceDream(createSeeder('noche:7'), dreamerA);
+  const dB = surfaceDream(createSeeder('noche:7'), dreamerB);
+  const dreamDet = (dA?.text ?? null) === (dB?.text ?? null);
+  console.log(`  sueño reproducible (misma noche → mismo sueño):  ${dreamDet ? 'PASS' : 'FAIL'}`);
+
+  // Escala con estrellas: 5★ sueña más que 1★.
+  console.log(`  prob. de soñar: 1★ ${dreamChance({ stars: 1 } as any).toFixed(2)} < 5★ ${dreamChance({ stars: 5 } as any).toFixed(2)} → ${dreamChance({ stars: 1 } as any) < dreamChance({ stars: 5 } as any) ? 'PASS' : 'FAIL'}`);
+
+  // A lo largo de muchas noches, un héroe acaba aflorando recuerdos.
+  const sleeper = summonInTown(town, 5);
+  let surfaced = 0;
+  for (let i = 0; i < 60; i++) if (surfaceDream(createSeeder('n:' + i), sleeper)) surfaced++;
+  console.log(`  tras 60 noches afloran recuerdos:                ${surfaced > 0 ? 'PASS' : 'FAIL'} (${surfaced} sueños; ${sleeper.lore.memories.filter((m) => m.surfaced).length}/${sleeper.lore.memories.length} recuerdos despiertos)`);
 }
