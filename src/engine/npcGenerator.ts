@@ -54,13 +54,15 @@ export function generateNPC(options: GenerationOptions): NPC {
 export function regenerateNPC(
   seed: string,
   storedAxes: NPC['axes'],
-  partial: Partial<Pick<NPC, 'level' | 'floorReached' | 'isAlive' | 'stamps' | 'rosterFloorAtSummon'>>
+  partial: Partial<Pick<NPC, 'level' | 'floorReached' | 'isAlive' | 'stamps' | 'rosterFloorAtSummon' | 'difficulty'>>
 ): NPC {
   const seeder = createSeeder(seed);
   const rosterFloorAtSummon = partial.rosterFloorAtSummon ?? 0;
-  // Regenerate deterministically from the seed, matching generation order:
-  // difficulty → stars → culture → archetype.
-  const difficulty = rollDifficulty(seeder);
+  // Difficulty is a TOWN property: read the value persisted at summon time so the
+  // star roll reproduces exactly. Fall back to a per-seed roll only if it was
+  // never persisted (legacy saves). `rollDifficulty` uses an isolated branch, so
+  // whether or not it runs it never perturbs the culture/archetype/axes rolls.
+  const difficulty = partial.difficulty ?? rollDifficulty(seeder);
   const stars   = rollStars(seeder, difficulty, rosterFloorAtSummon);
   const culture = generateCulture(seeder);
   const archetype = pickArchetype(seeder);

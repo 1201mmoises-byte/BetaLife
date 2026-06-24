@@ -1,4 +1,4 @@
-import { SoulAxes, Stamp } from './types';
+import { SoulAxes, Stamp, StarRating } from './types';
 import { Seeder } from './seeder';
 import { softCeiling, sealIfBandCrossed } from './stamps';
 
@@ -31,6 +31,22 @@ export interface ExperienceResult {
 }
 
 const BASE_DELTA = 0.04; // movimiento base antes de filtros y techo suave
+
+/**
+ * SCAFFOLD — gancho estrellas → facilidad de progreso. NO se usa todavía.
+ *
+ * Diseño: las estrellas son el modificador POR-NPC de qué tan fácil/rápido
+ * progresa un personaje (la dificultad es del pueblo, no del NPC). Más estrellas
+ * = mayor multiplicador. Esta función queda CREADA y lista para cuando exista el
+ * sistema de stats/niveles/habilidades; hoy NO se conecta a `applyExperience` ni
+ * a ningún cálculo, porque aún no hay reglas de progreso que mover.
+ *
+ * Curva suave anclada por diseño (ajustable cuando se integre):
+ *   1★→1.00  2★→1.15  3★→1.30  4★→1.45  5★→1.60
+ */
+export function starProgressionMultiplier(stars: StarRating): number {
+  return 1 + (stars - 1) * 0.15;
+}
 
 // El eje que sella el birthStamp es el más estable de un alma — resiste cambio.
 const BIRTH_AXIS_RESISTANCE = 0.6; // ×0.6 del delta al eje firma de origen

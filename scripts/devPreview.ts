@@ -13,80 +13,27 @@
  *   npx ts-node --project tsconfig.json scripts/devPreview.ts
  */
 
-import { generateNPC }            from '../src/engine/npcGenerator';
-import { createSeeder }           from '../src/engine/seeder';
-import { rollConversation, CONVERSATION_COOLDOWN } from '../src/engine/conversations';
-import { applyConversationNudges }from '../src/engine/experience';
-import { rareWhisper }            from '../src/engine/mediator';
-import { readEmergentTraits }     from '../src/engine/axes';
-import { NPC, SoulAxes }          from '../src/engine/types';
+import { rareWhisper }        from '../src/engine/mediator';
+import { readEmergentTraits } from '../src/engine/axes';
+import {
+  runPreviewSim, fallbackDialogue, DialogueLine,
+  ROLES, INITIAL, TICKS,
+} from './previewSim';
 import * as fs   from 'fs';
 import * as path from 'path';
 
-// ── 1. POOL de NPCs ──────────────────────────────────────────────────────────
-// 4 en el roster inicial + 4 invocables. El rol solo decide el aspecto visual;
-// los datos (ejes, estampas, dificultad) son los reales del motor.
-const ROLES = ['warrior', 'mage', 'rogue', 'archer'];
-const POOL_SIZE = 8;
-const INITIAL = 4;
+// ── 1+2. Pool (dificultad de PUEBLO) + simulación de charlas ─────────────────
+// La simulación vive en previewSim.ts y la comparte generateDialogue.ts, así el
+// log y las claves de caché coinciden exactamente. Todos los NPC comparten una
+// sola dificultad de pueblo (modelo nuevo), no una por NPC.
+const { town, pool, roster, currentAxes, log: rawLog } = runPreviewSim();
 
-const pool: NPC[] = Array.from({ length: POOL_SIZE }, (_, i) =>
-  generateNPC({ seed: `shrine-pool:${i + 1}` }),
-);
-
-// ── 2. Simulación de charlas (solo el roster inicial convive) ────────────────
-const currentAxes: Record<string, SoulAxes> = {};
-pool.forEach(n => { currentAxes[n.id] = { ...n.axes }; });
-
-interface ExchangeRecord {
-  tick: number;
-  aId: string; aName: string;
-  bId: string; bName: string;
-  topic: string;
-  intensity: number;
-  nudgesA: Partial<Record<string, number>>;
-  nudgesB: Partial<Record<string, number>>;
-}
-
-const world = createSeeder('shrine-dev-preview');
-const cooldowns = new Map<string, number>();
-const log: ExchangeRecord[] = [];
-
-const roster = pool.slice(0, INITIAL);
-const pairs: [number, number][] = [];
-for (let i = 0; i < roster.length - 1; i++)
-  for (let j = i + 1; j < roster.length; j++)
-    pairs.push([i, j]);
-
-const TICKS = 3000;
-for (let t = 0; t < TICKS; t++) {
-  for (const [ai, bi] of pairs) {
-    const na = roster[ai], nb = roster[bi];
-    const key = na.id < nb.id ? `${na.id}|${nb.id}` : `${nb.id}|${na.id}`;
-    const cd = cooldowns.get(key) ?? 0;
-    if (cd > 0) { cooldowns.set(key, cd - 1); continue; }
-
-    const pa = { id: na.id, axes: currentAxes[na.id] };
-    const pb = { id: nb.id, axes: currentAxes[nb.id] };
-    const ex = rollConversation(world.branch(`t:${t}:${key}`), pa, pb, {
-      proximity: 0.9, cooldownRemaining: 0,
-    });
-
-    if (ex) {
-      cooldowns.set(key, CONVERSATION_COOLDOWN);
-      const ra = applyConversationNudges(currentAxes[na.id], na.stamps, ex.nudges.a);
-      const rb = applyConversationNudges(currentAxes[nb.id], nb.stamps, ex.nudges.b);
-      currentAxes[na.id] = ra.axes;
-      currentAxes[nb.id] = rb.axes;
-      log.push({
-        tick: t, aId: na.id, aName: na.name, bId: nb.id, bName: nb.name,
-        topic: ex.topic, intensity: ex.intensity,
-        nudgesA: ex.nudges.a as Record<string, number>,
-        nudgesB: ex.nudges.b as Record<string, number>,
-      });
-    }
-  }
-}
+// Diálogo IA horneado: leer la caché generada por generateDialogue.ts. Si falta
+// una clave (caché aún no generada), usar el fallback redactado para no romper.
+const cachePath = path.join(__dirname, '..', 'preview', 'dialogue-cache.json');
+const dialogueCache: Record<string, DialogueLine[]> =
+  fs.existsSync(cachePath) ? JSON.parse(fs.readFileSync(cachePath, 'utf8')) : {};
+const log = rawLog.map((e) => ({ ...e, dialogue: dialogueCache[e.key] ?? fallbackDialogue(e) }));
 
 // ── 3. Datos para el HTML ─────────────────────────────────────────────────────
 const whisperMsg = rareWhisper(roster.map(n => ({ ...n, axes: currentAxes[n.id] })));
@@ -108,7 +55,7 @@ const npcData = pool.map((n, i) => ({
   initial: i < INITIAL,
 }));
 
-const DATA = JSON.stringify({ npcs: npcData, log, whisper: whisperMsg, ticks: TICKS, initial: INITIAL }, null, 0);
+const DATA = JSON.stringify({ npcs: npcData, log, whisper: whisperMsg, ticks: TICKS, initial: INITIAL, townDifficulty: town.difficulty }, null, 0);
 
 // ── 4. HTML ───────────────────────────────────────────────────────────────────
 const html = /* html */`<!DOCTYPE html>
@@ -284,6 +231,17 @@ body { background:#05050d; overflow:hidden; font-family:Georgia, serif; }
 .nudge-neg { color:#c06060; }
 .no-exchanges { color:rgba(160,140,200,.25); font-size:11px; text-align:center; margin-top:24px; letter-spacing:1px; }
 
+/* ── Diálogo IA (burbujas alternadas A↔B) ── */
+.dlg { margin:6px 0 4px; display:flex; flex-direction:column; gap:5px; }
+.bubble { max-width:82%; padding:6px 9px; font-size:12px; line-height:1.35; border-radius:12px; position:relative; }
+.bubble .who { display:block; font-size:8px; letter-spacing:1px; text-transform:uppercase; opacity:.55; margin-bottom:1px; }
+.bubble.a { align-self:flex-start; background:rgba(40,32,70,.85); color:#e6dcff; border:1px solid rgba(120,90,200,.35); border-bottom-left-radius:3px; }
+.bubble.b { align-self:flex-end; background:rgba(28,40,60,.85); color:#dcecff; border:1px solid rgba(80,130,200,.35); border-bottom-right-radius:3px; text-align:right; }
+.dev-detail { margin-top:4px; }
+.dev-detail > summary { font-size:8px; letter-spacing:1px; text-transform:uppercase; color:rgba(160,140,200,.35); cursor:pointer; list-style:none; outline:none; }
+.dev-detail > summary::-webkit-details-marker { display:none; }
+.dev-detail[open] > summary { color:rgba(160,140,200,.55); }
+
 ::-webkit-scrollbar { width:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:#2e2050; border-radius:2px; }
@@ -384,7 +342,7 @@ body { background:#05050d; overflow:hidden; font-family:Georgia, serif; }
   <!-- LOG -->
   <div class="convo-log" id="convo-log">
     <div class="log-header">
-      <span class="log-title">Charlas de fondo</span>
+      <span class="log-title">Charlas de fondo · pueblo dif ${town.difficulty}</span>
       <span class="log-count" id="log-count"></span>
     </div>
     <div class="log-filters" id="log-filters"></div>
@@ -642,6 +600,7 @@ function renderLog(filterTopic){
 
   if(!entries.length){ container.innerHTML='<div class="no-exchanges">Sin charlas para este filtro</div>'; return; }
 
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   container.innerHTML=[...entries].reverse().map(e=>{
     const tc=TOPICS[e.topic];
     const nudgeLine=(name,nudges)=>{
@@ -651,14 +610,21 @@ function renderLog(filterTopic){
     };
     const bars=Math.round(e.intensity*8);
     const ibar='▮'.repeat(bars)+'▯'.repeat(8-bars);
+    const bubbles=(e.dialogue||[]).map(l=>{
+      const who=l.speaker==='b'?e.bName:e.aName;
+      return \`<div class="bubble \${l.speaker==='b'?'b':'a'}"><span class="who">\${esc(who)}</span>\${esc(l.text)}</div>\`;
+    }).join('');
     return \`<div class="exchange-entry" style="--tc:\${tc.color};">
       <div class="ex-header">
         <span class="topic-tag" style="--tc:\${tc.color};--tct:\${tc.textColor};">\${tc.label}</span>
         <span class="ex-names">\${e.aName} ↔ \${e.bName}</span>
         <span class="ex-intensity">\${ibar} \${e.intensity.toFixed(2)}</span>
       </div>
-      <div style="font-size:9px;color:rgba(160,140,200,.3);margin-bottom:3px;">\${tc.desc}</div>
-      \${nudgeLine(e.aName,e.nudgesA)}\${nudgeLine(e.bName,e.nudgesB)}
+      <div class="dlg">\${bubbles}</div>
+      <details class="dev-detail">
+        <summary>detalle dev · \${esc(tc.desc)}</summary>
+        \${nudgeLine(e.aName,e.nudgesA)}\${nudgeLine(e.bName,e.nudgesB)}
+      </details>
     </div>\`;
   }).join('');
 }

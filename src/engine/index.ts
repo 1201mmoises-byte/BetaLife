@@ -12,3 +12,4 @@ export * from './stamps';
 export * from './nameGenerator';
 export * from './historyGenerator';
 export * from './npcGenerator';
+export * from './town';

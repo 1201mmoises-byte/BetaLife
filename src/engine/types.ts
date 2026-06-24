@@ -33,7 +33,7 @@ export interface NPC {
   culture: Culture;
   originArchetypeId: string; // root of the soul (derived from seed, not persisted)
   stars: StarRating;
-  difficulty: number;   // 1-1000, never shown to player
+  difficulty: number;   // 1-1000, never shown to player; comes from the TOWN (shared), not rolled per-NPC. Persisted so stars regenerate deterministically.
   rosterFloorAtSummon: number; // global roster progress when summoned; persisted so stars regenerate deterministically
   axes: SoulAxes;
   stamps: Stamp[]; // sealed chapters; stamps[0] is the birth stamp (acento de origen)
