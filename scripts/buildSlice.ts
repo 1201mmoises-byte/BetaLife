@@ -18,7 +18,7 @@
 import { explainRule }                    from '../src/engine/mediator';
 import { readEmergentTraits, AXIS_KEYS }  from '../src/engine/axes';
 import { readBehavior, firstImpression }  from '../src/engine/behavior';
-import { createNeeds, tickNeeds, needsStatus, Activity } from '../src/engine/needs';
+import { createNeeds, tickNeeds, needsStatus, Activity, Needs } from '../src/engine/needs';
 import { SoulAxes }                        from '../src/engine/types';
 import { createSeeder }                    from '../src/engine/seeder';
 import {
@@ -35,10 +35,16 @@ function driftAmount(orig: SoulAxes, now: SoulAxes): number {
   return AXIS_KEYS.reduce((m, k) => m + Math.abs(now[k] - orig[k]), 0);
 }
 
-/** Lectura de un héroe como la diría la Hada: ánimo, aprendizaje, miedo a la Torre. */
-function hadaReading(name: string, orig: SoulAxes, now: SoulAxes, cues: string[]): string {
+/** Lectura de un héroe como la diría la Hada: ánimo, cuerpo, aprendizaje, Torre.
+ * Las necesidades (hambre/agotamiento/salud) entran como CONDUCTA observable —
+ * nunca como número. Es "tipo Sims pero oculto": el jugador lo percibe por ella. */
+function hadaReading(name: string, orig: SoulAxes, now: SoulAxes, cues: string[], needs: Needs): string {
   const s: string[] = [];
   if (cues[0]) s.push(cues[0]);
+
+  // estado físico (necesidades) traducido a algo observable
+  const phys = needsStatus(needs).filter((p) => p !== 'se le ve entero');
+  if (phys.length) { const p = phys[0]; s.push(p.charAt(0).toUpperCase() + p.slice(1) + '.'); }
 
   const { confidence: conf, optimism: opt, curiosity: cur, warmth, sociability: soc } = now;
 
@@ -125,7 +131,7 @@ const heroes = pool.map((n, i) => {
     impression: firstImpression(createSeeder('imp:' + n.id), now),
     axesOrig: orig,
     axesNow: now,
-    reading: hadaReading(n.name, orig, now, cues),
+    reading: hadaReading(n.name, orig, now, cues, needs),
     needs,
     needsStatus: needsStatus(needs),
   };

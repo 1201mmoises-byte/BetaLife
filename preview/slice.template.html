@@ -1139,7 +1139,7 @@ function renderCharlas(){
 }
 function renderStats(){
   const box=document.getElementById('dev-stats');
-  box.innerHTML='<div class="stat-hint">barra = ahora · marca blanca = al nacer (la distancia = lo que ha aprendido)</div>';
+  box.innerHTML='<div class="stat-hint">vista de dev (rayos-X) — el jugador nunca ve esto; solo lo percibe por la Hada y la conducta. barra = ahora · marca = al nacer.</div>';
   DATA.heroes.filter(h=>h.inRoster).forEach(h=>{
     let rows='';
     AXIS_ORDER.forEach(k=>{
