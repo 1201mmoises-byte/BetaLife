@@ -1182,6 +1182,17 @@ function renderCharlas(){
 function renderStats(){
   const box=document.getElementById('dev-stats');
   box.innerHTML='<div class="stat-hint">vista de dev (rayos-X) — el jugador nunca ve esto; solo lo percibe por la Hada y la conducta. barra = ahora · marca = al nacer.</div>';
+  // La "verdad" del mundo perdido (oculta al jugador; se filtra por sueños).
+  if(DATA.world){
+    box.insertAdjacentHTML('beforeend',
+      '<div class="stat-hero" style="border-color:#5a3aa0">'+
+      '<div class="stat-name">El mundo perdido: '+DATA.world.name+'</div>'+
+      '<div class="needs-read">'+DATA.world.nature+'</div>'+
+      '<div class="needs-read" style="color:#c8a8ff">'+DATA.world.cataclysm+'</div>'+
+      '<div class="stat-sub">cómo cayó (lo revelará la Torre)</div>'+
+      (DATA.world.beats||[]).map((b,i)=>'<div class="log-line"><span class="who">'+(i+1)+'.</span> '+b+'</div>').join('')+
+      '</div>');
+  }
   DATA.heroes.filter(h=>h.inRoster).forEach(h=>{
     let rows='';
     AXIS_ORDER.forEach(k=>{
@@ -1217,9 +1228,10 @@ document.getElementById('tab-stats').addEventListener('click', ()=>devTab('stats
 document.getElementById('btn-dev').addEventListener('click', ()=>{ renderCharlas(); renderStats(); openSheet('sheet-dev'); });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Charlas EN VIVO entre héroes: se juntan y hablan en tiempo real, con burbujas
-// sobre ellos. No hay log previo — el feed de dev se llena con lo de esta sesión.
-// El texto sale del pool real del motor (DATA.dialoguePool, por tema).
+// Charlas EN VIVO entre héroes: se juntan y hablan en tiempo real, con burbujas.
+// El texto se COMPONE aquí, en el navegador, a partir de la voz real de cada uno
+// (oficio de antes, sueños del mundo perdido, hambre, sitio). Sin Gemini, sin pool
+// previo: un micro-planner elige de qué hablan según su estado del momento.
 // ─────────────────────────────────────────────────────────────────────────────
 const speechLayer = document.getElementById('speech-layer');
 const speeches = [];
@@ -1227,7 +1239,7 @@ function say(hero, text){
   const el = document.createElement('div'); el.className='speech'; el.textContent=text;
   speechLayer.appendChild(el);
   requestAnimationFrame(()=>el.classList.add('show'));
-  speeches.push({ el, hero, ttl:2.8 });
+  speeches.push({ el, hero, ttl:3.0 });
 }
 const _sv = new THREE.Vector3();
 function updateSpeeches(dt){
@@ -1240,12 +1252,84 @@ function updateSpeeches(dt){
   }
 }
 
-const TOPICS = ['training','survival','social','hobby','casual'];
-function pickLinePair(topic){
-  const pool = (DATA.dialoguePool && DATA.dialoguePool[topic]) || [];
-  if(pool.length) return pool[Math.floor(Math.random()*pool.length)];
-  for(const t of TOPICS){ const p=DATA.dialoguePool && DATA.dialoguePool[t]; if(p&&p.length) return p[Math.floor(Math.random()*p.length)]; }
-  return ['…','…'];
+// Comida pobre del pueblo (para las quejas de hambre).
+const FOODS = ['papas','papa hervida','pan duro','sopa aguada','raíces','gachas frías'];
+// Bancos de charla por "beat" (de qué hablan). Alternan hablante 1 y 2. Huecos:
+// {1t}/{2t}=oficio de antes · {1p}/{2p}=lugar de antes · {food}=comida · {frag}=sueño.
+const BANKS = {
+  disoriented: [
+    ['¿Tú entiendes este sitio? Me desperté aquí y nada me suena.','Yo tampoco. Es como si me hubieran soltado dentro del sueño de otro.','¿Y esa torre? Da escalofríos.','No la mires mucho. Yo intento no pensarla.'],
+    ['¿Sabes qué está pasando, en serio?','Ni idea. Le pregunto a la luz esa y responde a medias.','Algo nos trajo hasta aquí. No recuerdo qué.','Nadie recuerda. Eso es lo que peor me sienta.'],
+  ],
+  pastlife: [
+    ['Yo era {1t}, ¿sabes? Antes. Creo.','¿{1t}? A mí me late que era {2t}… las manos lo recuerdan más que yo.','Qué cosa, extrañar algo que no terminas de ver.','Bienvenido al club.'],
+    ['Oye, ¿a qué te dedicabas tú? Allá.','{2t}. O eso me dice algo por dentro. ¿Y tú?','{1t}. Me vuelve a ratos, como un olor.','Sí… el olor es lo último que se va.'],
+  ],
+  hunger: [
+    ['Tengo un hambre… y lo único que hay es {food}.','Otra vez {food}. Odio este sitio.','Daría lo que fuera por una comida de verdad.','Da por hecho que ya lo diste.'],
+    ['¿Comiste? No aguanto otra ración de {food}.','Ni lo nombres, se me revuelve.','En {1p} al menos se comía caliente.','No me hagas recordar eso con el estómago vacío.'],
+  ],
+  tired: [
+    ['Estoy molido. No sé ni de qué, pero molido.','Aquí cansa hasta dormir. Sueños raros.','Me levanto más cansado que al acostarme.','Algo nos roba el descanso. No sé el qué.'],
+  ],
+  field: [
+    ['¿Vienes a "entrenar"? Mira el ejercicio: picar madera.','Ja. Como en casa, pero con público.','Al menos la madera no devuelve los golpes.','Eso lo dices hasta que te clavas una astilla.'],
+    ['¿Quieres ver esto? Llevo toda la mañana con el hacha.','¿Eso es entrenamiento o leña para la noche?','Las dos cosas, si me sale bien.','Práctico. Me caes bien.'],
+  ],
+  dream: [
+    ['Anoche soñé… {frag}.','¿Otra vez con eso? Yo no quiero soñar nada.','No lo elijo. Llega y ya.','Tú duerme. Yo vigilo, por si acaso.'],
+    ['¿A ti también te pasa? Sueño cosas que no viví. {frag}.','…a veces. No se lo cuento a nadie.','¿Crees que significan algo?','Creo que es mejor no saberlo.'],
+  ],
+  bond: [
+    ['Te noto más tranquilo desde que llegamos.','Será la compañía. Contigo cuesta menos.','Aquí casi todo da miedo. Casi.','Lo sé. Por eso me quedo cerca.'],
+  ],
+  idle: [
+    ['Hace frío hoy.','Sí. Bueno para no hacer nada y mirar el fuego.','¿Otra noche en vela?','Eso parece. Al menos no solo.'],
+  ],
+};
+function fillTokens(t,s1,s2,food,frag){
+  return t.split('{1t}').join(s1.data.trade||'alguien').split('{2t}').join(s2.data.trade||'alguien')
+          .split('{1p}').join(s1.data.place||'su tierra').split('{2p}').join(s2.data.place||'su tierra')
+          .split('{food}').join(food).split('{frag}').join(frag||'algo que no entendía');
+}
+// Micro-planner: elige de qué hablan según su estado del momento (idea minada de
+// AutoChatManager: cada quien trae algo "en la cabeza"). Devuelve líneas con su autor.
+const TIER_W = { core:4, secondary:3, peripheral:2, mundane:1 };
+function composeExchange(A,B){
+  const ns = h => h.data.needsStatus || [];
+  const hungry = h => ns(h).some(s=>/hambr|comer/i.test(s));
+  const tired  = h => ns(h).some(s=>/agotad|cansad|colapso/i.test(s));
+  const disor  = h => (h.data.axesNow ? h.data.axesNow.confidence : 0.5) < 0.45;
+  const warm   = h => (h.data.axesNow ? h.data.axesNow.warmth : 0.5) > 0.6;
+  const dreamy = h => h.data.memories && h.data.memories.length;
+  const atField= h => h.target==='campo';
+
+  const cands=[]; const add=(b,w)=>{ if(w>0) cands.push([b,w]); };
+  let dreamer=null;
+  if(dreamy(A)||dreamy(B)){
+    dreamer = !dreamy(A)?B : !dreamy(B)?A : ((TIER_W[A.data.tier]||1)>=(TIER_W[B.data.tier]||1)?A:B);
+    add('dream', TIER_W[dreamer.data.tier]||1);
+  }
+  add('hunger', (hungry(A)||hungry(B))?4:0);
+  add('tired',  (tired(A)||tired(B))?2:0);
+  add('disoriented', (disor(A)||disor(B))?3:0);
+  add('field',  (atField(A)||atField(B))?3:0);
+  add('pastlife',2);
+  add('bond',   (warm(A)&&warm(B))?2:0);
+  add('idle',1);
+
+  const total=cands.reduce((s,c)=>s+c[1],0);
+  let r=Math.random()*total, beat='idle';
+  for(const [b,w] of cands){ r-=w; if(r<0){ beat=b; break; } }
+
+  let s1=A, s2=B;
+  if(beat==='dream' && dreamer===B){ s1=B; s2=A; }
+  const frag = beat==='dream' ? dreamer.data.memories[Math.floor(Math.random()*dreamer.data.memories.length)] : null;
+  const food = FOODS[Math.floor(Math.random()*FOODS.length)];
+  const arr = BANKS[beat] || BANKS.idle;
+  const tmpl = arr[Math.floor(Math.random()*arr.length)];
+  const lines = tmpl.map((t,i)=>({ hero:(i%2===0)?s1:s2, text:fillTokens(t,s1,s2,food,frag) }));
+  return { beat, lines };
 }
 const liveChats = [];
 let socialTimer = 3;
@@ -1265,14 +1349,16 @@ function faceEachOther(A,B){
 function startConversation(A,B){
   A.state=B.state='talk'; A.partner=B; B.partner=A;
   faceEachOther(A,B);
-  const topic = TOPICS[Math.floor(Math.random()*TOPICS.length)];
-  const pair = pickLinePair(topic);
-  liveChats.unshift({ a:A.data.name, b:B.data.name, topic, lines:[{who:A.data.name,text:pair[0]},{who:B.data.name,text:pair[1]}] });
+  const { beat, lines } = composeExchange(A,B);
+  liveChats.unshift({ a:A.data.name, b:B.data.name, topic:beat, lines: lines.map(l=>({who:l.hero.data.name,text:l.text})) });
   if(liveChats.length>40) liveChats.pop();
   if(document.getElementById('sheet-dev').classList.contains('open') && devCurrent==='charlas') renderCharlas();
-  say(A, pair[0]);
-  setTimeout(()=>{ if(B.alive && B.state==='talk') say(B, pair[1]); }, 1500);
-  setTimeout(()=>{ endConversation(A); endConversation(B); }, 3600);
+  // reproducir turno por turno (~1.6s cada uno), liberar tras la última
+  const STEP=1650;
+  lines.forEach((l,idx)=>{
+    setTimeout(()=>{ if(l.hero.alive && l.hero.state==='talk') say(l.hero, l.text); }, idx*STEP);
+  });
+  setTimeout(()=>{ endConversation(A); endConversation(B); }, lines.length*STEP + 700);
 }
 function endConversation(h){
   if(h.state==='talk'){ h.state='idle'; h.timer=1.5+Math.random()*2.5; }

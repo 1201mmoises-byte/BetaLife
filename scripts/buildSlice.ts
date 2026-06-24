@@ -19,10 +19,11 @@ import { explainRule }                    from '../src/engine/mediator';
 import { readEmergentTraits, AXIS_KEYS }  from '../src/engine/axes';
 import { readBehavior, firstImpression }  from '../src/engine/behavior';
 import { createNeeds, tickNeeds, needsStatus, Activity, Needs } from '../src/engine/needs';
+import { surfaceDream }                    from '../src/engine/dreams';
 import { SoulAxes }                        from '../src/engine/types';
 import { createSeeder }                    from '../src/engine/seeder';
 import {
-  runPreviewSim, fallbackDialogue, DialogueLine, ROLES, INITIAL,
+  runPreviewSim, ROLES, INITIAL,
 } from './previewSim';
 import * as fs   from 'fs';
 import * as path from 'path';
@@ -112,6 +113,16 @@ function simulateNeeds(seed: string, axes: SoulAxes, role: string) {
   return n;
 }
 
+// Simula varias "noches" y devuelve el primer recuerdo que aflora (o null).
+// Da el toque de misterio: la Hada nota el sueño, el héroe puede mencionarlo.
+function firstDream(n: typeof pool[number]): string | null {
+  for (let i = 0; i < 10; i++) {
+    const d = surfaceDream(createSeeder('night:' + i), n);
+    if (d) return d.text;
+  }
+  return null;
+}
+
 // ── 3. Héroes horneados (con ejes nacimiento + ahora para el panel de stats) ──
 const heroes = pool.map((n, i) => {
   const orig = n.axes;
@@ -119,6 +130,9 @@ const heroes = pool.map((n, i) => {
   const role = ROLES[i % ROLES.length];
   const cues = readBehavior(createSeeder('cue:' + n.id), now, 3);
   const needs = simulateNeeds(n.id, now, role);
+  const dreamed = firstDream(n);
+  let reading = hadaReading(n.name, orig, now, cues, needs);
+  if (dreamed) reading += ` Y anoche soñó con ${dreamed}; no sabe qué significa, pero lo cargó todo el día.`;
   return {
     id: n.id,
     name: n.name,
@@ -131,9 +145,15 @@ const heroes = pool.map((n, i) => {
     impression: firstImpression(createSeeder('imp:' + n.id), now),
     axesOrig: orig,
     axesNow: now,
-    reading: hadaReading(n.name, orig, now, cues, needs),
+    reading,
     needs,
     needsStatus: needsStatus(needs),
+    // ── Voz del héroe (para componer charlas EN VIVO en el navegador) ──
+    trade: n.pastLife.trade,           // quién era antes (vida civil)
+    place: n.pastLife.place,
+    tier: n.lore.tier,                 // 5★ core … 1-2★ mundane
+    memories: n.lore.memories.map((m) => m.text),  // fragmentos del mundo perdido
+    dreamed,                           // recuerdo aflorado (o null)
   };
 });
 
@@ -145,26 +165,16 @@ const situation = hadaSituation(
 const reports: Record<string, string> = {};
 heroes.forEach((h) => { reports[h.id] = h.reading; });
 
-// ── 4. Pool de diálogo por tema (para charlas EN VIVO, no un log previo) ──────
-// El slice NO hornea charlas pasadas: genera las conversaciones en vivo y dibuja
-// líneas de este pool (texto real del motor: Gemini/fallback agrupado por tema).
-const cachePath = path.join(__dirname, '..', 'preview', 'dialogue-cache.json');
-const rawCache: Record<string, any> =
-  fs.existsSync(cachePath) ? JSON.parse(fs.readFileSync(cachePath, 'utf8')) : {};
-const dialoguePool: Record<string, [string, string][]> = {};
-for (const e of rawLog) {
-  const entry = rawCache[e.key];
-  const lines: DialogueLine[] =
-    entry?.lines ?? (Array.isArray(entry) ? entry : null) ?? fallbackDialogue(e);
-  const a = lines.find((l) => l.speaker === 'a')?.text;
-  const b = lines.find((l) => l.speaker === 'b')?.text;
-  if (!a || !b) continue;
-  (dialoguePool[e.topic] ||= []);
-  if (dialoguePool[e.topic].length < 12 && !dialoguePool[e.topic].some((p) => p[0] === a)) {
-    dialoguePool[e.topic].push([a, b]);
-  }
-}
-const dialogueLines = Object.values(dialoguePool).reduce((acc, arr) => acc + arr.length, 0);
+// ── 4. El mundo perdido (la "verdad" oculta, solo para el panel de dev) ───────
+// YA NO se hornea un pool de diálogo: las charlas se COMPONEN en vivo en el
+// navegador a partir de la voz real de cada héroe (oficio, sueños, hambre, sitio).
+// Sin Gemini, sin caché. El jugador nunca ve esta verdad; la intuye por los sueños.
+const world = {
+  name: town.world.name,
+  nature: town.world.nature,
+  cataclysm: town.world.cataclysm,
+  beats: town.world.beats,
+};
 
 // resumen offline (cualitativo, sin conteos)
 const catchup = rawLog.slice(-5).reverse().slice(0, 3).map((e) => {
@@ -180,7 +190,7 @@ const DATA = {
   initial: INITIAL,
   heroes,
   hada: { situation, reports, rules },
-  dialoguePool,
+  world,
   catchup,
 };
 
@@ -196,6 +206,7 @@ fs.writeFileSync(outPath, tpl.replace('__BETALIFE_DATA__', JSON.stringify(DATA))
 console.log('✓ slice.html generado:', JSON.stringify({
   heroes: heroes.length, roster: rosterHeroes.length,
   invocables: heroes.length - rosterHeroes.length,
-  dialogueLines, difficulty: town.difficulty,
+  difficulty: town.difficulty, world: world.name,
 }, null, 0));
-console.log('  héroes:', heroes.map((h) => `${h.name}(${h.role},${'★'.repeat(h.stars)})`).join(' '));
+console.log('  mundo perdido:', world.cataclysm);
+console.log('  héroes:', heroes.map((h) => `${h.name}(${h.role},${'★'.repeat(h.stars)},${h.tier})`).join(' '));

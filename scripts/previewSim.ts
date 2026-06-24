@@ -1,10 +1,10 @@
 /**
  * Simulación compartida del preview (dev tool).
  *
- * Tanto `devPreview.ts` (que monta el HTML) como `generateDialogue.ts` (que pide
- * el diálogo a la IA) corren ESTA misma simulación determinista, así el `log` y
- * las claves de caché coinciden exactamente entre ambos. Si divergieran, el
- * diálogo horneado no casaría con las charlas mostradas.
+ * `devPreview.ts` (el dev tool 2D legacy) corre ESTA misma simulación determinista
+ * para sus burbujas de charla. El slice 3D (buildSlice.ts) ya NO usa diálogo
+ * horneado: compone las charlas en vivo en el navegador (sin Gemini). El fallback
+ * de abajo queda para el dev tool 2D.
  *
  * Integra el modelo nuevo: una sola DIFICULTAD de pueblo (createTown) compartida
  * por todos los NPC invocados, en vez de que cada uno tire la suya.
