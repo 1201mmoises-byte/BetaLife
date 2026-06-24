@@ -282,11 +282,33 @@ const ROLE_VIS = {
 };
 const hx = (c)=>new THREE.Color(c);
 
+// Textura de grama (mota verde) para el piso exterior no jugable.
+function grassTexture(){
+  const c=document.createElement('canvas'); c.width=c.height=256;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#36502a'; ctx.fillRect(0,0,256,256);
+  const tones=['#3e5e2a','#314c22','#476b30','#2c441f','#52753a'];
+  for(let i=0;i<2200;i++){ ctx.fillStyle=tones[i%tones.length];
+    const x=Math.random()*256, y=Math.random()*256, s=Math.random()*3+1; ctx.fillRect(x,y,s,s); }
+  const t=new THREE.CanvasTexture(c); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(22,22);
+  return t;
+}
+// Resplandor radial (para el halo del sol).
+function radialTexture(){
+  const c=document.createElement('canvas'); c.width=c.height=128;
+  const ctx=c.getContext('2d');
+  const g=ctx.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,'rgba(255,255,255,1)'); g.addColorStop(0.28,'rgba(255,240,200,0.55)');
+  g.addColorStop(1,'rgba(255,220,170,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
+}
+
 // ── Escena, cámara isométrica, renderer ──────────────────────────────────────
 const app = document.getElementById('app');
 const scene = new THREE.Scene();
 scene.background = hx('#05050d');
-scene.fog = new THREE.FogExp2(0x05050d, 0.022);
+scene.fog = new THREE.FogExp2(0x05050d, 0.014);
 
 const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -340,6 +362,10 @@ const fill = new THREE.HemisphereLight(0x8a7ac0, 0x0c0a18, 0.6); scene.add(fill)
 const sunDisc = new THREE.Mesh(new THREE.SphereGeometry(2.4,16,16),
   new THREE.MeshBasicMaterial({ color:0xffe2a0 }));
 scene.add(sunDisc);
+// halo del sol (reflejo/resplandor) — sigue al disco
+let sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map:radialTexture(), color:0xffe0a0,
+  transparent:true, opacity:0.5, blending:THREE.AdditiveBlending, depthWrite:false, depthTest:false }));
+sunGlow.scale.set(26,26,1); sunDisc.add(sunGlow);
 const moonDisc = new THREE.Mesh(new THREE.SphereGeometry(1.6,16,16),
   new THREE.MeshBasicMaterial({ color:0xd8dcf0 }));
 scene.add(moonDisc);
@@ -350,6 +376,9 @@ const FOG_NIGHT = new THREE.Color(0x070613);
 const FOG_DAY   = new THREE.Color(0x35517e);
 let NIGHT = 0;                 // 0 = pleno día, 1 = plena noche (lo usan antorchas/fogata)
 let starMat = null;            // se asigna abajo
+let skyMat = null;             // domo de cielo (gradiente), se asigna abajo
+const SKYTOP_DAY=new THREE.Color(0x2563a8), SKYTOP_NIGHT=new THREE.Color(0x05050f);
+const SKYBOT_DAY=new THREE.Color(0xa6c4e0), SKYBOT_NIGHT=new THREE.Color(0x130f2a);
 function updateSky(tod){       // tod 0..1
   const ang = tod * Math.PI * 2;          // 0 = amanecer
   const el  = Math.sin(ang);              // elevación del sol -1..1
@@ -360,14 +389,19 @@ function updateSky(tod){       // tod 0..1
   moonDisc.position.set(Math.cos(ang+Math.PI)*44, Math.sin(ang+Math.PI)*46, -22);
   sun.position.copy(sunDisc.position).multiplyScalar(0.5).add(new THREE.Vector3(0,4,6));
   moon.position.copy(moonDisc.position).multiplyScalar(0.4);
-  // intensidades
-  sun.intensity = 1.6*day; moon.intensity = 0.5*NIGHT;
-  ambient.intensity = 0.5 + 0.6*day; fill.intensity = 0.35 + 0.45*day;
+  // intensidades (un poco más de luz en general)
+  sun.intensity = 2.1*day + 0.08; moon.intensity = 0.75*NIGHT;
+  ambient.intensity = 0.85 + 0.8*day; fill.intensity = 0.6 + 0.55*day;
   sunDisc.visible = el > -0.25; moonDisc.visible = Math.sin(ang+Math.PI) > -0.25;
+  if(sunGlow) sunGlow.material.opacity = 0.55*day;
   // cielo y niebla
   scene.background = SKY_NIGHT.clone().lerp(SKY_DAY, day);
   if(scene.fog) scene.fog.color.copy(FOG_NIGHT.clone().lerp(FOG_DAY, day));
-  if(starMat) starMat.opacity = 0.15 + 0.8*NIGHT;
+  if(skyMat){
+    skyMat.uniforms.top.value.copy(SKYTOP_NIGHT).lerp(SKYTOP_DAY, day);
+    skyMat.uniforms.bottom.value.copy(SKYBOT_NIGHT).lerp(SKYBOT_DAY, day);
+  }
+  if(starMat) starMat.opacity = 0.03 + 0.85*NIGHT;
 }
 
 // ── Estrellas en el cielo ────────────────────────────────────────────────────
@@ -388,13 +422,28 @@ function updateSky(tod){       // tod 0..1
   scene.add(new THREE.Points(g, m));
 })();
 
-// ── Suelo ────────────────────────────────────────────────────────────────────
+// ── Cielo: domo con gradiente (horizonte → cenit), transiciona día/noche ──────
+(function skyDome(){
+  skyMat = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite:false, fog:false,
+    uniforms:{ top:{ value:new THREE.Color(0x2563a8) }, bottom:{ value:new THREE.Color(0xa6c4e0) } },
+    vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: 'uniform vec3 top; uniform vec3 bottom; varying vec3 vP; void main(){ float h = clamp(normalize(vP).y*0.55 + 0.35, 0.0, 1.0); gl_FragColor = vec4(mix(bottom, top, h), 1.0); }',
+  });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(170, 32, 16), skyMat);
+  dome.renderOrder = -1; scene.add(dome);
+})();
+
+// ── Suelo: grama exterior (no jugable) + piso del pueblo dentro de la muralla ─
 (function ground(){
-  const geo = new THREE.CircleGeometry(20, 64);
-  const mat = new THREE.MeshStandardMaterial({ color:0x0c0b18, roughness:1, metalness:0 });
-  const m = new THREE.Mesh(geo, mat);
-  m.rotation.x = -Math.PI/2; m.receiveShadow = true;
-  scene.add(m);
+  // grama que se extiende a los lados, fuera de la torre y la muralla
+  const grass = new THREE.Mesh(new THREE.CircleGeometry(130, 80),
+    new THREE.MeshStandardMaterial({ map:grassTexture(), color:0x86a861, roughness:1, metalness:0 }));
+  grass.rotation.x = -Math.PI/2; grass.position.y = -0.05; grass.receiveShadow = true; scene.add(grass);
+  // piso del pueblo (dentro de la muralla, radio ~18). Leve metalness = un reflejo del sol.
+  const inner = new THREE.Mesh(new THREE.CircleGeometry(18, 64),
+    new THREE.MeshStandardMaterial({ color:0x18141f, roughness:0.85, metalness:0.12 }));
+  inner.rotation.x = -Math.PI/2; inner.position.y = 0; inner.receiveShadow = true; scene.add(inner);
   // anillo tenue alrededor del Shrine
   const ring = new THREE.Mesh(
     new THREE.RingGeometry(2.0, 3.4, 48),
