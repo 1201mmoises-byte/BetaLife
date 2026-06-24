@@ -131,31 +131,33 @@ export function runPreviewSim(): PreviewSim {
 // Se usa cuando NO hay GEMINI_API_KEY o la llamada falla, para que el preview
 // SIEMPRE muestre charla natural. Gemini, cuando hay clave, lo sobrescribe por
 // exchange. Determinista: elige variante por la clave del exchange.
+// Tono de recién llegados (sin pisos/combate ni cosas no vividas): desorientación,
+// el sitio, el frío, conocerse. Solo lo alimenta el dev tool 2D legacy.
 const FALLBACK: Record<string, [string, string][]> = {
   training: [
-    ['¿Volviste a probar la guardia alta en el último tramo?', 'Sí, pero pierdo el pie. Tú aguantas mejor la distancia, enséñame eso.'],
-    ['Esa finta tuya me costó el turno entero descifrarla.', 'Es puro ritmo. Cuento dos tiempos y entro al tercero, nada más.'],
-    ['No mido bien cuándo retroceder.', 'Yo tampoco antes. Mira los pies del otro, no las manos; ahí se nota.'],
+    ['¿Otra vuelta al campo? No sé ni cómo se sostiene esto.', 'Nadie sabe. Lo hacemos por no quedarnos quietos.'],
+    ['Me canso rápido. No estoy hecho para esto.', 'Yo tampoco. Pero algo hay que hacer mientras entendemos dónde estamos.'],
+    ['¿Tú crees que sirve de algo todo esto?', 'Ni idea. Al menos entra uno en calor.'],
   ],
   survival: [
-    ['El próximo piso no me da buena espina.', 'A mí tampoco. Vamos pegados y nadie cruza solo, ¿trato?'],
-    ['Si esto sale mal, ¿qué hacemos?', 'Retroceder sin vergüenza. Vivo y con miedo es mejor que valiente y frío.'],
-    ['¿Tú le tienes miedo a caer?', 'Todos los días. Por eso reviso dos veces antes de pisar.'],
+    ['Este sitio no me termina de gustar.', 'A mí tampoco. Pero estamos juntos, algo es algo.'],
+    ['¿Tú recuerdas cómo llegaste?', 'No. Y eso es lo que más me inquieta.'],
+    ['Si las cosas se ponen feas, ¿qué hacemos?', 'Quedarnos cerca. Solos no se aguanta.'],
   ],
   social: [
-    ['Te noto distinto desde que llegamos.', 'Será la compañía. Contigo cuesta menos estar.'],
-    ['Nunca me cuentas de dónde vienes.', 'Poco a poco. Hoy me quedo aquí, que ya es bastante.'],
-    ['¿Confías en la gente del pueblo?', 'En la mayoría no. En ti, un poco más cada día.'],
+    ['Te noto distinto desde que llegamos.', 'Será que aquí uno no sabe ni quién es.'],
+    ['Nunca me cuentas de dónde vienes.', 'Poco a poco. Apenas me acuerdo yo.'],
+    ['¿Confías en la gente de aquí?', 'En ti, un poco más cada día.'],
   ],
   hobby: [
-    ['Encontré una piedra rara cerca del río, mira.', 'Qué buena. Yo junto las que brillan; esta va a mi montón.'],
-    ['¿Sabes tallar madera?', 'Algo. Te enseño esta tarde si traes tu cuchillo.'],
-    ['Cuando no peleamos, ¿tú qué haces?', 'Miro el cielo y le invento nombres a las luces. Tonto, lo sé.'],
+    ['¿Qué hacías para distraerte, antes?', 'No me acuerdo bien. Algo con las manos, creo.'],
+    ['A veces me siento a mirar el fuego y ya.', 'Yo igual. Calma, aunque sea un rato.'],
+    ['Cuéntame algo, lo que sea.', 'No tengo gran cosa. Pero te escucho, si quieres hablar tú.'],
   ],
   casual: [
-    ['Hace frío hoy.', 'Sí. Bueno para no hacer nada y mirar el fuego un rato.'],
-    ['¿Otra noche en vela?', 'Eso parece. Al menos no estoy solo aguantándola.'],
-    ['No hace falta hablar, ¿sabes?', 'Lo sé. Por eso se está bien aquí contigo.'],
+    ['Hace frío hoy.', 'Sí. Bueno para arrimarse al fuego y callar.'],
+    ['¿Otra noche en vela?', 'Eso parece. Al menos no la paso solo.'],
+    ['No hace falta hablar, ¿sabes?', 'Lo sé. Se está bien así.'],
   ],
 };
 

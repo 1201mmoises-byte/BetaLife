@@ -662,20 +662,22 @@ let hadaBaseY = 2.8, hadaTimer = 0;
 const hadaTarget = new THREE.Vector3(P_PLAZA.x, 2.9, P_PLAZA.z);
 const HADA_SPOTS = [P_PLAZA, P_SHRINE, P_POSADA, P_CAMPO, P_FUSION, P_TORRE];
 function hadaRoam(dt){
-  hadaTimer -= dt;
-  if(hadaTimer <= 0){
-    hadaTimer = 4 + Math.random()*5;
-    if(Math.random() < 0.22){    // a veces sale sobre la grama, fuera de la muralla
-      const a = Math.random()*Math.PI*2;
-      hadaTarget.set(Math.cos(a)*22, 3.0 + Math.random()*1.6, Math.sin(a)*22);
-    } else {
-      const q = HADA_SPOTS[Math.floor(Math.random()*HADA_SPOTS.length)];
-      hadaTarget.set(q.x + (Math.random()-0.5)*3, 2.7 + Math.random()*1.5, q.z + (Math.random()-0.5)*3);
+  if(!hadaBusy){   // mientras atiende a un héroe, se queda quieta (solo flota/aletea)
+    hadaTimer -= dt;
+    if(hadaTimer <= 0){
+      hadaTimer = 4 + Math.random()*5;
+      if(Math.random() < 0.22){    // a veces sale sobre la grama, fuera de la muralla
+        const a = Math.random()*Math.PI*2;
+        hadaTarget.set(Math.cos(a)*22, 3.0 + Math.random()*1.6, Math.sin(a)*22);
+      } else {
+        const q = HADA_SPOTS[Math.floor(Math.random()*HADA_SPOTS.length)];
+        hadaTarget.set(q.x + (Math.random()-0.5)*3, 2.7 + Math.random()*1.5, q.z + (Math.random()-0.5)*3);
+      }
     }
+    hada.position.x += (hadaTarget.x - hada.position.x) * dt*0.5;
+    hada.position.z += (hadaTarget.z - hada.position.z) * dt*0.5;
+    hadaBaseY += (hadaTarget.y - hadaBaseY) * dt*0.5;
   }
-  hada.position.x += (hadaTarget.x - hada.position.x) * dt*0.5;
-  hada.position.z += (hadaTarget.z - hada.position.z) * dt*0.5;
-  hadaBaseY += (hadaTarget.y - hadaBaseY) * dt*0.5;
   hada.position.y = hadaBaseY + Math.sin(worldT*1.7)*0.06;
   hada.lookAt(cam.position.x, hada.position.y, cam.position.z);   // de frente a la cámara
   // aleteo
@@ -1254,103 +1256,122 @@ function updateSpeeches(dt){
 
 // Comida pobre del pueblo (para las quejas de hambre).
 const FOODS = ['papas','papa hervida','pan duro','sopa aguada','raíces','gachas frías'];
-// Armas por rol (para las charlas de entrenamiento: probar, comparar, rivalizar).
-const WEAPONS = {
-  warrior:['la espada','el hacha','la lanza'],
-  archer: ['el arco','la lanza','la jabalina'],
-  rogue:  ['las dagas','el estoque','los cuchillos'],
-  mage:   ['el báculo','la vara','los conjuros'],
-  default:['la espada','la lanza','el arco'],
+// Tono dominante de un héroe, leído de sus ejes REALES (axesNow). Hace que cada uno
+// hable EN SU VOZ y que el planner elija de qué hablar según quién es.
+function toneOf(h){
+  const ax = h.data.axesNow || {};
+  const g = (k)=> (ax[k]==null?0.5:ax[k]);
+  const cands = [
+    ['inseguro', 0.5-g('confidence')], ['curioso', g('curiosity')-0.5],
+    ['cálido', g('warmth')-0.5],       ['frío', 0.5-g('warmth')],
+    ['cauto', g('caution')-0.5],       ['solitario', 0.5-g('sociability')],
+    ['optimista', g('optimism')-0.5],  ['sombrío', 0.5-g('optimism')],
+  ];
+  let best='sereno', bv=0.12;   // si nada destaca lo suficiente, queda sereno
+  for(const [t,d] of cands){ if(d>bv){ bv=d; best=t; } }
+  return best;
+}
+// Cómo se ve ese tono al observarlo (para que se "lean" entre ellos = conocimiento propio).
+const TONE_OBS = {
+  inseguro:'dudando de ti mismo, sin razón', curioso:'preguntándolo todo, sin parar quieto',
+  'cálido':'fácil de tratar, te acercas sin esfuerzo', 'frío':'reservado, cuesta llegarte',
+  cauto:'siempre alerta, como si el suelo fuera a ceder', solitario:'en tu rincón, apartado',
+  optimista:'con el ánimo en alto, pese a todo', 'sombrío':'cargando algo que no sueltas',
+  sereno:'tranquilo, ni arriba ni abajo',
 };
-// Bancos de charla por "beat" (de qué hablan). Alternan hablante 1 y 2. Huecos:
-// {1t}/{2t}=oficio de antes · {1p}/{2p}=lugar de antes · {food}=comida · {frag}=sueño.
+// Bancos por "beat". Cada beat TRAZA a un dato real (estado, pasado, sueño,
+// personalidad, entorno) — nada inventado ni vivido fuera de aquí. Alternan hablante
+// 1 y 2. Huecos: {1t}/{2t}=oficio de antes · {1p}/{2p}=lugar · {food}=comida ·
+// {frag}=sueño real aflorado · {2obs}=cómo se ve el otro (su personalidad real).
 const BANKS = {
-  disoriented: [
-    ['¿Tú entiendes este sitio? Me desperté aquí y nada me suena.','Yo tampoco. Es como si me hubieran soltado dentro del sueño de otro.','¿Y esa torre? Da escalofríos.','No la mires mucho. Yo intento no pensarla.'],
-    ['¿Sabes qué está pasando, en serio?','Ni idea. Le pregunto a la luz esa y responde a medias.','Algo nos trajo hasta aquí. No recuerdo qué.','Nadie recuerda. Eso es lo que peor me sienta.'],
+  arrival: [
+    ['¿Tú entiendes este sitio? Desperté aquí y no recuerdo cómo.','Yo igual. Como si me faltara un pedazo de ayer.','¿Y esa torre de ahí?','Ni idea. No me da buena espina.'],
+    ['¿Sabes qué es este lugar?','Un pueblo, dicen. Antes yo no estaba aquí, eso seguro.','¿No te inquieta no recordar?','Un poco. Intento no escarbar.'],
+    ['Hay algo raro aquí, ¿lo notas?','Lo noto. Pero prefiero no preguntar tanto.','A mí no saber me pesa más que la verdad.','Allá cada quien con lo suyo.'],
   ],
   pastlife: [
-    ['Yo era {1t}, ¿sabes? Antes. Creo.','¿{1t}? A mí me late que era {2t}… las manos lo recuerdan más que yo.','Qué cosa, extrañar algo que no terminas de ver.','Bienvenido al club.'],
-    ['Oye, ¿a qué te dedicabas tú? Allá.','{2t}. O eso me dice algo por dentro. ¿Y tú?','{1t}. Me vuelve a ratos, como un olor.','Sí… el olor es lo último que se va.'],
+    ['Yo era {1t}, ¿sabes? Antes. Creo.','¿{1t}? Las manos lo recuerdan más que la cabeza.','¿Y tú?','{2t}, me parece. De {2p}. O eso quiero creer.'],
+    ['¿Tú de dónde venías?','De {1p}. Era {1t} ahí. ¿Tú?','{2t}. Lo siento lejos, como ajeno.','Sé bien lo que es eso.'],
   ],
   hunger: [
-    ['Tengo un hambre… y lo único que hay es {food}.','Otra vez {food}. Odio este sitio.','Daría lo que fuera por una comida de verdad.','Da por hecho que ya lo diste.'],
-    ['¿Comiste? No aguanto otra ración de {food}.','Ni lo nombres, se me revuelve.','En {1p} al menos se comía caliente.','No me hagas recordar eso con el estómago vacío.'],
+    ['Tengo un hambre… y solo hay {food}.','Otra vez {food}. Cómo extraño comer de verdad.','En {1p} al menos había de sobra.','No te tortures recordándolo.'],
+    ['¿Comiste algo?','{food}, lo de siempre. Ya ni sabe a nada.','Hay que aguantar, no queda otra.','Aguantar. La palabra de este sitio.'],
   ],
   tired: [
-    ['Estoy molido. No sé ni de qué, pero molido.','Aquí cansa hasta dormir. Sueños raros.','Me levanto más cansado que al acostarme.','Algo nos roba el descanso. No sé el qué.'],
-  ],
-  field: [
-    ['¿Vienes a "entrenar"? Mira el ejercicio: picar madera.','Ja. Como en casa, pero con público.','Al menos la madera no devuelve los golpes.','Eso lo dices hasta que te clavas una astilla.'],
-    ['¿Quieres ver esto? Llevo toda la mañana con el hacha.','¿Eso es entrenamiento o leña para la noche?','Las dos cosas, si me sale bien.','Práctico. Me caes bien.'],
-  ],
-  // Charlas de experiencia: probar armas, rivalizar sano, descubrir técnica.
-  training: [
-    ['Hoy voy a probar {1w}. ¿Tú con qué te quedas?','Yo le entro a {2w}. A ver a quién le luce más.','Trato hecho: el que pierda carga la leña.','Ya estás cargando, entonces.'],
-    ['Me paso a {1w}, lo de antes no me cuadraba.','Yo sigo con {2w}, le voy agarrando el modo.','Midámonos sin hacernos daño, ¿va?','Sin daño. Pero gano yo.'],
-    ['Oye, me di cuenta de algo: el golpe entra mejor cruzado que de frente.','¿Cruzado? A ver, enséñame eso.','Giras la cadera primero; el brazo va detrás.','…ah. Así pega casi solo. Qué cosa.'],
-    ['Por fin le hallé el ritmo a {1w}.','¿Sí? Yo todavía llego tarde al segundo tiempo.','Cuenta dos y entra al tercero. A mí me costó igual.','Voy a probar. Si me sale, te debo una.'],
-    ['Cada día me sale un poco mejor. Las manos aprenden solas.','Eso dicen. Yo aún me siento torpe.','Ayer también te veías torpe. Hoy menos. Cuenta.','…gracias. Lo necesitaba.'],
+    ['Estoy molido y casi no hice nada.','Aquí cansa hasta el aire. Y los sueños no dejan dormir.','¿Tú también sueñas raro?','Mejor no hablemos de eso.'],
   ],
   dream: [
-    ['Anoche soñé… {frag}.','¿Otra vez con eso? Yo no quiero soñar nada.','No lo elijo. Llega y ya.','Tú duerme. Yo vigilo, por si acaso.'],
-    ['¿A ti también te pasa? Sueño cosas que no viví. {frag}.','…a veces. No se lo cuento a nadie.','¿Crees que significan algo?','Creo que es mejor no saberlo.'],
+    ['Anoche soñé… {frag}.','¿Otra vez con eso? Yo no quiero soñar nada.','No lo elijo. Llega y ya.','Tú descansa. Yo me quedo despierto un rato.'],
+    ['Soñé algo que no viví. {frag}.','…a veces a mí también. No se lo cuento a nadie.','¿Será de antes?','Quién sabe. Mejor no escarbar.'],
   ],
   bond: [
-    ['Te noto más tranquilo desde que llegamos.','Será la compañía. Contigo cuesta menos.','Aquí casi todo da miedo. Casi.','Lo sé. Por eso me quedo cerca.'],
+    ['Te he estado mirando: {2obs}.','¿Tan claro se ve?','Aquí cada quien es como es. No pasa nada.','…gracias. No esperaba que alguien se fijara.'],
+    ['Llevas días así: {2obs}.','¿Y eso te molesta?','Para nada. Me hace fiarme un poco más.','Es mutuo, entonces.'],
+  ],
+  environment: [
+    ['Cae la noche otra vez.','Sí. Me acerco al fuego, ¿vienes?','Voy. Al menos da algo de calor.','Y compañía. No es poco aquí.'],
+    ['Hace frío esta noche.','Siempre, cuando uno no recuerda de dónde viene.','Qué cosa más triste dijiste.','Perdona. Se me escapó.'],
   ],
   idle: [
-    ['Hace frío hoy.','Sí. Bueno para no hacer nada y mirar el fuego.','¿Otra noche en vela?','Eso parece. Al menos no solo.'],
+    ['No hace falta hablar, ¿sabes?','No.','…','Se está bien así.'],
   ],
 };
-function fillTokens(t,s1,s2,food,frag,w1,w2){
+function fillTokens(t,s1,s2,food,frag){
   return t.split('{1t}').join(s1.data.trade||'alguien').split('{2t}').join(s2.data.trade||'alguien')
           .split('{1p}').join(s1.data.place||'su tierra').split('{2p}').join(s2.data.place||'su tierra')
-          .split('{1w}').join(w1||'la espada').split('{2w}').join(w2||'la lanza')
+          .split('{2obs}').join(TONE_OBS[toneOf(s2)]||'difícil de leer')
+          .split('{1obs}').join(TONE_OBS[toneOf(s1)]||'difícil de leer')
           .split('{food}').join(food).split('{frag}').join(frag||'algo que no entendía');
 }
-function pickWeapon(role){ const p=WEAPONS[role]||WEAPONS.default; return p[Math.floor(Math.random()*p.length)]; }
-// Micro-planner: elige de qué hablan según su estado del momento (idea minada de
-// AutoChatManager: cada quien trae algo "en la cabeza"). Devuelve líneas con su autor.
+// Micro-planner: elige de qué hablan según su ESTADO real y su PERSONALIDAD (idea
+// minada de AutoChatManager). Anti-repetición de beat y plantilla.
 const TIER_W = { core:4, secondary:3, peripheral:2, mundane:1 };
+let lastBeat=null, lastTmpl='';
 function composeExchange(A,B){
   const ns = h => h.data.needsStatus || [];
   const hungry = h => ns(h).some(s=>/hambr|comer/i.test(s));
   const tired  = h => ns(h).some(s=>/agotad|cansad|colapso/i.test(s));
   const disor  = h => (h.data.axesNow ? h.data.axesNow.confidence : 0.5) < 0.45;
-  const warm   = h => (h.data.axesNow ? h.data.axesNow.warmth : 0.5) > 0.6;
   const dreamy = h => h.data.memories && h.data.memories.length;
-  const atField= h => h.target==='campo';
+  const tA = toneOf(A), tB = toneOf(B);
+  const isTone = (t)=> tA===t || tB===t;
 
   const cands=[]; const add=(b,w)=>{ if(w>0) cands.push([b,w]); };
+  // sueño: un recuerdo REAL aflorado
   let dreamer=null;
   if(dreamy(A)||dreamy(B)){
     dreamer = !dreamy(A)?B : !dreamy(B)?A : ((TIER_W[A.data.tier]||1)>=(TIER_W[B.data.tier]||1)?A:B);
     add('dream', TIER_W[dreamer.data.tier]||1);
   }
+  // estado real
   add('hunger', (hungry(A)||hungry(B))?4:0);
   add('tired',  (tired(A)||tired(B))?2:0);
-  add('disoriented', (disor(A)||disor(B))?3:0);
-  add('training', (atField(A)||atField(B))?4:1);   // ganar experiencia: armas, técnica
-  add('field',  (atField(A)||atField(B))?2:0);      // el chiste seco de picar madera
-  add('pastlife',2);
-  add('bond',   (warm(A)&&warm(B))?2:0);
-  add('idle',1);
+  // recién llegados: desorientación (sube con inseguros/curiosos)
+  add('arrival', 3 + ((disor(A)||disor(B))?2:0) + (isTone('curioso')?1:0) + (isTone('inseguro')?1:0));
+  // su propio pasado (sube con curiosos)
+  add('pastlife', 2 + (isTone('curioso')?1:0));
+  // leerse entre ellos (vínculo): sube si alguien es cálido
+  add('bond', isTone('cálido')?3:1);
+  // entorno: solo pesa de noche (dato real del ciclo día/noche)
+  add('environment', (NIGHT>0.5)?2:1);
+  // silencio: para solitarios
+  add('idle', isTone('solitario')?2:1);
 
+  // anti-repetición: castiga repetir el último beat
+  for(const c of cands){ if(c[0]===lastBeat) c[1]*=0.25; }
   const total=cands.reduce((s,c)=>s+c[1],0);
-  let r=Math.random()*total, beat='idle';
+  let r=Math.random()*total, beat='arrival';
   for(const [b,w] of cands){ r-=w; if(r<0){ beat=b; break; } }
 
   let s1=A, s2=B;
   if(beat==='dream' && dreamer===B){ s1=B; s2=A; }
   const frag = beat==='dream' ? dreamer.data.memories[Math.floor(Math.random()*dreamer.data.memories.length)] : null;
   const food = FOODS[Math.floor(Math.random()*FOODS.length)];
-  // armas para las charlas de entrenamiento (distintas, para que la rivalidad tenga sentido)
-  let w1 = pickWeapon(s1.data.role), w2 = pickWeapon(s2.data.role);
-  if(w1===w2){ const alt=(WEAPONS[s2.data.role]||WEAPONS.default).filter(x=>x!==w1); if(alt.length) w2=alt[Math.floor(Math.random()*alt.length)]; }
-  const arr = BANKS[beat] || BANKS.idle;
-  const tmpl = arr[Math.floor(Math.random()*arr.length)];
-  const lines = tmpl.map((t,i)=>({ hero:(i%2===0)?s1:s2, text:fillTokens(t,s1,s2,food,frag,w1,w2) }));
+  const arr = BANKS[beat] || BANKS.arrival;
+  let tmpl = arr[Math.floor(Math.random()*arr.length)];
+  if(arr.length>1 && tmpl[0]===lastTmpl){ tmpl = arr[(arr.indexOf(tmpl)+1)%arr.length]; }
+  lastBeat=beat; lastTmpl=tmpl[0];
+  const lines = tmpl.map((t,i)=>({ hero:(i%2===0)?s1:s2, text:fillTokens(t,s1,s2,food,frag) }));
   return { beat, lines };
 }
 const liveChats = [];
@@ -1385,6 +1406,42 @@ function startConversation(A,B){
 function endConversation(h){
   if(h.state==='talk'){ h.state='idle'; h.timer=1.5+Math.random()*2.5; }
   h.partner=null;
+}
+
+// ── El héroe le pregunta a la Hada (guía, SOLO si preguntan) ──────────────────
+// Un recién llegado confundido camina hasta la Hada y le pregunta; ella responde
+// como mentora (sin números, sin spoilers del mundo). La pregunta se elige por su
+// personalidad real. La Hada se queda quieta durante el intercambio (hadaBusy).
+let hadaBusy = false, guideTimer = 9;
+const hadaSpeaker = { group: hada, alive:true, data:{ name:'La Hada' } };
+const FAIRY_QA = {
+  inseguro: { q:'¿Qué… qué hago ahora? No sé ni por dónde empezar.', a:'Respira. Es tu pueblo ahora; aquí estás a salvo. Come, descansa, conoce a los demás — lo demás llega solo.' },
+  curioso:  { q:'¿Qué es este lugar? ¿Y esa torre de allá?', a:'Es tu pueblo. La Torre… llama, lo sé; pero aún no es momento de subir. Lo sabrás cuando lo sea.' },
+  'frío':   { q:'¿Quién eres tú, y por qué habría de escucharte?', a:'Una voz que te acompaña, nada más. No haré las cosas por ti; pero si lo pides, te guío.' },
+  'default':{ q:'¿Dónde estoy? No recuerdo cómo llegué aquí.', a:'Pocos lo recuerdan. Algo te trajo a este pueblo. Con el tiempo, quizá un sueño te diga el resto.' },
+};
+function guidanceDirector(dt){
+  if(TUTORIAL) return;     // durante el onboarding la Hada la conduce el tutorial
+  guideTimer -= dt;
+  if(guideTimer > 0 || hadaBusy) return;
+  guideTimer = 14 + Math.random()*8;
+  const cand = heroes.filter(h=>h.alive && h.state==='idle' && !h.partner &&
+    (toneOf(h)==='inseguro' || toneOf(h)==='curioso' || (h.data.axesNow && h.data.axesNow.confidence<0.45)));
+  if(!cand.length) return;
+  const h = cand[Math.floor(Math.random()*cand.length)];
+  h.state='seekFairy'; h.seekT=0; hadaBusy=true;
+}
+function askFairy(h){
+  h.state='asking'; h.seekT=0;
+  h.group.rotation.y = Math.atan2(hada.position.x-h.group.position.x, hada.position.z-h.group.position.z);
+  const qa = FAIRY_QA[toneOf(h)] || FAIRY_QA.default;
+  say(h, qa.q);
+  setTimeout(()=>{ say(hadaSpeaker, qa.a); }, 1500);
+  liveChats.unshift({ a:h.data.name, b:'La Hada', topic:'pregunta a la Hada',
+    lines:[{who:h.data.name,text:qa.q},{who:'La Hada',text:qa.a}] });
+  if(liveChats.length>40) liveChats.pop();
+  if(document.getElementById('sheet-dev').classList.contains('open') && devCurrent==='charlas') renderCharlas();
+  setTimeout(()=>{ h.state='idle'; h.timer=2+Math.random()*3; hadaBusy=false; }, 4200);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1507,7 +1564,16 @@ function updateHero(h, dt){
   h.phase += dt*2.4;
   // respiración / bob
   h.group.position.y = Math.abs(Math.sin(h.phase))*0.06;
-  if(h.state==='talk'){ return; }   // parado, charlando (la conversación lo libera)
+  if(h.state==='talk' || h.state==='asking'){ return; }   // parado, hablando (lo libera el timeout)
+  if(h.state==='seekFairy'){   // camina hasta la Hada para preguntarle
+    const dx=hada.position.x-h.group.position.x, dz=hada.position.z-h.group.position.z;
+    const d=Math.hypot(dx,dz); h.seekT=(h.seekT||0)+dt;
+    if(d<2.2 || h.seekT>10){ askFairy(h); return; }
+    const sp=h.speed*dt*1.6;
+    h.group.position.x+=dx/d*sp; h.group.position.z+=dz/d*sp;
+    h.group.rotation.y=Math.atan2(dx,dz);
+    return;
+  }
   if(h.state==='idle' || h.state==='train' || h.state==='rest'){
     h.timer -= dt;
     if(h.state==='train'){ h.group.rotation.y += dt*0.6; }   // gira practicando
@@ -1581,6 +1647,7 @@ function animate(){
   }
   for(const h of heroes){ if(h.alive) updateHero(h, dt); }
   socialDirector(dt);      // los héroes se juntan y charlan en vivo
+  guidanceDirector(dt);    // un recién llegado confundido va a preguntarle a la Hada
   updateSpeeches(dt);      // burbujas de diálogo flotando sobre ellos
   renderer.render(scene, cam);
 }
