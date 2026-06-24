@@ -9,6 +9,7 @@ import { rollConversation, conversationAffinity, CONVERSATION_COOLDOWN } from '.
 import { inspectNPC, revealExchange, setDevMode } from '../src/engine/debug';
 import { applyExperience, applyConversationNudges } from '../src/engine/experience';
 import { briefRoster, describeNPC, reportActivity, explainRule, relay, rareWhisper } from '../src/engine/mediator';
+import { createNeeds, tickNeeds, needsStatus, criticalNeed } from '../src/engine/needs';
 
 const SEEDS = [
   'world-alpha:1001',
@@ -462,4 +463,39 @@ console.log('\n=== La entidad (hada) — única voz al jefe, reactiva ===\n');
   const wHealthy = rareWhisper(healthyRoster);
   console.log(`  roster sano        → "${wHealthy ?? '(silencio — correcto)'}"`);
   console.log(`    ${wHealthy === null ? 'PASS — sin alertas, silencio' : 'FAIL — no debería disparar'}`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Necesidades vitales (base Fase 2/3): hambre, agotamiento, salud.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  console.log('\n=== Necesidades vitales (base supervivencia) ===\n');
+  const hero = generateNPC({ seed: 'world-alpha:1001' });
+  const seeder = createSeeder('needs-test:' + hero.name);
+
+  // Determinismo: mismo seed/ejes → mismas necesidades iniciales.
+  const n1 = createNeeds(createSeeder('det'), hero.axes);
+  const n2 = createNeeds(createSeeder('det'), hero.axes);
+  const detNeeds = JSON.stringify(n1) === JSON.stringify(n2);
+  console.log(`  createNeeds determinista: ${detNeeds ? 'PASS' : 'FAIL'}`);
+
+  // Entrenar mucho sin descansar agota; descansar recupera.
+  const start = createNeeds(seeder, hero.axes);
+  const trained = tickNeeds(start, hero.axes, 'train', 60);
+  const drains = trained.energy < start.energy;
+  console.log(`  entrenar 60t agota energía: ${drains ? 'PASS' : 'FAIL'} (${start.energy} → ${trained.energy})`);
+  const rested = tickNeeds(trained, hero.axes, 'rest', 30);
+  const recovers = rested.energy > trained.energy;
+  console.log(`  descansar 30t recupera:    ${recovers ? 'PASS' : 'FAIL'} (${trained.energy} → ${rested.energy})`);
+
+  // Hambre extrema daña la salud; criticalNeed la detecta.
+  const starved = tickNeeds({ satiety: 1, energy: 1, health: 1 }, hero.axes, 'idle', 200);
+  const healthFell = starved.health < 1;
+  console.log(`  inanición larga daña salud: ${healthFell ? 'PASS' : 'FAIL'} (satiety=${starved.satiety} health=${starved.health})`);
+  console.log(`  estado observable          → "${needsStatus(starved).join('; ')}"`);
+  console.log(`  necesidad crítica          → ${criticalNeed(starved) ?? '(ninguna)'}`);
+
+  // Comer restaura la saciedad.
+  const fed = tickNeeds({ satiety: 0.1, energy: 0.6, health: 0.7 }, hero.axes, 'eat', 5);
+  console.log(`  comer 5t restaura saciedad: ${fed.satiety > 0.1 ? 'PASS' : 'FAIL'} (0.1 → ${fed.satiety})`);
 }

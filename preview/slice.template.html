@@ -168,6 +168,9 @@
   .ax-fill{position:absolute;top:0;bottom:0;left:0;border-radius:4px;}
   .ax-orig{position:absolute;top:-2px;width:2px;height:10px;background:rgba(255,255,255,.45);border-radius:1px;}
   .stat-hint{font-size:9px;color:var(--txt-dim);font-style:italic;text-align:center;margin:2px 0 12px;}
+  .stat-sub{font-size:8px;letter-spacing:2px;color:var(--violet-dim);text-transform:uppercase;
+       margin:10px 2px 5px;border-top:1px solid var(--line);padding-top:8px;}
+  .needs-read{font-size:9px;color:var(--txt-dim);font-style:italic;margin-top:4px;}
 
   /* loader */
   #loader{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
@@ -1147,9 +1150,16 @@ function renderStats(){
         '<span class="ax-hi">'+lab[1]+'</span></div>';
     });
     const em=(h.emergent&&h.emergent.length)?h.emergent.join(' · '):'sin rasgos marcados aún';
+    // necesidades vitales (base Fase 2)
+    const nb=(label,v,col)=>'<div class="ax"><span class="ax-lo">'+label+'</span><span class="ax-bar"><span class="ax-fill" style="width:'+Math.round(v*100)+'%;background:'+col+'"></span></span><span class="ax-hi"></span></div>';
+    const nd=h.needs||{satiety:1,energy:1,health:1};
+    const hCol=nd.health<0.3?'#b05050':nd.health<0.6?'#b0903a':'#5a8868';
+    const needsHtml='<div class="stat-sub">necesidades — base Fase 2</div>'+
+      nb('hambre',nd.satiety,'#c08a3a')+nb('energía',nd.energy,'#3a78b0')+nb('salud',nd.health,hCol)+
+      '<div class="needs-read">'+((h.needsStatus||[]).join(' · '))+'</div>';
     box.insertAdjacentHTML('beforeend',
       '<div class="stat-hero"><div class="stat-name">'+h.name+'<span class="st">'+('★'.repeat(h.stars))+'</span><span class="cl">'+(CLASS_ES[h.role]||h.role)+'</span></div>'+
-      '<div class="stat-emergent">'+em+'</div>'+rows+'</div>');
+      '<div class="stat-emergent">'+em+'</div>'+rows+needsHtml+'</div>');
   });
 }
 function devTab(which){

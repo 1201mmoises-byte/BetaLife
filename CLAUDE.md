@@ -21,6 +21,16 @@ Diseño completo en `docs/DISENO-VERTICAL-SLICE.md`. Primera versión jugable:
   efectos reales; muerte emergente rara (hoy stub: voluntad de vivir = no mueren en la
   demo). NO incluye Torre jugable ni combate (faltan stats).
 
+## Bases para Fase 2 (capa RPG) — EN CURSO
+- `src/engine/needs.ts` — necesidades vitales deterministas (estilo Sims): `satiety`
+  (hambre), `energy` (agotamiento), `health`. Floats 0..1 (1=bien), nunca se muestran
+  como número. API: `createNeeds(seeder, axes)`, `tickNeeds(needs, axes, activity, ticks)`,
+  `needsStatus(needs)` (lectura observable), `criticalNeed(needs)` (= gancho para la muerte
+  emergente de Fase 2/3). Puro, modulado por `discipline`. Exportado en `index.ts`.
+- NO conectado al juego en vivo aún. El slice lo hornea como snapshot (simula un día
+  determinista por héroe en `buildSlice.ts`) y lo muestra como barras en el panel de dev.
+- Test en `scripts/testEngine.ts` (bloque "Necesidades vitales").
+
 ## Fases completadas
 
 ### Fase A — Motor de pueblo + scaffold de estrellas ✓

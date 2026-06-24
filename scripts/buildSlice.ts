@@ -18,6 +18,7 @@
 import { explainRule }                    from '../src/engine/mediator';
 import { readEmergentTraits, AXIS_KEYS }  from '../src/engine/axes';
 import { readBehavior, firstImpression }  from '../src/engine/behavior';
+import { createNeeds, tickNeeds, needsStatus, Activity } from '../src/engine/needs';
 import { SoulAxes }                        from '../src/engine/types';
 import { createSeeder }                    from '../src/engine/seeder';
 import {
@@ -91,12 +92,27 @@ const rules = ['growth', 'death', 'promotion', 'start'].map((k) => ({
   k, label: RULE_LABELS[k] || k, text: explainRule(k),
 }));
 
+// Necesidades vitales (base Fase 2): simula un "día" determinista de actividades
+// para tener un snapshot variado por héroe. La capa real las correrá en vivo.
+function simulateNeeds(seed: string, axes: SoulAxes, role: string) {
+  const s = createSeeder('needs:' + seed);
+  const pool: Activity[] =
+    role === 'warrior' || role === 'archer' ? ['train','idle','rest','rest','eat','work','train']
+    : role === 'mage'                       ? ['work','idle','train','rest','rest','eat','idle']
+    :                                         ['idle','work','rest','eat','train','rest','idle'];
+  let n = createNeeds(s, axes);
+  const day = s.branch('day');
+  for (let t = 0; t < 110; t++) n = tickNeeds(n, axes, day.nextChoice(pool), 1);
+  return n;
+}
+
 // ── 3. Héroes horneados (con ejes nacimiento + ahora para el panel de stats) ──
 const heroes = pool.map((n, i) => {
   const orig = n.axes;
   const now = currentAxes[n.id];
   const role = ROLES[i % ROLES.length];
   const cues = readBehavior(createSeeder('cue:' + n.id), now, 3);
+  const needs = simulateNeeds(n.id, now, role);
   return {
     id: n.id,
     name: n.name,
@@ -110,6 +126,8 @@ const heroes = pool.map((n, i) => {
     axesOrig: orig,
     axesNow: now,
     reading: hadaReading(n.name, orig, now, cues),
+    needs,
+    needsStatus: needsStatus(needs),
   };
 });
 
