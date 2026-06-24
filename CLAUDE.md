@@ -45,6 +45,28 @@ Diseño completo en `docs/DISENO-VERTICAL-SLICE.md`. Primera versión jugable:
   determinista por héroe en `buildSlice.ts`) y lo muestra como barras en el panel de dev.
 - Test en `scripts/testEngine.ts` (bloque "Necesidades vitales").
 
+## Base narrativa — Mundo por semilla + estrellas↔catástrofe + sueños (motor) ✓
+Promueve el "Norte Narrativo" a base real y determinista del motor:
+- `src/engine/world.ts` — `generateWorld(seeder)` → cada SEMILLA engendra un mundo
+  único con su **catástrofe** (6 tipos: grieta/guerra/ruina/olvido/marea/sol-muerto) +
+  `beats` (la "verdad" que la Torre revelará) + `shards` por profundidad. `Town.world`
+  (en `town.ts`) lo comparten TODOS los héroes del pueblo. El jugador nunca ve la
+  verdad; solo se filtra por sueños. (En el slice: panel de dev = rayos-X.)
+- `src/engine/historyGenerator.ts` — `generatePastLife` (oficio civil + lugar por
+  arquetipo) y `generateHeroLore`: las **estrellas** deciden a qué profundidad de la
+  catástrofe estuvo el héroe (5★ núcleo · 4★ secundario · 3★ periférico · 1-2★
+  fillers sin pericia), con **memorias OLVIDADAS** sacadas de los `shards` del mundo
+  según el tier (los fillers recuerdan su vida civil, no la catástrofe).
+- `src/engine/dreams.ts` — `surfaceDream` aflora un recuerdo (raro, escala con
+  estrellas) = la fuga controlada del misterio. No conectado a un loop aún; lo
+  consume el preview/Hada ("anoche soñó con…").
+- `NPC` gana `worldSeed`, `pastLife`, `lore`; reproducibles en `regenerateNPC`.
+- Tests en `scripts/testEngine.ts` (mundo determinista/único, estrellas↔memorias,
+  pastLife y sueños reproducibles).
+- **Pendiente (RPG futuro):** la dificultad de semilla → pisos (monstruos/terreno/
+  acertijos/soporte) y la Torre revela los `beats`. La misma data por personaje
+  alimentará la IA on-device (Fase 5).
+
 ## Fases completadas
 
 ### Fase A — Motor de pueblo + scaffold de estrellas ✓
@@ -57,24 +79,19 @@ Diseño completo en `docs/DISENO-VERTICAL-SLICE.md`. Primera versión jugable:
 - `src/engine/types.ts` — `NPC.difficulty` = del pueblo, no por NPC.
 - `src/engine/index.ts` — exporta `town`.
 
-### Fase B — Diálogo IA en el dev preview ✓
+### Fase B — Diálogo IA en el dev preview ✓ (Gemini RETIRADO)
 - `scripts/previewSim.ts` — simulación compartida. `runPreviewSim()` devuelve
-  `{town, pool, roster, currentAxes, log}`. `fallbackDialogue(e)` para sin API key.
-  `dialogueKey()` = FNV-1a hash estable para claves de caché.
-- `scripts/generateDialogue.ts` — Gemini 2.5-flash via `curl` (respeta HTTPS_PROXY).
-  Formato de caché: `{ [key]: { via: 'gemini'|'fallback', lines: DialogueLine[] } }`.
-  Guardado incremental (después de CADA llamada). Modo por defecto = fill-missing
-  (solo regenera entradas ausentes o `via:'fallback'`). `--force` regenera todo.
-- `preview/dialogue-cache.json` — 63 entradas (18 gemini, 45 fallback). Commiteado.
-- `scripts/devPreview.ts` — lee `entry.lines` del nuevo formato de caché.
-  Burbujas A/B en el log de charlas. Importa de previewSim.ts.
+  `{town, pool, roster, currentAxes, log}`. `fallbackDialogue(e)` queda SOLO para el
+  dev tool 2D legacy (`devPreview.ts`).
+- **Gemini eliminado** (free-tier diminuto): borrados `scripts/generateDialogue.ts`,
+  `preview/dialogue-cache.json` y el workflow. El slice 3D ya NO usa diálogo horneado:
+  **compone las charlas en vivo en el navegador** (ver Fase 1, abajo), ancladas en la
+  voz real de cada héroe (oficio/sueños/hambre/sitio). Sin API, sin límites.
 
-### Fase C — Auto-generación incremental via GitHub Actions ✓
-- `.github/workflows/dialogue-gen.yml` — corre diariamente 4 AM UTC + en push a
-  `main` si cambian `src/engine/**` o `scripts/previewSim.ts`.
-  Genera dialogue → rebuild preview → commit → deploy a gh-pages. Todo automático.
-- **Secret necesario:** repo → Settings → Secrets and variables → Actions →
-  New secret → nombre `GEMINI_API_KEY`.
+### Fase C — ~~Auto-generación via GitHub Actions~~ RETIRADA
+- `.github/workflows/dialogue-gen.yml` ELIMINADO junto con Gemini. El `GEMINI_API_KEY`
+  ya no se usa. (Ideas minadas de Sentient-NPC / AutoChatManager: offline-first,
+  estado/plan por personaje, round-robin — aplicadas al compositor determinista.)
 
 ## Preview publicado
 URL: `https://raw.githack.com/1201mmoises-byte/BetaLife/gh-pages/index.html`
@@ -109,8 +126,7 @@ Archivos futuros: `src/ai/localDialogue.ts`, `src/ai/playerContext.ts`.
 
 ## Comandos frecuentes
 ```bash
-# Generar diálogo IA (fill-missing, rellena fallback con Gemini si hay clave)
-GEMINI_API_KEY=xxx npx ts-node --project tsconfig.json scripts/generateDialogue.ts
+# (Gemini retirado: las charlas del slice 3D se componen en vivo, sin API)
 
 # Regenerar preview HTML (dev tool 2D)
 npx ts-node --project tsconfig.json scripts/devPreview.ts
@@ -128,6 +144,8 @@ npx tsc --noEmit
 ## Notas técnicas importantes
 - `npm test` falla con Node 22 + `--loader ts-node/esm` (cycle ESM bug). Usar
   `npx ts-node --project tsconfig.json scripts/testEngine.ts` en cambio.
-- Gemini API: `gemini-2.0-flash` tiene `limit:0` en este proyecto. Usar `gemini-2.5-flash`.
-- HTTP via `curl`, no `fetch` global de Node (no honra HTTPS_PROXY en este entorno).
-- `groq.com` y `openai.com` están bloqueados por el proxy. Solo Gemini alcanzable.
+- **Gemini retirado** del flujo de charlas (free-tier muy chico). El slice compone
+  las charlas en vivo de forma determinista; no se llama a ninguna API en el build.
+- La meta on-device (Fase 5) sustituye a Gemini a futuro: `transformers.js` +
+  SmolLM2 en el navegador, alimentado por el mismo contexto por personaje
+  (world+lore+pastLife+needs+sitio).

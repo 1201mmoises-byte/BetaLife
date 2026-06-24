@@ -216,15 +216,29 @@ el ancla de voluntad de vivir. NO requiere la capa completa de stats (esa es par
 
 ---
 
-## NORTE NARRATIVO (contexto — NO se construye aún)
+## NORTE NARRATIVO (✓ ahora BASE del motor)
 
 Cada semilla es un mundo con su propia historia. Los héroes tuvieron **vidas completas**
 (obreros, leñadores, cocineros — no sólo guerreros). Ese mundo *terminó* por alguna catástrofe,
 y la **Torre repara esos errores poco a poco**: cada piso es un fragmento de cómo su mundo
 padeció — invasión de monstruos, guerras entre países, una ruina que oculta algo. El misterio
-("¿por qué cayó su mundo?") es el motor de querer subir. Implicación de diseño que ya refuerza
-el slice: los héroes tienen **pasados civiles** → más "vidas propias" (conecta con `history` /
-`originArchetype` del motor). Muy poco definido; se mantiene como Norte, no como tarea.
+("¿por qué cayó su mundo?") es el motor de querer subir.
+
+**Implementado en el motor (determinista):**
+- **Cada semilla = un mundo único** con su catástrofe (`src/engine/world.ts`: grieta,
+  guerra, ruina, plaga del olvido, marea, sol muerto) + `beats` (la verdad que la Torre
+  revelará). `Town.world` lo comparten todos los héroes del pueblo.
+- **Las estrellas codifican la conexión con el fin del mundo:** 5★ en el núcleo de la
+  catástrofe · 4★ secundarios · 3★ periféricos · 1-2★ *fillers* (gente común, casi sin
+  pericia de batalla — por eso los de baja estrella saben poco de combate).
+- **Olvido + sueños:** al llegar al pueblo OLVIDAN su mundo (de ahí el misterio), pero
+  algunos sueños afloran fragmentos (`src/engine/dreams.ts`). Los fillers sueñan su vida
+  civil; los de núcleo, lo más central y ominoso.
+- **Pasado civil** (`pastLife`: oficio + lugar) por arquetipo → "vidas propias".
+
+La **dificultad de semilla** (ya existente) alimentará el RPG de pisos (monstruos, nivel,
+terreno, acertijos, soporte aliado) cuando se construya la generación de pisos. Conclusión
+de diseño: **la historia de cada persona da valor a conocer tu propio mundo.**
 
 ---
 
