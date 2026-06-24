@@ -14,7 +14,14 @@ Diseño completo en `docs/DISENO-VERTICAL-SLICE.md`. Primera versión jugable:
   en tiempo real con burbujas de diálogo flotando sobre ellos (texto del pool real del
   motor). NO hay log previo horneado. **Panel de dev** (botón "dev"): feed de charlas en
   vivo de la sesión + 14 ejes por héroe (barra=ahora, marca=al nacer) + necesidades.
-  Token `__BETALIFE_DATA__`.
+  Token `__BETALIFE_DATA__`. **Onboarding (tutorial):** el pueblo arranca VACÍO
+  (`start()` pone `inRoster=false` a todos) y la Hada conduce paso a paso —
+  `startTutorial()`→`tutDoSummon()`×4 (invocar los primeros 4, anillo dorado de
+  resalte en el sitio) → `tutExplain()`/`tutTryAsk()` (única voz, sin números;
+  prueba a preguntar por uno) → `tutFusionIntro()` + `tutAfterFusion()` (obliga a
+  sentir UN Eco/Merger). Durante el tutorial `body.tut` oculta cierres/HUD y
+  `doPick` deja el mundo inerte salvo la acción pedida. Termina en `tutDone()`.
+  Corre en cada carga (el roster no se persiste).
 - `scripts/buildSlice.ts` — corre `runPreviewSim()`, hornea héroes (ejes nacimiento+ahora,
   emergentes, cues, necesidades) + **voz CUALITATIVA de la Hada compuesta aquí** (sin
   números: deriva de ejes = "ha ido aprendiendo", `confidence` = miedo a la Torre, y teje

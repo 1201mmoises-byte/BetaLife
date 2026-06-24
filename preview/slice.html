@@ -189,6 +189,9 @@
   #loader.hide{opacity:0;pointer-events:none;}
   #loader .pulse{animation:lp 1.6s ease-in-out infinite;}
   @keyframes lp{0%,100%{opacity:.35;}50%{opacity:1;}}
+
+  /* durante el tutorial: nada de escapar — la Hada conduce paso a paso */
+  body.tut .sheet-close, body.tut .sheet-grip, body.tut .hud-btn{ display:none; }
 </style>
 </head>
 <body>
@@ -865,6 +868,13 @@ function panBy(sx, sy){
 }
 function doPick(e){
   pointerToScene(e);
+  if(TUTORIAL){
+    // sólo responden la Hada y la acción que el tutorial está pidiendo
+    if(ray.intersectObject(hada, true).length){ openSheet('sheet-hada'); return; }
+    if(tutStep==='summon' && pickPlace()==='shrine'){ tutDoSummon(); return; }
+    if(tutStep==='fusion' && pickPlace()==='fusion'){ openSheet('sheet-merge'); return; }
+    return;
+  }
   if(ray.intersectObject(hada, true).length){ openHada(); return; }
   const h = pickHero(); if(h){ heroReading(h); return; }
   const p = pickPlace(); if(p){ onPlace(p); return; }
@@ -993,6 +1003,7 @@ function askExplain(){
 let hadaOpened=false;
 function openHada(){
   openSheet('sheet-hada');
+  if(TUTORIAL) return;   // el tutorial ya conduce el hilo; no lo pisamos
   if(!hadaOpened){
     hadaOpened=true;
     if(window.__catchupMins){
@@ -1022,14 +1033,19 @@ function onPlace(k){
 }
 
 // ── Invocación (Shrine) — ritual con coste, héroe sin desarrollar ────────────
-function invoke(){
+function summonNext(){
   const d = DATA.heroes.find(h=>!h.inRoster);   // siguiente del pool sin invocar
-  if(!d){ toast('<b>Shrine</b> — no queda esencia para invocar por ahora.'); return; }
+  if(!d) return null;
   d.inRoster = true;
-  // destello del cristal
-  const cr = PLACES.shrine.crystal;
+  const cr = PLACES.shrine.crystal;             // destello del cristal
   if(cr){ cr.material.emissiveIntensity = 4; setTimeout(()=>cr.material.emissiveIntensity=1.6, 350); }
   spawnHero(d, heroes.length);
+  return d;
+}
+function invoke(){
+  if(TUTORIAL) return;   // durante el tutorial la invocación la guía la Hada
+  const d = summonNext();
+  if(!d){ toast('<b>Shrine</b> — no queda esencia para invocar por ahora.'); return; }
   toast('<b>Ritual</b> — llega <b>'+d.name+'</b> ('+('★'.repeat(d.stars))+'). Cuesta esencia; vendrá sin desarrollar.');
   // la Hada se entera en el acto: si su chat está abierto, lo anuncia
   if(document.getElementById('sheet-hada').classList.contains('open')){
@@ -1120,6 +1136,7 @@ document.getElementById('btn-do-merge').addEventListener('click', ()=>{
   toast('<b>Eco</b> — '+rec.name+' guarda ahora el eco de '+sac.name+'. El pueblo calla.');
   closeSheets();
   sac=null; rec=null;
+  if(TUTORIAL) tutAfterFusion();   // el tutorial cierra con esta primera fusión
 });
 // abrir picker al abrir la Cámara
 const mergeSheet = document.getElementById('sheet-merge');
@@ -1251,6 +1268,96 @@ function endConversation(h){
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TUTORIAL — el pueblo arranca VACÍO. La Hada conduce: invocar 4 héroes, explicar
+// cómo funciona ella (única voz, sin números) y obligar a sentir un Eco (Merger)
+// una vez. Es el onboarding: sustituye a "tener héroes ya puestos al iniciar".
+// ─────────────────────────────────────────────────────────────────────────────
+let TUTORIAL = false, tutStep = null, tutSummoned = 0;
+
+// resalte en el suelo (anillo dorado pulsante) que señala dónde mirar
+const hlRing = new THREE.Mesh(new THREE.RingGeometry(1.7, 2.1, 40),
+  new THREE.MeshBasicMaterial({ color:0xf0c040, transparent:true, opacity:0, side:THREE.DoubleSide, depthWrite:false }));
+hlRing.rotation.x = -Math.PI/2; hlRing.position.y = 0.06; hlRing.visible = false; scene.add(hlRing);
+function highlightPlace(key){ const p = PLACES[key].pos; hlRing.position.set(p.x, 0.06, p.z); hlRing.visible = true; }
+function clearHighlight(){ hlRing.visible = false; }
+
+const TUT_SUMMON_LINES = [
+  'Ahí está — <b>{n}</b>. Un alma recién llamada, sin pulir, pero ya respira con nosotros.',
+  '<b>{n}</b> se les une. Fíjate: cada uno carga su propia manera de ser.',
+  'Y <b>{n}</b>. Van tres. Ninguno siente el mundo igual que otro.',
+  'Con <b>{n}</b> ya son cuatro. Suficiente para empezar un pueblo.',
+];
+function startTutorial(){
+  TUTORIAL = true; tutStep = 'intro'; tutSummoned = 0;
+  document.body.classList.add('tut');
+  thread.innerHTML = '';
+  const sub = document.getElementById('hud-sub'); if(sub) sub.textContent = 'la Hada te guía';
+  openSheet('sheet-hada');
+  fairySays('Despiertas como una presencia sobre este pueblo. No eres su héroe ni su titiritero — eres quien lo observa y lo moldea.', ()=>{
+    fairySays('Yo soy <b>la Hada</b>: tu única voz hacia ellos. Pero mira… el pueblo está vacío. Hay que llamar a los primeros.', ()=>{
+      tutStep = 'summon'; highlightPlace('shrine');
+      setIntents([{ label:'Invocar al primero ✦', act:tutDoSummon }]);
+    });
+  });
+}
+function tutDoSummon(){
+  if(tutStep !== 'summon') return;
+  const d = summonNext(); if(!d) return;
+  tutSummoned++;
+  openSheet('sheet-hada');
+  const line = TUT_SUMMON_LINES[tutSummoned-1].replace('{n}', d.name);
+  if(tutSummoned < 4){
+    fairySays(line, ()=> setIntents([{ label:'Invocar a otro ✦', act:tutDoSummon }]));
+  } else {
+    clearHighlight();
+    fairySays(line, ()=> setIntents([{ label:'Continuar', act:tutExplain }]));
+  }
+}
+function tutExplain(){
+  tutStep = 'explain'; clearHighlight(); openSheet('sheet-hada');
+  fairySays('Ahora lo importante: <b>yo soy tu única voz hacia ellos</b>. No les das órdenes directas — me dices qué deseas y yo lo susurro. Te escuchan… o no. Son suyas las decisiones.', ()=>{
+    fairySays('Conmigo puedes <b>saber cómo van</b>, <b>pedirme algo</b> (enfocarlos, guiar a uno) o que te <b>explique</b> las reglas del mundo. Nunca verás números: solo lo que se puede observar.', ()=>{
+      setIntents([{ label:'Pregúntame por uno ✦', act:tutTryAsk }]);
+    });
+  });
+}
+function tutTryAsk(){
+  fairySays('Adelante. ¿Por quién preguntas?', ()=> setIntents(
+    liveRoster().map(h=>({ label:h.name, act:()=>{
+      bub('right','¿Cómo está '+h.name+'?');
+      fairySays(DATA.hada.reports[h.id] || ('Veo a '+h.name+', pero nada me dice gran cosa aún.'), ()=>{
+        fairySays('¿Lo ves? Ni un solo número. Así te hablaré siempre de ellos.', ()=>{
+          setIntents([{ label:'Entiendo. Sigue.', act:tutFusionIntro }]);
+        });
+      });
+    }}))
+  ));
+}
+function tutFusionIntro(){
+  tutStep = 'fusion'; openSheet('sheet-hada');
+  fairySays('Queda lo más pesado. <b>El Eco</b>, en la Cámara de los Ecos: mi <b>única orden que nadie puede rechazar</b>. Un héroe se pierde para que otro guarde su eco. No es un atajo — el valor se transfiere <em>a pérdida</em>.', ()=>{
+    fairySays('Debes sentir su peso al menos una vez. Ven: elige quién se sacrifica y quién recibe.', ()=>{
+      highlightPlace('fusion');
+      setIntents([{ label:'Ir a la Cámara de los Ecos', cls:'danger', act:()=>openSheet('sheet-merge') }]);
+    });
+  });
+}
+function tutAfterFusion(){
+  clearHighlight(); openSheet('sheet-hada');
+  fairySays('Lo sentiste. El pueblo calló un momento — todos lo notan, cada uno a su modo. Esa es la autoridad que cargas; úsala pocas veces.', ()=>{
+    fairySays('Ya está. El pueblo es tuyo para observar y guiar. Tócame siempre que quieras hablar.', ()=>{
+      setIntents([{ label:'Comenzar', act:tutDone }]);
+    });
+  });
+}
+function tutDone(){
+  TUTORIAL = false; tutStep = null;
+  document.body.classList.remove('tut'); clearHighlight(); closeSheets();
+  thread.innerHTML = ''; hadaOpened = false; window.__catchupMins = 0;
+  const sub = document.getElementById('hud-sub'); if(sub) sub.textContent = 'el pueblo vive';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Bucle: tiempo real. El mundo vive (los héroes se mueven solos).
 // ─────────────────────────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
@@ -1310,7 +1417,7 @@ function animate(){
   if(Math.abs(tod-lastTod) > 0.02){
     lastTod = tod;
     const sub = document.getElementById('hud-sub');
-    if(sub && !window.__catchupMins){
+    if(sub && !window.__catchupMins && !TUTORIAL){
       sub.textContent = NIGHT > 0.6 ? 'cae la noche' : NIGHT > 0.25 ? 'atardece' : 'el pueblo vive';
     }
   }
@@ -1325,6 +1432,8 @@ function animate(){
   }
   // la Hada vaga por el mundo y aletea
   hadaRoam(dt);
+  // resalte de tutorial: anillo dorado que respira en el sitio a tocar
+  if(hlRing.visible){ const pl=0.45+0.4*Math.sin(worldT*4); hlRing.material.opacity=pl; hlRing.scale.setScalar(1+0.1*Math.sin(worldT*4)); }
   // cristal del shrine pulsa
   const cr = PLACES.shrine.crystal; if(cr){ cr.rotation.y += dt*0.5; cr.position.y = 1.8 + Math.sin(worldT*1.6)*0.06; }
   // Cámara de los Ecos: cristal gira/flota y los anillos ondean hacia afuera
@@ -1342,15 +1451,15 @@ function animate(){
 
 // ── Arranque ─────────────────────────────────────────────────────────────────
 function start(){
-  DATA.heroes.forEach((d,i)=>{ if(d.inRoster) spawnHero(d, heroes.filter(x=>true).length); });
-  // día simulado (cosmético)
-  const dnum = dayBase + (window.__catchupMins? Math.min(9, Math.floor(window.__catchupMins/3)) : 0);
-  document.getElementById('hud-day').firstChild.textContent = 'Día '+dnum;
-  if(window.__catchupMins){ document.getElementById('hud-sub').textContent = 'siguió sin ti'; }
+  // El pueblo arranca VACÍO: el tutorial guía la invocación de los primeros 4.
+  DATA.heroes.forEach(h=>{ h.inRoster = false; });
+  document.getElementById('hud-day').firstChild.textContent = 'Día 1';
   animate();
   setTimeout(()=>document.getElementById('loader').classList.add('hide'), 500);
   // guarda timestamp al salir
   window.addEventListener('beforeunload', ()=>localStorage.setItem(LS_KEY, String(Date.now())));
+  // arranca el tutorial cuando la escena ya está a la vista
+  setTimeout(startTutorial, 750);
 }
 start();
 </script>
