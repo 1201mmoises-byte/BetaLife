@@ -8,14 +8,18 @@ Diseño completo en `docs/DISENO-VERTICAL-SLICE.md`. Primera versión jugable:
   4 héroes vivos en tiempo real (caminan/entrenan/descansan solos), la **Hada como
   orbe tocable** que abre la conversación con burbujas (ramas: saber/pedir/explicar),
   **Roster**, **Cámara de Fusión (Merger simbólico)**, invocación en el Shrine,
-  catch-up offline (el mundo no para). Token `__BETALIFE_DATA__` = punto de inyección.
-- `scripts/buildSlice.ts` — corre `runPreviewSim()`, hornea héroes + textos de la Hada
-  (`situationBrief`/`consultNPC`/`explainRule`) + conducta observable (`readBehavior`/
-  `firstImpression`), inyecta en la plantilla → `preview/slice.html`.
+  catch-up offline (el mundo no para). **Ambiente:** ciclo día/noche (sol + luna),
+  muralla circular de fondo, antorchas en cada sitio + fogata central que se encienden
+  de noche. **Panel de dev** (botón "dev"): charlas con diálogo + 14 ejes por héroe
+  (barra=ahora, marca=al nacer → "lo que ha aprendido"). Token `__BETALIFE_DATA__`.
+- `scripts/buildSlice.ts` — corre `runPreviewSim()`, hornea héroes (ejes nacimiento+ahora,
+  emergentes, cues) + **voz CUALITATIVA de la Hada compuesta aquí** (sin números: usa la
+  deriva de ejes = "ha ido aprendiendo", `confidence` = miedo a la Torre; NO usa
+  `consultNPC`/`situationBrief` del motor porque mencionan conteos) + charlas con diálogo.
 - Build: `npx ts-node --project tsconfig.json scripts/buildSlice.ts`
-- **Pendiente:** verificación visual en navegador real (WebGL); afinar comportamiento de
-  héroes; conectar foco/guía a efectos reales; muerte emergente rara (hoy stub: voluntad
-  de vivir = no mueren en la demo). NO incluye Torre jugable ni combate (faltan stats).
+- **Pendiente:** verificación visual en navegador real (WebGL); conectar foco/guía a
+  efectos reales; muerte emergente rara (hoy stub: voluntad de vivir = no mueren en la
+  demo). NO incluye Torre jugable ni combate (faltan stats).
 
 ## Fases completadas
 

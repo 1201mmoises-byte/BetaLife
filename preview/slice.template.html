@@ -143,6 +143,32 @@
 
   .note{font-size:10px;color:var(--txt-dim);line-height:1.6;text-align:center;margin:14px 6px 0;font-style:italic;}
 
+  /* ── Panel de dev: charlas + stats ── */
+  .tabs{display:flex;gap:8px;margin-bottom:12px;}
+  .tab{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+       color:var(--txt-dim);font-family:inherit;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;
+       padding:9px;cursor:pointer;transition:.15s;}
+  .tab.active{border-color:var(--violet);color:var(--violet-soft);background:#1a1230;}
+  .dev-count{font-size:9px;letter-spacing:2px;color:var(--violet-dim);text-transform:uppercase;margin:0 2px 8px;}
+  .log-item{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:8px;}
+  .log-meta{font-size:9px;letter-spacing:1px;color:var(--violet-dim);text-transform:uppercase;margin-bottom:5px;
+       display:flex;justify-content:space-between;}
+  .log-meta .tk{color:var(--txt-dim);}
+  .log-line{font-size:11.5px;color:var(--txt);line-height:1.5;margin:2px 0;}
+  .log-line .who{color:var(--violet-soft);}
+  .stat-hero{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px;}
+  .stat-name{font-size:12px;letter-spacing:1px;color:var(--txt);}
+  .stat-name .st{color:var(--gold);font-size:9px;margin-left:6px;text-shadow:0 0 5px var(--gold);}
+  .stat-name .cl{color:var(--violet-dim);font-size:8.5px;letter-spacing:1.5px;text-transform:uppercase;margin-left:6px;}
+  .stat-emergent{font-size:8.5px;color:#9fc88c;letter-spacing:1px;margin:3px 0 8px;text-transform:uppercase;}
+  .ax{display:flex;align-items:center;gap:8px;margin:3px 0;}
+  .ax-lo,.ax-hi{font-size:8.5px;color:var(--txt-dim);width:72px;}
+  .ax-lo{text-align:right;}
+  .ax-bar{flex:1;height:6px;background:#0a0816;border-radius:4px;position:relative;overflow:visible;}
+  .ax-fill{position:absolute;top:0;bottom:0;left:0;border-radius:4px;}
+  .ax-orig{position:absolute;top:-2px;width:2px;height:10px;background:rgba(255,255,255,.45);border-radius:1px;}
+  .stat-hint{font-size:9px;color:var(--txt-dim);font-style:italic;text-align:center;margin:2px 0 12px;}
+
   /* loader */
   #loader{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
        background:var(--bg);color:var(--violet-soft);font-size:13px;letter-spacing:3px;
@@ -159,7 +185,10 @@
 
 <div class="hud-top">
   <div class="hud-day" id="hud-day">Día 1<small id="hud-sub">el pueblo vive</small></div>
-  <button class="hud-btn" id="btn-roster">los héroes</button>
+  <div style="display:flex;gap:8px;">
+    <button class="hud-btn" id="btn-dev">dev</button>
+    <button class="hud-btn" id="btn-roster">los héroes</button>
+  </div>
 </div>
 
 <div class="place-toast" id="place-toast"></div>
@@ -211,6 +240,24 @@
     <button class="btn-merge" id="btn-do-merge">Ordenar Fusión</button>
     <div class="picker-label">elegir</div>
     <div class="picker" id="merge-picker"></div>
+  </div>
+</div>
+
+<!-- ░░ Dev · charlas + estadísticas ░░ -->
+<div class="sheet" id="sheet-dev">
+  <div class="sheet-grip"></div>
+  <div class="sheet-head">
+    <span class="sheet-icon" style="color:#9fc88c;">⚙</span>
+    <div class="sheet-title">Dev<small>charlas y estadísticas (sigue en desarrollo)</small></div>
+    <span class="sheet-close" data-close="sheet-dev">✕</span>
+  </div>
+  <div class="sheet-body mw">
+    <div class="tabs">
+      <button class="tab active" id="tab-charlas">Charlas</button>
+      <button class="tab" id="tab-stats">Stats</button>
+    </div>
+    <div id="dev-charlas"></div>
+    <div id="dev-stats" style="display:none;"></div>
   </div>
 </div>
 
@@ -271,16 +318,48 @@ function placeCamera(){
 }
 placeCamera();
 
-// ── Luces: luna fría + relleno + la Hada calienta su rincón ──────────────────
-scene.add(new THREE.AmbientLight(0x2a2348, 1.1));
-const moon = new THREE.DirectionalLight(0x9f86d8, 0.9);
-moon.position.set(-12, 22, 8); moon.castShadow = true;
-moon.shadow.mapSize.set(1024,1024);
-moon.shadow.camera.left=-20; moon.shadow.camera.right=20;
-moon.shadow.camera.top=20; moon.shadow.camera.bottom=-20;
-scene.add(moon);
-const fill = new THREE.HemisphereLight(0x4a3a7a, 0x0a0814, 0.5);
-scene.add(fill);
+// ── Ciclo día/noche: sol cálido de día, luna y luces de noche ────────────────
+const ambient = new THREE.AmbientLight(0x4a4470, 1.0); scene.add(ambient);
+const sun = new THREE.DirectionalLight(0xffe6b0, 1.5);
+sun.castShadow = true; sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left=-22; sun.shadow.camera.right=22;
+sun.shadow.camera.top=22; sun.shadow.camera.bottom=-22; sun.shadow.camera.far=120;
+scene.add(sun);
+const moon = new THREE.DirectionalLight(0x9fb0e0, 0.45); scene.add(moon);
+const fill = new THREE.HemisphereLight(0x8a7ac0, 0x0c0a18, 0.6); scene.add(fill);
+// discos del sol y la luna en el cielo
+const sunDisc = new THREE.Mesh(new THREE.SphereGeometry(2.4,16,16),
+  new THREE.MeshBasicMaterial({ color:0xffe2a0 }));
+scene.add(sunDisc);
+const moonDisc = new THREE.Mesh(new THREE.SphereGeometry(1.6,16,16),
+  new THREE.MeshBasicMaterial({ color:0xd8dcf0 }));
+scene.add(moonDisc);
+
+const SKY_NIGHT = new THREE.Color(0x070613);
+const SKY_DAY   = new THREE.Color(0x2a4a78);
+const FOG_NIGHT = new THREE.Color(0x070613);
+const FOG_DAY   = new THREE.Color(0x35517e);
+let NIGHT = 0;                 // 0 = pleno día, 1 = plena noche (lo usan antorchas/fogata)
+let starMat = null;            // se asigna abajo
+function updateSky(tod){       // tod 0..1
+  const ang = tod * Math.PI * 2;          // 0 = amanecer
+  const el  = Math.sin(ang);              // elevación del sol -1..1
+  const day = THREE.MathUtils.smoothstep(el, -0.18, 0.30);  // 0 noche .. 1 día
+  NIGHT = 1 - day;
+  // posiciones en el cielo
+  sunDisc.position.set(Math.cos(ang)*44, el*46, -22);
+  moonDisc.position.set(Math.cos(ang+Math.PI)*44, Math.sin(ang+Math.PI)*46, -22);
+  sun.position.copy(sunDisc.position).multiplyScalar(0.5).add(new THREE.Vector3(0,4,6));
+  moon.position.copy(moonDisc.position).multiplyScalar(0.4);
+  // intensidades
+  sun.intensity = 1.6*day; moon.intensity = 0.5*NIGHT;
+  ambient.intensity = 0.5 + 0.6*day; fill.intensity = 0.35 + 0.45*day;
+  sunDisc.visible = el > -0.25; moonDisc.visible = Math.sin(ang+Math.PI) > -0.25;
+  // cielo y niebla
+  scene.background = SKY_NIGHT.clone().lerp(SKY_DAY, day);
+  if(scene.fog) scene.fog.color.copy(FOG_NIGHT.clone().lerp(FOG_DAY, day));
+  if(starMat) starMat.opacity = 0.15 + 0.8*NIGHT;
+}
 
 // ── Estrellas en el cielo ────────────────────────────────────────────────────
 (function stars(){
@@ -296,6 +375,7 @@ scene.add(fill);
   g.setAttribute('position', new THREE.BufferAttribute(pos,3));
   const m = new THREE.PointsMaterial({ color:0xffffff, size:0.35, sizeAttenuation:true,
     transparent:true, opacity:0.85 });
+  starMat = m;
   scene.add(new THREE.Points(g, m));
 })();
 
@@ -440,6 +520,70 @@ const hadaLight = new THREE.PointLight(0xc8a8ff, 1.6, 9); hada.add(hadaLight);
 hada.position.set(P_SHRINE.x+1.6, 2.4, P_SHRINE.z+0.5);
 scene.add(hada);
 
+// ── Antorchas y fuegos (se encienden de noche) ───────────────────────────────
+const fires = [];   // { light, flame, base, mat }
+function makeFire(x, y, z, scale, baseInt, color){
+  const g = new THREE.Group();
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.16*scale, 0.5*scale, 7),
+    new THREE.MeshBasicMaterial({ color: color||0xffb050, transparent:true, opacity:0.95 }));
+  flame.position.y = 0.3*scale; g.add(flame);
+  const light = new THREE.PointLight(color||0xffa040, baseInt, 7*scale);
+  light.position.y = 0.4*scale; g.add(light);
+  g.position.set(x, y, z); scene.add(g);
+  fires.push({ light, flame, base:baseInt, mat:flame.material, phase:Math.random()*9 });
+  return g;
+}
+function makeTorch(x, z){
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.09,1.5,6),
+    new THREE.MeshStandardMaterial({ color:0x3a2a1a, roughness:.9, flatShading:true }));
+  post.position.set(x, 0.75, z); post.castShadow=true; scene.add(post);
+  makeFire(x, 1.55, z, 0.8, 1.1, 0xffb050);
+}
+
+// Muralla circular de fondo (mantiene el 3D alineado y enmarca el pueblo)
+(function wall(){
+  const R = 17, H = 2.6, seg = 64;
+  const ringMat = new THREE.MeshStandardMaterial({ color:0x241d34, roughness:.95, flatShading:true });
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(R, R+0.4, H, seg, 1, true), ringMat);
+  ring.position.y = H/2; ring.castShadow = true; ring.receiveShadow = true; scene.add(ring);
+  // almenas (merlones) arriba
+  const merlonMat = new THREE.MeshStandardMaterial({ color:0x2c2440, roughness:.9, flatShading:true });
+  for(let i=0;i<seg;i+=2){
+    const a = (i/seg)*Math.PI*2;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.55,0.6,0.5), merlonMat);
+    m.position.set(Math.cos(a)*R, H+0.3, Math.sin(a)*R);
+    m.lookAt(0, H+0.3, 0); scene.add(m);
+  }
+  // torreones + antorchas repartidas por la muralla
+  for(let i=0;i<8;i++){
+    const a = (i/8)*Math.PI*2;
+    const tx = Math.cos(a)*R, tz = Math.sin(a)*R;
+    const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.9,1.0,H+1.4,8),
+      new THREE.MeshStandardMaterial({ color:0x1e1830, roughness:.95, flatShading:true }));
+    tower.position.set(tx, (H+1.4)/2, tz); tower.castShadow=true; scene.add(tower);
+    makeFire(tx, H+1.5, tz, 0.9, 0.9, 0xffa840);
+  }
+})();
+
+// Antorchas junto a cada sitio
+[P_SHRINE, P_POSADA, P_CAMPO, P_FUSION].forEach(p=>{
+  makeTorch(p.x+1.6, p.z+1.2); makeTorch(p.x-1.6, p.z-1.2);
+});
+
+// Fogata central en la plaza (el corazón del pueblo de noche)
+(function bonfire(){
+  const g = new THREE.Group();
+  for(let i=0;i<5;i++){
+    const a=(i/5)*Math.PI*2;
+    const log = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,1.1,6),
+      new THREE.MeshStandardMaterial({ color:0x3a2818, roughness:.9, flatShading:true }));
+    log.position.set(Math.cos(a)*0.3, 0.15, Math.sin(a)*0.3);
+    log.rotation.z = 0.5; log.rotation.y = a; g.add(log);
+  }
+  g.position.copy(P_PLAZA); scene.add(g);
+  makeFire(P_PLAZA.x, 0.45, P_PLAZA.z, 1.8, 2.2, 0xff8a30);
+})();
+
 // ── Héroes ───────────────────────────────────────────────────────────────────
 function buildHero(role){
   const v = ROLE_VIS[role] || ROLE_VIS.archer;
@@ -565,12 +709,9 @@ window.addEventListener('resize', ()=>{ renderer.setSize(innerWidth,innerHeight)
 // ─────────────────────────────────────────────────────────────────────────────
 // OVERLAYS (HTML) — la Hada conversación, roster, merger
 // ─────────────────────────────────────────────────────────────────────────────
-function openSheet(id){
-  ['sheet-hada','sheet-roster','sheet-merge'].forEach(s=>{
-    document.getElementById(s).classList.toggle('open', s===id);
-  });
-}
-function closeSheets(){ ['sheet-hada','sheet-roster','sheet-merge'].forEach(s=>document.getElementById(s).classList.remove('open')); }
+const SHEETS = ['sheet-hada','sheet-roster','sheet-merge','sheet-dev'];
+function openSheet(id){ SHEETS.forEach(s=>document.getElementById(s).classList.toggle('open', s===id)); }
+function closeSheets(){ SHEETS.forEach(s=>document.getElementById(s).classList.remove('open')); }
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeSheets()));
 
 // toast de estructura
@@ -782,11 +923,64 @@ const mergeSheet = document.getElementById('sheet-merge');
 new MutationObserver(()=>{ if(mergeSheet.classList.contains('open')){ renderPicker(); paintMerge(); } })
   .observe(mergeSheet, { attributes:true, attributeFilter:['class'] });
 
+// ── Panel de dev: charlas (con diálogo) + estadísticas (14 ejes) ─────────────
+const AXIS_LABELS = {
+  caution:['imprudente','cauto'], passivity:['agresivo','pasivo'], submission:['dominante','sumiso'],
+  warmth:['frío','cálido'], trust:['desconfiado','confiado'], altruism:['egoísta','altruista'],
+  sociability:['solitario','social'], integrity:['acomodaticio','íntegro'], loyalty:['desleal','leal'],
+  optimism:['pesimista','optimista'], discipline:['impulsivo','disciplinado'], curiosity:['cerrado','curioso'],
+  confidence:['inseguro','seguro'], forgiveness:['rencoroso','indulgente'],
+};
+const AXIS_ORDER = ['caution','passivity','submission','warmth','trust','altruism','sociability','integrity','loyalty','optimism','discipline','curiosity','confidence','forgiveness'];
+function barColor(v){ if(v<0.25)return '#604060'; if(v<0.5)return '#504880'; if(v<0.75)return '#406088'; return '#5a8868'; }
+
+function renderCharlas(){
+  const box=document.getElementById('dev-charlas');
+  const list=DATA.conversations;
+  const total=DATA.conversationsTotal||list.length;
+  let html='<div class="dev-count">'+total+' charlas silenciosas (mostrando últimas '+list.length+') — empujan ejes, nunca son texto en el juego</div>';
+  for(let i=list.length-1;i>=0;i--){
+    const c=list[i];
+    const lines=(c.lines||[]).map(l=>'<div class="log-line"><span class="who">'+(l.speaker==='a'?c.a:c.b)+':</span> '+l.text+'</div>').join('');
+    html+='<div class="log-item"><div class="log-meta"><span>'+c.a+' ✦ '+c.b+'</span><span class="tk">'+c.topic+' · t'+c.tick+'</span></div>'+lines+'</div>';
+  }
+  box.innerHTML=html;
+}
+function renderStats(){
+  const box=document.getElementById('dev-stats');
+  box.innerHTML='<div class="stat-hint">barra = ahora · marca blanca = al nacer (la distancia = lo que ha aprendido)</div>';
+  DATA.heroes.filter(h=>h.inRoster).forEach(h=>{
+    let rows='';
+    AXIS_ORDER.forEach(k=>{
+      const now=h.axesNow[k], orig=h.axesOrig[k], lab=AXIS_LABELS[k];
+      rows+='<div class="ax"><span class="ax-lo">'+lab[0]+'</span>'+
+        '<span class="ax-bar"><span class="ax-fill" style="width:'+(now*100).toFixed(0)+'%;background:'+barColor(now)+'"></span>'+
+        '<span class="ax-orig" style="left:'+(orig*100).toFixed(0)+'%"></span></span>'+
+        '<span class="ax-hi">'+lab[1]+'</span></div>';
+    });
+    const em=(h.emergent&&h.emergent.length)?h.emergent.join(' · '):'sin rasgos marcados aún';
+    box.insertAdjacentHTML('beforeend',
+      '<div class="stat-hero"><div class="stat-name">'+h.name+'<span class="st">'+('★'.repeat(h.stars))+'</span><span class="cl">'+(CLASS_ES[h.role]||h.role)+'</span></div>'+
+      '<div class="stat-emergent">'+em+'</div>'+rows+'</div>');
+  });
+}
+function devTab(which){
+  document.getElementById('tab-charlas').classList.toggle('active', which==='charlas');
+  document.getElementById('tab-stats').classList.toggle('active', which==='stats');
+  document.getElementById('dev-charlas').style.display = which==='charlas'?'block':'none';
+  document.getElementById('dev-stats').style.display = which==='stats'?'block':'none';
+}
+document.getElementById('tab-charlas').addEventListener('click', ()=>devTab('charlas'));
+document.getElementById('tab-stats').addEventListener('click', ()=>devTab('stats'));
+document.getElementById('btn-dev').addEventListener('click', ()=>{ renderCharlas(); renderStats(); openSheet('sheet-dev'); });
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Bucle: tiempo real. El mundo vive (los héroes se mueven solos).
 // ─────────────────────────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
 let worldT = 0;
+const DAY_LENGTH = 150;     // segundos por ciclo completo (día+noche)
+const START_TOD  = 0.18;    // arranca de mañana (no en lo oscuro)
 const SPOT_RADIUS = { campo:1.6, posada:1.8, plaza:2.2, shrine:1.6 };
 function spotPos(k){ const p=PLACES[k].pos; return p; }
 
@@ -819,10 +1013,29 @@ function updateHero(h, dt){
   }
 }
 
+let lastTod = -1;
 function animate(){
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
   worldT += dt;
+  // ciclo día/noche
+  const tod = ((worldT / DAY_LENGTH) + START_TOD) % 1;
+  updateSky(tod);
+  // fuegos: parpadean y se encienden de noche
+  for(const f of fires){
+    const flick = 0.72 + Math.sin(worldT*9 + f.phase)*0.16 + Math.random()*0.08;
+    f.light.intensity = f.base * NIGHT * flick;
+    f.mat.opacity = (0.15 + 0.85*NIGHT) * flick;
+    f.flame.scale.set(1, 0.85+0.3*flick, 1);
+  }
+  // etiqueta del HUD (día / anochece / noche)
+  if(Math.abs(tod-lastTod) > 0.02){
+    lastTod = tod;
+    const sub = document.getElementById('hud-sub');
+    if(sub && !window.__catchupMins){
+      sub.textContent = NIGHT > 0.6 ? 'cae la noche' : NIGHT > 0.25 ? 'atardece' : 'el pueblo vive';
+    }
+  }
   // Hada flota
   hada.position.y = 2.4 + Math.sin(worldT*1.3)*0.18;
   hadaOrb.rotation.y += dt*0.8;
