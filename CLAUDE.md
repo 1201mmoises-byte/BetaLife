@@ -42,11 +42,15 @@ Fuente: `preview/shrine-dev.html` generado por `scripts/devPreview.ts`
 - La hada (`mediator.ts`) es la única voz hacia el jugador.
 - El texto de diálogo es SOLO para el preview de dev, nunca en el juego real.
 
-## Fase 6 — Entidad interactiva (próxima)
-- La entidad (hada/mediador) ya existe en `src/engine/mediator.ts` con funciones pasivas.
-- Expandir para que responda a consultas del jugador sobre NPC específicos o el roster.
-- Reportar situaciones críticas proactivamente (no solo `rareWhisper`).
-- En el preview: panel "Consultar a la entidad" → resumen del estado actual.
+### Fase 6 — El Hada interactiva ✓
+- `src/engine/mediator.ts` — `consultNPC`, `situationBrief`, `explainRule` activos.
+- `scripts/devPreview.ts` — panel del hada (bottom sheet): situación del roster,
+  lectura por héroe (toca para ir al inspector), reglas que el hada explica.
+  El inspector de cada héroe muestra "el hada dice" (lectura observable, sin números).
+  Hada clicable en la escena + botón "el hada" en dev-controls.
+- **Terminología de dominio (cara al jugador):**
+  - "La hada" = la entidad mediadora (`mediator.ts`). Guía/mentora del jugador Y de los héroes.
+  - "Héroes" = los personajes del roster (internamente siguen siendo `NPC` en el código).
 - **NOTA PENDIENTE:** "Chequear si dos mismos personajes en diferentes ambientes
   se desarrollan diferente" — verificar que el mismo NPC seed en dos pueblos distintos
   produce ejes divergentes con el tiempo (por las diferentes interacciones de contexto).

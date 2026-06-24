@@ -13,7 +13,7 @@
  *   npx ts-node --project tsconfig.json scripts/devPreview.ts
  */
 
-import { rareWhisper, consultNPC, situationBrief } from '../src/engine/mediator';
+import { rareWhisper, consultNPC, situationBrief, explainRule } from '../src/engine/mediator';
 import { readEmergentTraits }                      from '../src/engine/axes';
 import { Exchange, ConversationTopic }             from '../src/engine/conversations';
 import { createSeeder }                            from '../src/engine/seeder';
@@ -43,7 +43,31 @@ const log = rawLog.map((e) => {
   return { ...e, dialogue };
 });
 
-// ── 3. Datos para el HTML ─────────────────────────────────────────────────────
+// ── 3. El hada — pre-cómputo en build time ────────────────────────────────────
+// Adaptar ExchangeRecord[] → Exchange[] para las funciones de mediator.
+// nudges no los necesita mediator (solo usa participants/topic/intensity/sealedAt).
+const exchanges: Exchange[] = rawLog.map((e) => ({
+  participants: [e.aId, e.bId] as [string, string],
+  topic: e.topic as ConversationTopic,
+  intensity: e.intensity,
+  nudges: { a: {}, b: {} },
+  sealedAt: e.tick,
+}));
+
+// Héroes con sus ejes evolucionados (no los de nacimiento).
+const allLive = pool.map((n) => ({ ...n, axes: currentAxes[n.id] }));
+const consultSeeder = createSeeder('shrine-dev-consult');
+
+const entitySituation = situationBrief(allLive.slice(0, INITIAL), exchanges);
+const entityNpcReports: Record<string, string> = {};
+for (const n of allLive) {
+  entityNpcReports[n.id] = consultNPC(consultSeeder, { ...n, isAlive: true }, exchanges, allLive);
+}
+const entityRules = ['growth', 'death', 'promotion', 'start'].map((k) => ({
+  k, text: explainRule(k),
+}));
+
+// ── 4. Datos para el HTML ─────────────────────────────────────────────────────
 const whisperMsg = rareWhisper(roster.map(n => ({ ...n, axes: currentAxes[n.id] })));
 
 const npcData = pool.map((n, i) => ({
@@ -63,7 +87,7 @@ const npcData = pool.map((n, i) => ({
   initial: i < INITIAL,
 }));
 
-const DATA = JSON.stringify({ npcs: npcData, log, whisper: whisperMsg, ticks: TICKS, initial: INITIAL, townDifficulty: town.difficulty }, null, 0);
+const DATA = JSON.stringify({ npcs: npcData, log, whisper: whisperMsg, ticks: TICKS, initial: INITIAL, townDifficulty: town.difficulty, entitySituation, entityNpcReports, entityRules }, null, 0);
 
 // ── 4. HTML ───────────────────────────────────────────────────────────────────
 const html = /* html */`<!DOCTYPE html>
@@ -250,6 +274,24 @@ body { background:#05050d; overflow:hidden; font-family:Georgia, serif; }
 .dev-detail > summary::-webkit-details-marker { display:none; }
 .dev-detail[open] > summary { color:rgba(160,140,200,.55); }
 
+/* ── PANEL DE LA HADA — sheet desde abajo, igual que inspector ── */
+.entity-panel { position:fixed; bottom:0; left:0; right:0; height:78%; background:rgba(6,8,22,.97); border-top:1px solid rgba(160,210,255,.2); border-radius:18px 18px 0 0; padding:20px 18px 32px; overflow-y:auto; transform:translateY(105%); transition:transform .35s cubic-bezier(.3,1,.4,1); z-index:30; }
+.entity-panel.open { transform:translateY(0); }
+.entity-close { position:absolute; top:14px; right:18px; color:rgba(160,200,255,.5); font-size:20px; cursor:pointer; line-height:1; padding:4px 8px; touch-action:manipulation; }
+.entity-close:active { color:#a0d0ff; }
+.entity-title { font-size:15px; color:rgba(200,230,255,.9); letter-spacing:1px; margin-bottom:2px; padding-right:24px; }
+.entity-sub { font-size:9px; color:rgba(140,190,255,.45); letter-spacing:3px; text-transform:uppercase; margin-bottom:14px; }
+.entity-section { margin-top:14px; }
+.entity-section-title { font-size:9px; color:rgba(140,190,255,.4); letter-spacing:3px; text-transform:uppercase; margin-bottom:6px; }
+.entity-line { font-size:11px; color:rgba(200,225,255,.7); line-height:1.5; margin-bottom:3px; }
+.entity-hero { margin-bottom:10px; padding:8px 10px; background:rgba(20,18,38,.7); border-left:2px solid rgba(120,170,255,.25); border-radius:0 4px 4px 0; cursor:pointer; transition:background .15s; }
+.entity-hero:active { background:rgba(40,36,70,.8); }
+.entity-hero-name { font-size:11px; color:rgba(180,210,255,.8); margin-bottom:3px; }
+.entity-hero-report { font-size:10px; color:rgba(160,195,255,.5); line-height:1.4; }
+.entity-rule { margin-bottom:8px; }
+.entity-rule-key { display:inline-block; font-size:8px; color:rgba(120,170,255,.5); letter-spacing:2px; text-transform:uppercase; margin-bottom:2px; }
+.entity-rule-text { font-size:10px; color:rgba(180,210,255,.6); line-height:1.4; font-style:italic; }
+
 ::-webkit-scrollbar { width:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:#2e2050; border-radius:2px; }
@@ -295,12 +337,12 @@ body { background:#05050d; overflow:hidden; font-family:Georgia, serif; }
     <div class="hdot" style="--od:6.5s;--odelay:0s;--ostart:60deg;--or:52px;opacity:.6"></div>
     <div class="hdot" style="--od:6.5s;--odelay:0s;--ostart:180deg;--or:52px;opacity:.6"></div>
     <div class="hdot" style="--od:6.5s;--odelay:0s;--ostart:300deg;--or:52px;opacity:.6"></div>
-    <div class="hada-label">La Entidad</div>
+    <div class="hada-label">El Hada</div>
   </div>
 
   <!-- WHISPER -->
   <div class="whisper-alert" id="whisper-alert">
-    <span class="whisper-label">entidad</span><span id="whisper-text"></span>
+    <span class="whisper-label">hada</span><span id="whisper-text"></span>
   </div>
 
   <!-- SHRINE (clic = invocar) -->
@@ -338,6 +380,7 @@ body { background:#05050d; overflow:hidden; font-family:Georgia, serif; }
   <!-- DEV overlay -->
   <div class="dev-badge">DEV MODE</div>
   <div class="dev-controls">
+    <div class="dev-btn" id="btn-hada">el hada</div>
     <div class="dev-btn" id="btn-log">charlas (${log.length})</div>
   </div>
 
@@ -355,6 +398,12 @@ body { background:#05050d; overflow:hidden; font-family:Georgia, serif; }
     </div>
     <div class="log-filters" id="log-filters"></div>
     <div id="log-entries"></div>
+  </div>
+
+  <!-- PANEL DEL HADA -->
+  <div class="entity-panel" id="entity-panel">
+    <span class="entity-close" id="entity-close">✕</span>
+    <div id="entity-body"></div>
   </div>
 
 </div>
@@ -488,12 +537,24 @@ function init(){
   document.getElementById('btn-log').addEventListener('click', () => {
     const panel = document.getElementById('convo-log');
     const btn = document.getElementById('btn-log');
+    const opening = !panel.classList.contains('open');
+    if (opening) { closeEntityPanel(); }
     panel.classList.toggle('open');
     btn.classList.toggle('active');
   });
 
   // Inspector close
   document.getElementById('inspector-close').addEventListener('click', closeInspector);
+
+  // Hada — clic abre el panel; botón de controles también
+  document.getElementById('hada').addEventListener('click', openEntityPanel);
+  document.getElementById('btn-hada').addEventListener('click', () => {
+    const panel = document.getElementById('entity-panel');
+    const btn   = document.getElementById('btn-hada');
+    if (panel.classList.contains('open')) { closeEntityPanel(); }
+    else { openEntityPanel(); btn.classList.add('active'); }
+  });
+  document.getElementById('entity-close').addEventListener('click', closeEntityPanel);
 }
 
 // Si el DOM ya está listo (visores que inyectan el HTML después de cargar),
@@ -503,6 +564,70 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
   init();
+}
+
+// ── Panel del Hada ───────────────────────────────────────────────────────
+function openEntityPanel(){
+  // Cerrar los otros paneles para no solapar
+  document.getElementById('convo-log').classList.remove('open');
+  document.getElementById('btn-log').classList.remove('active');
+  document.getElementById('inspector').classList.remove('open');
+  document.querySelectorAll('.npc').forEach(el => el.classList.remove('selected'));
+  selectedId = null;
+
+  renderEntityPanel();
+  document.getElementById('entity-panel').classList.add('open');
+  document.getElementById('btn-hada').classList.add('active');
+}
+
+function closeEntityPanel(){
+  document.getElementById('entity-panel').classList.remove('open');
+  document.getElementById('btn-hada').classList.remove('active');
+}
+
+function renderEntityPanel(){
+  const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const body = document.getElementById('entity-body');
+
+  // Situación: dividir por newlines en líneas
+  const situLines = (DATA.entitySituation || '').split('\\n').filter(Boolean);
+  const situHtml = situLines.map(l => \`<div class="entity-line">\${esc(l)}</div>\`).join('');
+
+  // Héroes del roster inicial con lectura del hada
+  const rosterNpcs = DATA.npcs.filter(n => n.initial);
+  const heroesHtml = rosterNpcs.map(n => {
+    const stars = '★'.repeat(n.stars);
+    const report = DATA.entityNpcReports[n.id] || '';
+    return \`<div class="entity-hero" onclick="selectNPC('\${n.id}'); closeEntityPanel();">
+      <div class="entity-hero-name">\${esc(n.name)} <span style="color:#f0c040;font-size:10px">\${stars}</span></div>
+      <div class="entity-hero-report">\${esc(report)}</div>
+    </div>\`;
+  }).join('');
+
+  // Reglas que el hada explica
+  const rulesHtml = (DATA.entityRules || []).map(r =>
+    \`<div class="entity-rule">
+      <span class="entity-rule-key">\${esc(r.k)}</span>
+      <div class="entity-rule-text">\${esc(r.text)}</div>
+    </div>\`
+  ).join('');
+
+  body.innerHTML = \`
+    <div class="entity-title">El Hada</div>
+    <div class="entity-sub">guía · mensajera · mentora</div>
+    <div class="entity-section">
+      <div class="entity-section-title">situación del pueblo</div>
+      \${situHtml}
+    </div>
+    <div class="entity-section">
+      <div class="entity-section-title">héroes del roster — toca para inspeccionar</div>
+      \${heroesHtml}
+    </div>
+    <div class="entity-section">
+      <div class="entity-section-title">lo que el hada explica</div>
+      \${rulesHtml}
+    </div>
+  \`;
 }
 
 // ── Summon ───────────────────────────────────────────────────────────────
@@ -527,6 +652,7 @@ let selectedId = null;
 
 function selectNPC(id){
   selectedId = id;
+  closeEntityPanel();
   document.querySelectorAll('.npc').forEach(el => el.classList.remove('selected'));
   const el = document.getElementById('npc-'+id);
   if (el) el.classList.add('selected');
@@ -577,7 +703,9 @@ function renderInspector(id){
     \${convivencia}
     <div class="axes-title">estampas</div><div class="tag-row">\${stampsHtml}</div>
     <div class="axes-title">emergentes</div><div class="tag-row">\${emergentHtml}</div>
-    <div class="axes-title">ejes — de más a menos definitorio</div>\${axesHtml}\`;
+    <div class="axes-title">ejes — de más a menos definitorio</div>\${axesHtml}
+    <div class="axes-title">el hada dice</div>
+    <div class="inspector-obs">\${DATA.entityNpcReports[id] || ''}</div>\`;
 }
 
 // ── Log ──────────────────────────────────────────────────────────────────
