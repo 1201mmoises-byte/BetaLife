@@ -226,7 +226,7 @@
   <div class="sheet-grip"></div>
   <div class="sheet-head">
     <span class="sheet-icon" style="color:var(--danger-soft);text-shadow:0 0 10px var(--danger-soft);">❖</span>
-    <div class="sheet-title">Cámara de Fusión<small>la única orden irrechazable</small></div>
+    <div class="sheet-title">Cámara de los Ecos<small>la única orden irrechazable</small></div>
     <span class="sheet-close" data-close="sheet-merge">✕</span>
   </div>
   <div class="sheet-body mw">
@@ -237,7 +237,7 @@
     </div>
     <p class="merge-warn">— quien se sacrifica no puede negarse. nadie puede. —</p>
     <div class="reaction-box" id="merge-reaction">Elige a quién sacrificas y quién recibe. El valor se transfiere <em>a pérdida</em>: un impulso leve, nunca un atajo.</div>
-    <button class="btn-merge" id="btn-do-merge">Ordenar Fusión</button>
+    <button class="btn-merge" id="btn-do-merge">Despertar el Eco</button>
     <div class="picker-label">elegir</div>
     <div class="picker" id="merge-picker"></div>
   </div>
@@ -534,39 +534,70 @@ const P_PLAZA  = place('plaza',  0,   1);
   PLACES.posada.group = g;
 })();
 
-// Campo de Entrenamiento — crecimiento observable
+// Campo de Entrenamiento — crecimiento observable (amplio)
 (function campo(){
   const g = new THREE.Group();
-  const pad = new THREE.Mesh(new THREE.CircleGeometry(2.6,24),
-    new THREE.MeshStandardMaterial({ color:0x14160e, roughness:1 }));
+  const pad = new THREE.Mesh(new THREE.CircleGeometry(4.4,40),
+    new THREE.MeshStandardMaterial({ color:0x16170e, roughness:1 }));
   pad.rotation.x=-Math.PI/2; pad.position.y=0.02; pad.receiveShadow=true; g.add(pad);
-  // muñecos de entrenamiento
-  for(const dx of [-1.2,1.2]){
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.14,1.6,6),
+  // valla baja alrededor del campo
+  const fenceMat = new THREE.MeshStandardMaterial({ color:0x3a2a18, roughness:.9, flatShading:true });
+  for(let i=0;i<18;i++){
+    const a=(i/18)*Math.PI*2;
+    const post=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.7,5), fenceMat);
+    post.position.set(Math.cos(a)*4.3, 0.35, Math.sin(a)*4.3); g.add(post);
+  }
+  // varios muñecos de entrenamiento repartidos
+  for(const [dx,dz] of [[-2,1.2],[2,1.2],[-1.6,-1.8],[1.6,-1.8],[0,2.6]]){
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.15,1.7,6),
       new THREE.MeshStandardMaterial({ color:0x4a3420, roughness:.9, flatShading:true }));
-    post.position.set(dx,0.8,0.6); post.castShadow=true; g.add(post);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.32,8,8),
+    post.position.set(dx,0.85,dz); post.castShadow=true; g.add(post);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.34,8,8),
       new THREE.MeshStandardMaterial({ color:0x6a5038, roughness:.9, flatShading:true }));
-    head.position.set(dx,1.7,0.6); g.add(head);
+    head.position.set(dx,1.8,dz); g.add(head);
   }
   g.position.copy(P_CAMPO); scene.add(g);
-  const lbl = makeLabel('Campo', '#9fc88c'); lbl.position.set(0,2.8,0); g.add(lbl);
+  const lbl = makeLabel('Campo de Entrenamiento', '#9fc88c'); lbl.position.set(0,3.6,0); lbl.scale.set(5.6,1.4,1); g.add(lbl);
   PLACES.campo.group = g;
 })();
 
-// Cámara de Fusión — Merger (sombría)
-(function fusion(){
+// Cámara de los Ecos — Merger (un "chamber" cerrado con eco interior)
+const echoRings = [];
+(function chamber(){
   const g = new THREE.Group();
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.7,2.0,1,6),
-    new THREE.MeshStandardMaterial({ color:0x1c1020, roughness:.85, flatShading:true }));
-  base.position.y=0.5; base.castShadow=true; g.add(base);
-  const arch = new THREE.Mesh(new THREE.TorusGeometry(1.1,0.18,8,24,Math.PI),
-    new THREE.MeshStandardMaterial({ color:0x3a1424, emissive:0xc0506a, emissiveIntensity:0.9, flatShading:true }));
-  arch.position.y=1.0; g.add(arch);
-  const gl = new THREE.PointLight(0xc0506a, 9, 12, 1.6); gl.position.y=1.4; g.add(gl);
+  const stoneMat = new THREE.MeshStandardMaterial({ color:0x231425, roughness:.9, flatShading:true });
+  // piso elevado
+  const floor = new THREE.Mesh(new THREE.CylinderGeometry(2.5,2.7,0.5,6), stoneMat);
+  floor.position.y=0.25; floor.castShadow=true; floor.receiveShadow=true; g.add(floor);
+  // muros hexagonales con UNA abertura: la entrada mira al centro del pueblo
+  const R=2.0, H=2.6, doorAngle=Math.atan2(-P_FUSION.z, -P_FUSION.x);
+  for(let i=0;i<6;i++){
+    const a=(i/6)*Math.PI*2 + Math.PI/6;
+    const da=Math.atan2(Math.sin(a-doorAngle), Math.cos(a-doorAngle));
+    if(Math.abs(da) < 0.6) continue;   // deja el hueco de la puerta
+    const wall=new THREE.Mesh(new THREE.BoxGeometry(2.2,H,0.35), stoneMat);
+    wall.position.set(Math.cos(a)*R, H/2+0.5, Math.sin(a)*R);
+    wall.lookAt(0,H/2+0.5,0); wall.castShadow=true; g.add(wall);
+  }
+  // techo cónico hexagonal
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(2.8,1.7,6),
+    new THREE.MeshStandardMaterial({ color:0x1a0f1e, roughness:.9, flatShading:true }));
+  roof.position.y=H+0.5+0.85; roof.rotation.y=Math.PI/6; roof.castShadow=true; g.add(roof);
+  // cristal del eco (flota dentro) + luz pulsante
+  const echo=new THREE.Mesh(new THREE.OctahedronGeometry(0.5),
+    new THREE.MeshStandardMaterial({ color:0xe0a0c0, emissive:0xc0506a, emissiveIntensity:1.7, flatShading:true }));
+  echo.position.y=1.6; g.add(echo);
+  const gl=new THREE.PointLight(0xc0506a, 9, 12, 1.6); gl.position.y=1.6; g.add(gl);
+  // anillos de eco en el piso (ondean hacia afuera)
+  for(let i=0;i<2;i++){
+    const ring=new THREE.Mesh(new THREE.RingGeometry(0.55,0.72,40),
+      new THREE.MeshBasicMaterial({ color:0xc0506a, transparent:true, opacity:0.45, side:THREE.DoubleSide, depthWrite:false }));
+    ring.rotation.x=-Math.PI/2; ring.position.y=0.52; g.add(ring);
+    echoRings.push({ ring, phase:i*0.5 });
+  }
   g.position.copy(P_FUSION); scene.add(g);
-  const lbl = makeLabel('Fusión', '#ff7090'); lbl.position.set(0,3.2,0); g.add(lbl);
-  PLACES.fusion.group = g;
+  const lbl = makeLabel('Cámara de los Ecos', '#ff7090'); lbl.position.set(0,H+3.0,0); lbl.scale.set(5.2,1.3,1); g.add(lbl);
+  PLACES.fusion.group = g; PLACES.fusion.echo = echo;
 })();
 
 // ── La Hada — orbe alado tocable ─────────────────────────────────────────────
@@ -851,9 +882,10 @@ function setIntents(list){
     b.addEventListener('click', it.act); intentsEl.appendChild(b);
   });
 }
-const ROSTER = DATA.heroes.filter(h=>h.inRoster);
+// lista EN VIVO (incluye héroes recién invocados; excluye a los que ya no están)
+function liveRoster(){ return DATA.heroes.filter(h=>h.inRoster && h.alive!==false); }
 function heroPickIntents(then){
-  setIntents(ROSTER.map(h=>({ label:h.name, act:()=>{ bub('right', h.name); then(h); } }))
+  setIntents(liveRoster().map(h=>({ label:h.name, act:()=>{ bub('right', h.name); then(h); } }))
     .concat([{ label:'volver', cls:'back', act:hadaRoot }]));
 }
 function hadaRoot(){
@@ -876,7 +908,7 @@ function askRequest(){
     { label:'Enfoca a la comunidad', act:()=>{ bub('right','Enfoca a la comunidad'); focusCommunity(); } },
     { label:'Enfoca a un héroe', act:()=>heroPickIntents(h=>fairySays('Le diré a '+h.name+' hacia dónde mirar. Si su alma lo permite, irá.', hadaRoot)) },
     { label:'Guía a un héroe', act:()=>heroPickIntents(h=>fairySays('Hablaré con '+h.name+' con calma — para cuando el ánimo flaquea. <span class="cd">vuelve en 2 días</span>', hadaRoot)) },
-    { label:'Fusión…', cls:'danger', act:()=>{ bub('right','Una Fusión'); fairySays('Eso es una orden, no un consejo. Ven a la Cámara.', ()=>{ setTimeout(()=>{ openSheet('sheet-merge'); }, 400); }); } },
+    { label:'El Eco…', cls:'danger', act:()=>{ bub('right','Un Eco'); fairySays('Eso es una orden, no un consejo. Ven a la Cámara de los Ecos.', ()=>{ setTimeout(()=>{ openSheet('sheet-merge'); }, 400); }); } },
     { label:'volver', cls:'back', act:hadaRoot },
   ]));
 }
@@ -925,17 +957,19 @@ function onPlace(k){
 }
 
 // ── Invocación (Shrine) — ritual con coste, héroe sin desarrollar ────────────
-let invokeIdx = 0;
 function invoke(){
-  const pool = DATA.heroes.filter(h=>!h.inRoster);
-  if(invokeIdx >= pool.length){ toast('<b>Shrine</b> — no queda esencia para invocar por ahora.'); return; }
-  const d = pool[invokeIdx++];
+  const d = DATA.heroes.find(h=>!h.inRoster);   // siguiente del pool sin invocar
+  if(!d){ toast('<b>Shrine</b> — no queda esencia para invocar por ahora.'); return; }
   d.inRoster = true;
   // destello del cristal
   const cr = PLACES.shrine.crystal;
   if(cr){ cr.material.emissiveIntensity = 4; setTimeout(()=>cr.material.emissiveIntensity=1.6, 350); }
   spawnHero(d, heroes.length);
   toast('<b>Ritual</b> — llega <b>'+d.name+'</b> ('+('★'.repeat(d.stars))+'). Cuesta esencia; vendrá sin desarrollar.');
+  // la Hada se entera en el acto: si su chat está abierto, lo anuncia
+  if(document.getElementById('sheet-hada').classList.contains('open')){
+    fairySays('Llegó alguien nuevo: '+d.name+'. Aún sin pulir, pero ya respira con nosotros — pregúntame por él cuando quieras.', hadaRoot);
+  }
 }
 
 // ── Roster ───────────────────────────────────────────────────────────────────
@@ -998,7 +1032,7 @@ function paintMerge(){
   slotFill('slot-rec','rec-empty',rec,'r');
   const rx=document.getElementById('merge-reaction'), btn=document.getElementById('btn-do-merge');
   if(sac && rec){
-    rx.innerHTML='<b>'+rec.name+'</b> recibirá lo que fue <b>'+sac.name+'</b> — un impulso <em>leve</em>, transferido a pérdida. La comunidad lo sentirá: los leales callan, los rebeldes lo resienten, los temerosos obedecen.';
+    rx.innerHTML='<b>'+rec.name+'</b> guardará el eco de <b>'+sac.name+'</b> — un impulso <em>leve</em>, transferido a pérdida. La comunidad lo sentirá: los leales callan, los rebeldes lo resienten, los temerosos obedecen.';
     btn.classList.add('ready');
   } else {
     rx.innerHTML='Elige a quién sacrificas y quién recibe. El valor se transfiere <em>a pérdida</em>: un impulso leve, nunca un atajo.';
@@ -1018,7 +1052,7 @@ document.getElementById('btn-do-merge').addEventListener('click', ()=>{
   const recH = heroes.find(x=>x.data.id===rec.id);
   if(recH){ const t=recH.group; t.scale.set(1.18,1.18,1.18); setTimeout(()=>t.scale.set(1,1,1), 500); }
   sac.inRoster=false;
-  toast('<b>Fusión</b> — '+rec.name+' guarda ahora algo de '+sac.name+'. El pueblo calla.');
+  toast('<b>Eco</b> — '+rec.name+' guarda ahora el eco de '+sac.name+'. El pueblo calla.');
   closeSheets();
   sac=null; rec=null;
 });
@@ -1085,7 +1119,7 @@ const clock = new THREE.Clock();
 let worldT = 0;
 const DAY_LENGTH = 150;     // segundos por ciclo completo (día+noche)
 const START_TOD  = 0.18;    // arranca de mañana (no en lo oscuro)
-const SPOT_RADIUS = { campo:1.6, posada:1.8, plaza:2.2, shrine:1.6 };
+const SPOT_RADIUS = { campo:3.0, posada:1.8, plaza:2.2, shrine:1.6 };
 function spotPos(k){ const p=PLACES[k].pos; return p; }
 
 function updateHero(h, dt){
@@ -1155,6 +1189,13 @@ function animate(){
   hadaOrb.rotation.y += dt*0.8;
   // cristal del shrine pulsa
   const cr = PLACES.shrine.crystal; if(cr){ cr.rotation.y += dt*0.5; cr.position.y = 1.8 + Math.sin(worldT*1.6)*0.06; }
+  // Cámara de los Ecos: cristal gira/flota y los anillos ondean hacia afuera
+  const ce = PLACES.fusion.echo; if(ce){ ce.rotation.y += dt*0.7; ce.position.y = 1.6 + Math.sin(worldT*1.4)*0.08; }
+  for(const e of echoRings){
+    const t = (worldT*0.55 + e.phase) % 1;
+    e.ring.scale.set(1 + t*2.4, 1 + t*2.4, 1);
+    e.ring.material.opacity = 0.5 * (1 - t);
+  }
   for(const h of heroes){ if(h.alive) updateHero(h, dt); }
   renderer.render(scene, cam);
 }
