@@ -24,7 +24,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { runPreviewSim, fallbackDialogue, DialogueLine, ExchangeRecord } from './previewSim';
 
-const MODEL = 'gemini-2.0-flash';
+const MODEL = 'gemini-2.5-flash';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 const CACHE_PATH = path.join(__dirname, '..', 'preview', 'dialogue-cache.json');
 
@@ -51,7 +51,17 @@ function buildPrompt(e: ExchangeRecord): string {
   ].join('\n');
 }
 
-function callGemini(apiKey: string, prompt: string): DialogueLine[] | null {
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Returns seconds to wait from a 429 message, or null if not a rate-limit. */
+function parseRetryAfter(msg: string): number | null {
+  const m = msg.match(/retry in ([\d.]+)s/i);
+  return m ? Math.ceil(parseFloat(m[1])) + 2 : null;
+}
+
+async function callGemini(apiKey: string, prompt: string, retries = 4): Promise<DialogueLine[] | null> {
   const body = JSON.stringify({
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: { responseMimeType: 'application/json', temperature: 0.95 },
@@ -73,7 +83,17 @@ function callGemini(apiKey: string, prompt: string): DialogueLine[] | null {
   }
   try {
     const res = JSON.parse(raw);
-    if (res.error) { console.warn('  API error:', res.error.message); return null; }
+    if (res.error) {
+      const msg: string = res.error.message ?? '';
+      const waitSec = parseRetryAfter(msg);
+      if (waitSec !== null && retries > 0) {
+        process.stdout.write(`  rate-limit — esperando ${waitSec}s (${retries} reintentos)...\n`);
+        await sleep(waitSec * 1000);
+        return callGemini(apiKey, prompt, retries - 1);
+      }
+      console.warn('  API error:', msg.split('\n')[0].slice(0, 120));
+      return null;
+    }
     const text = res?.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) return null;
     const arr = JSON.parse(text);
@@ -116,10 +136,10 @@ async function main() {
 
     let lines: DialogueLine[] | null = null;
     if (apiKey) {
-      lines = callGemini(apiKey, buildPrompt(e));
+      lines = await callGemini(apiKey, buildPrompt(e));
       if (lines) viaGemini++;
-      // Respeta el límite del free tier (~15 RPM): pausa breve entre llamadas.
-      await new Promise((r) => setTimeout(r, 300));
+      // Respeta el límite del free tier (~10 RPM): pausa entre llamadas.
+      await new Promise((r) => setTimeout(r, 6500));
     }
     if (!lines) { lines = fallbackDialogue(e); viaFallback++; }
     cache[key] = lines;
