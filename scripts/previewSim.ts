@@ -1,10 +1,9 @@
 /**
- * Simulación compartida del preview (dev tool).
+ * Simulación compartida del preview.
  *
- * `devPreview.ts` (el dev tool 2D legacy) corre ESTA misma simulación determinista
- * para sus burbujas de charla. El slice 3D (buildSlice.ts) ya NO usa diálogo
- * horneado: compone las charlas en vivo en el navegador (sin Gemini). El fallback
- * de abajo queda para el dev tool 2D.
+ * `buildSlice.ts` corre esta simulación determinista para hornear el estado inicial
+ * del slice 3D (ejes evolucionados + log de charlas para el resumen offline). Las
+ * charlas con texto se componen EN VIVO en el navegador (sin Gemini, sin caché).
  *
  * Integra el modelo nuevo: una sola DIFICULTAD de pueblo (createTown) compartida
  * por todos los NPC invocados, en vez de que cada uno tire la suya.
@@ -23,11 +22,6 @@ export const INITIAL = 4;
 export const TICKS = 3000;
 export const TOWN_SEED = 'shrine-dev-town';
 
-export interface DialogueLine {
-  speaker: 'a' | 'b';
-  text: string;
-}
-
 export interface ExchangeRecord {
   tick: number;
   aId: string; aName: string;
@@ -40,7 +34,6 @@ export interface ExchangeRecord {
   // crudos — solo lo que se vería mirando). Es la "persona" que recibe la IA.
   cuesA: string[];
   cuesB: string[];
-  key: string; // clave estable para la caché de diálogo
 }
 
 export interface PreviewSim {
@@ -49,26 +42,6 @@ export interface PreviewSim {
   roster: NPC[];
   currentAxes: Record<string, SoulAxes>;
   log: ExchangeRecord[];
-}
-
-/** Hash estable (FNV-1a) → hex corto, para claves de caché reproducibles. */
-function stableHash(str: string): string {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  return h.toString(16).padStart(8, '0');
-}
-
-export function dialogueKey(
-  topic: string,
-  aName: string,
-  bName: string,
-  cuesA: string[],
-  cuesB: string[],
-): string {
-  return stableHash([topic, aName, bName, cuesA.join('|'), cuesB.join('|')].join('::'));
 }
 
 /** Corre la simulación determinista y devuelve pool, roster, ejes finales y log. */
@@ -118,52 +91,10 @@ export function runPreviewSim(): PreviewSim {
           nudgesA: ex.nudges.a as Record<string, number>,
           nudgesB: ex.nudges.b as Record<string, number>,
           cuesA, cuesB,
-          key: dialogueKey(ex.topic, na.name, nb.name, cuesA, cuesB),
         });
       }
     }
   }
 
   return { town, pool, roster, currentAxes, log };
-}
-
-// ── Fallback de diálogo (redactado por Claude) ───────────────────────────────
-// Se usa cuando NO hay GEMINI_API_KEY o la llamada falla, para que el preview
-// SIEMPRE muestre charla natural. Gemini, cuando hay clave, lo sobrescribe por
-// exchange. Determinista: elige variante por la clave del exchange.
-// Tono de recién llegados (sin pisos/combate ni cosas no vividas): desorientación,
-// el sitio, el frío, conocerse. Solo lo alimenta el dev tool 2D legacy.
-const FALLBACK: Record<string, [string, string][]> = {
-  training: [
-    ['¿Otra vuelta al campo? No sé ni cómo se sostiene esto.', 'Nadie sabe. Lo hacemos por no quedarnos quietos.'],
-    ['Me canso rápido. No estoy hecho para esto.', 'Yo tampoco. Pero algo hay que hacer mientras entendemos dónde estamos.'],
-    ['¿Tú crees que sirve de algo todo esto?', 'Ni idea. Al menos entra uno en calor.'],
-  ],
-  survival: [
-    ['Este sitio no me termina de gustar.', 'A mí tampoco. Pero estamos juntos, algo es algo.'],
-    ['¿Tú recuerdas cómo llegaste?', 'No. Y eso es lo que más me inquieta.'],
-    ['Si las cosas se ponen feas, ¿qué hacemos?', 'Quedarnos cerca. Solos no se aguanta.'],
-  ],
-  social: [
-    ['Te noto distinto desde que llegamos.', 'Será que aquí uno no sabe ni quién es.'],
-    ['Nunca me cuentas de dónde vienes.', 'Poco a poco. Apenas me acuerdo yo.'],
-    ['¿Confías en la gente de aquí?', 'En ti, un poco más cada día.'],
-  ],
-  hobby: [
-    ['¿Qué hacías para distraerte, antes?', 'No me acuerdo bien. Algo con las manos, creo.'],
-    ['A veces me siento a mirar el fuego y ya.', 'Yo igual. Calma, aunque sea un rato.'],
-    ['Cuéntame algo, lo que sea.', 'No tengo gran cosa. Pero te escucho, si quieres hablar tú.'],
-  ],
-  casual: [
-    ['Hace frío hoy.', 'Sí. Bueno para arrimarse al fuego y callar.'],
-    ['¿Otra noche en vela?', 'Eso parece. Al menos no la paso solo.'],
-    ['No hace falta hablar, ¿sabes?', 'Lo sé. Se está bien así.'],
-  ],
-};
-
-export function fallbackDialogue(e: ExchangeRecord): DialogueLine[] {
-  const bank = FALLBACK[e.topic] ?? FALLBACK.casual;
-  const idx = parseInt(e.key.slice(0, 4), 16) % bank.length;
-  const [a, b] = bank[idx];
-  return [{ speaker: 'a', text: a }, { speaker: 'b', text: b }];
 }

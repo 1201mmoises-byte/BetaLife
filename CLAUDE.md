@@ -28,9 +28,9 @@ Diseño completo en `docs/DISENO-VERTICAL-SLICE.md`. Primera versión jugable:
 - `scripts/buildSlice.ts` — corre `runPreviewSim()`, hornea héroes (ejes nacimiento+ahora,
   emergentes, cues, necesidades) + **voz CUALITATIVA de la Hada compuesta aquí** (sin
   números: deriva de ejes = "ha ido aprendiendo", `confidence` = miedo a la Torre, y teje
-  las necesidades observables; NO usa `consultNPC`/`situationBrief` del motor porque
-  mencionan conteos) + **pool de diálogo por tema** (`dialoguePool`) para las charlas en vivo.
-- Build: `npx ts-node --project tsconfig.json scripts/buildSlice.ts`
+  las necesidades observables) + **pool de diálogo por tema** (`dialoguePool`) para las
+  charlas en vivo. (En vivo, la lectura por héroe la compone `liveReading` en el navegador.)
+- Build: `npm run build:slice`
 - **Pendiente:** verificación visual en navegador real (WebGL); conectar foco/guía a
   efectos reales; muerte emergente rara (hoy stub: voluntad de vivir = no mueren en la
   demo). NO incluye Torre jugable ni combate (faltan stats).
@@ -98,14 +98,15 @@ El slice deja de ser una "foto": el motor determinista corre EN EL NAVEGADOR y s
 - `src/engine/types.ts` — `NPC.difficulty` = del pueblo, no por NPC.
 - `src/engine/index.ts` — exporta `town`.
 
-### Fase B — Diálogo IA en el dev preview ✓ (Gemini RETIRADO)
+### Fase B — Diálogo IA en el dev preview ✓ (Gemini + dev tool 2D RETIRADOS)
 - `scripts/previewSim.ts` — simulación compartida. `runPreviewSim()` devuelve
-  `{town, pool, roster, currentAxes, log}`. `fallbackDialogue(e)` queda SOLO para el
-  dev tool 2D legacy (`devPreview.ts`).
-- **Gemini eliminado** (free-tier diminuto): borrados `scripts/generateDialogue.ts`,
-  `preview/dialogue-cache.json` y el workflow. El slice 3D ya NO usa diálogo horneado:
-  **compone las charlas en vivo en el navegador** (ver Fase 1, abajo), ancladas en la
-  voz real de cada héroe (oficio/sueños/hambre/sitio). Sin API, sin límites.
+  `{town, pool, roster, currentAxes, log}`; lo consume `buildSlice.ts` para hornear el
+  estado inicial del slice 3D.
+- **Gemini eliminado** (free-tier diminuto) y **dev tool 2D retirado** (`devPreview.ts`,
+  `preview/shrine-dev.html`, `preview/shrine.html` borrados, junto con `fallbackDialogue`/
+  `consultNPC`/`situationBrief`). El slice 3D ya NO usa diálogo horneado: **compone las
+  charlas en vivo en el navegador** (ver Fase 1), ancladas en la voz real de cada héroe
+  (oficio/sueños/hambre/sitio). Sin API, sin límites.
 
 ### Fase C — ~~Auto-generación via GitHub Actions~~ RETIRADA
 - `.github/workflows/dialogue-gen.yml` ELIMINADO junto con Gemini. El `GEMINI_API_KEY`
@@ -114,8 +115,10 @@ El slice deja de ser una "foto": el motor determinista corre EN EL NAVEGADOR y s
 
 ## Preview publicado
 URL: `https://raw.githack.com/1201mmoises-byte/BetaLife/gh-pages/index.html`
-Branch: `gh-pages` → `index.html`
-Fuente: `preview/shrine-dev.html` generado por `scripts/devPreview.ts`
+Branch: `gh-pages` → `index.html` = **el slice 3D** (el dev tool 2D fue retirado).
+Fuente: `preview/slice.template.html` → `npm run build:slice` → `preview/slice.html`.
+Deploy: copiar `preview/slice.html` a `index.html` y `preview/engine.bundle.js` a la
+raíz de `gh-pages` (el slice importa `./engine.bundle.js`, relativo).
 
 ## Arquitectura del motor
 - Determinismo: `seeder.branch(suffix)` crea seeders hijos independientes.
@@ -124,11 +127,10 @@ Fuente: `preview/shrine-dev.html` generado por `scripts/devPreview.ts`
 - El texto de diálogo es SOLO para el preview de dev, nunca en el juego real.
 
 ### Fase 6 — El Hada interactiva ✓
-- `src/engine/mediator.ts` — `consultNPC`, `situationBrief`, `explainRule` activos.
-- `scripts/devPreview.ts` — panel del hada (bottom sheet): situación del roster,
-  lectura por héroe (toca para ir al inspector), reglas que el hada explica.
-  El inspector de cada héroe muestra "el hada dice" (lectura observable, sin números).
-  Hada clicable en la escena + botón "el hada" en dev-controls.
+- `src/engine/mediator.ts` — voz de la Hada: `briefRoster`, `describeNPC`,
+  `reportActivity`, `explainRule`, `relay`, `rareWhisper`. (El slice usa `explainRule`
+  para las reglas; la lectura por héroe se compone en vivo en el navegador con
+  `liveReading`, sin números.)
 - **Terminología de dominio (cara al jugador):**
   - "La hada" = la entidad mediadora (`mediator.ts`). Guía/mentora del jugador Y de los héroes.
   - "Héroes" = los personajes del roster (internamente siguen siendo `NPC` en el código).
@@ -145,16 +147,17 @@ Archivos futuros: `src/ai/localDialogue.ts`, `src/ai/playerContext.ts`.
 
 ## Comandos frecuentes
 ```bash
-# (Gemini retirado: las charlas del slice 3D se componen en vivo, sin API)
-
-# Regenerar preview HTML (dev tool 2D)
-npx ts-node --project tsconfig.json scripts/devPreview.ts
+# (Gemini + dev tool 2D retirados: las charlas del slice 3D se componen en vivo, sin API)
 
 # Generar el vertical slice 3D (Fase 1) → preview/slice.html
-npx ts-node --project tsconfig.json scripts/buildSlice.ts
+npm run build:slice
 
-# Ejecutar tests del motor
-npx ts-node --project tsconfig.json scripts/testEngine.ts
+# Empaquetar el motor para el navegador → preview/engine.bundle.js
+npm run bundle
+
+# Ejecutar tests del motor / mundo vivo
+npm test
+npm run test:live
 
 # TypeScript check
 npx tsc --noEmit

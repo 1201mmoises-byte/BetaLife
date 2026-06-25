@@ -6,8 +6,9 @@
   "scripts": {
     "build": "tsc",
     "bundle": "esbuild src/runtime/browser.ts --bundle --format=esm --outfile=preview/engine.bundle.js",
-    "test": "node --loader ts-node/esm scripts/testEngine.ts",
-    "validate": "ts-node scripts/testEngine.ts"
+    "build:slice": "ts-node --project tsconfig.json scripts/buildSlice.ts",
+    "test": "ts-node --project tsconfig.json scripts/testEngine.ts",
+    "test:live": "ts-node --project tsconfig.json scripts/testLive.ts"
   },
   "devDependencies": {
     "typescript": "^5.4.5",

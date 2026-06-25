@@ -783,62 +783,6 @@ function rareWhisper(npcs) {
   if (alive.length === 0) return null;
   return checkRosterFear(alive) ?? checkConflict(alive) ?? checkIsolation(alive);
 }
-function consultNPC(seeder, npc, exchanges, allies) {
-  if (!npc.isAlive) return `${npc.name} ha ca\xEDdo. No hay m\xE1s que reportar.`;
-  const seen = firstImpression(seeder.branch("observe:" + npc.id), npc.axes);
-  const status = npc.floorReached > 0 ? `piso ${npc.floorReached}` : "piso 1";
-  const header = `${npc.name} (${npc.stars}\u2605, ${status}).`;
-  const own = exchanges.filter((e) => e.participants.includes(npc.id));
-  if (own.length === 0) return `${header} Sin charlas registradas. ${seen}`;
-  const topicCounts = {};
-  const partnerCounts = {};
-  let totalIntensity = 0;
-  const nameOf = new Map(allies.map((n) => [n.id, n.name]));
-  for (const e of own) {
-    topicCounts[e.topic] = (topicCounts[e.topic] ?? 0) + 1;
-    const otherId = e.participants[0] === npc.id ? e.participants[1] : e.participants[0];
-    const otherName = nameOf.get(otherId) ?? otherId;
-    partnerCounts[otherName] = (partnerCounts[otherName] ?? 0) + 1;
-    totalIntensity += e.intensity;
-  }
-  const dominant = Object.entries(topicCounts).sort((a, b) => b[1] - a[1])[0][0];
-  const [topPartner, topCount] = Object.entries(partnerCounts).sort((a, b) => b[1] - a[1])[0];
-  const avgIntensity = totalIntensity / own.length;
-  const lines = [
-    header,
-    `${own.length} ${own.length === 1 ? "charla" : "charlas"}. Lo que m\xE1s lo ocupa: ${TOPIC_REPORT[dominant]}.`,
-    `Habla m\xE1s con ${topPartner} (${topCount} ${+topCount === 1 ? "vez" : "veces"}).`
-  ];
-  if (avgIntensity > 0.5) lines.push("Las charlas han sido intensas \u2014 no es superficie.");
-  lines.push(seen);
-  return lines.join(" ");
-}
-function situationBrief(npcs, exchanges) {
-  const alive = npcs.filter((n) => n.isAlive);
-  const alert = checkRosterFear(alive) ?? checkConflict(alive) ?? checkIsolation(alive);
-  const parts = [];
-  if (alert) parts.push(alert);
-  parts.push(briefRoster(npcs));
-  if (exchanges.length === 0) {
-    parts.push("Sin actividad entre ellos todav\xEDa.");
-    return parts.join("\n");
-  }
-  const nameOf = new Map(npcs.map((n) => [n.id, n.name]));
-  const pairCounts = /* @__PURE__ */ new Map();
-  for (const e of exchanges) {
-    const aName = nameOf.get(e.participants[0]) ?? e.participants[0];
-    const bName = nameOf.get(e.participants[1]) ?? e.participants[1];
-    const label = `${aName} y ${bName}`;
-    const rec = pairCounts.get(label) ?? { count: 0, topic: e.topic };
-    rec.count++;
-    pairCounts.set(label, rec);
-  }
-  const topPairs = [...pairCounts.entries()].sort((a, b) => b[1].count - a[1].count).slice(0, 3);
-  parts.push(
-    "Actividad reciente: " + topPairs.map(([pair, rec]) => `${pair}: ${TOPIC_REPORT[rec.topic]} (${rec.count})`).join(". ") + "."
-  );
-  return parts.join("\n");
-}
 
 // src/engine/needs.ts
 var SATIETY_DECAY = 0.012;
@@ -1514,7 +1458,6 @@ export {
   applyExperience,
   bandOf,
   briefRoster,
-  consultNPC,
   conversationAffinity,
   conversationChance,
   createLiveWorld,
@@ -1556,7 +1499,6 @@ export {
   serializeSave,
   setDevMode,
   simulateOffline,
-  situationBrief,
   softCeiling,
   starProbabilities,
   starProgressionMultiplier,
