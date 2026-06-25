@@ -1297,6 +1297,8 @@ function executeFusion(sacData, recData, onDone){
     }, 1400);
   }
   sacData.inRoster=false;
+  recentLoss = { name: sacData.name, timer: 180 };
+  hadaState.solemnity = Math.min(1, hadaState.solemnity + 0.12);
   if(onDone) setTimeout(onDone, 500);
 }
 function echoCeremony(sacData, recData, afterCb){
@@ -1515,13 +1517,19 @@ const BANKS = {
   idle: [
     ['No hace falta hablar, ¿sabes?','No.','…','Se está bien así.'],
   ],
+  loss: [
+    ['{1t} lleva tiempo sin salir… ¿Sabes qué pasó?', 'Entró a la Cámara. Solo salió {2t}.'],
+    ['El sitio donde dormía {lost} está vacío.', 'Lo noté esta mañana. El pueblo es más callado.'],
+    ['¿Crees que {lost} sabía lo que iba a pasar?', 'Nadie sabe. Pero fue rápido.'],
+  ],
 };
 function fillTokens(t,s1,s2,food,frag){
   return t.split('{1t}').join(s1.data.trade||'alguien').split('{2t}').join(s2.data.trade||'alguien')
           .split('{1p}').join(s1.data.place||'su tierra').split('{2p}').join(s2.data.place||'su tierra')
           .split('{2obs}').join(TONE_OBS[toneOf(s2)]||'difícil de leer')
           .split('{1obs}').join(TONE_OBS[toneOf(s1)]||'difícil de leer')
-          .split('{food}').join(food).split('{frag}').join(frag||'algo que no entendía');
+          .split('{food}').join(food).split('{frag}').join(frag||'algo que no entendía')
+          .split('{lost}').join(recentLoss ? recentLoss.name : 'aquel');
 }
 // Micro-planner: elige de qué hablan según su ESTADO real y su PERSONALIDAD (idea
 // minada de AutoChatManager). Anti-repetición de beat y plantilla.
@@ -1556,6 +1564,8 @@ function composeExchange(A,B){
   add('environment', (NIGHT>0.5)?2:1);
   // silencio: para solitarios
   add('idle', isTone('solitario')?2:1);
+  // pérdida reciente: testigos recuerdan al sacrificado
+  if(recentLoss) add('loss', 5);
 
   // anti-repetición: castiga repetir el último beat
   for(const c of cands){ if(c[0]===lastBeat) c[1]*=0.25; }
@@ -1616,94 +1626,134 @@ function endConversation(h){
 }
 
 // ── El héroe le pregunta a la Hada (guía, SOLO si preguntan) ──────────────────
-// Respuesta compuesta desde el estado REAL: necesidades, tono de alma, Torre.
-// La Hada sabe más de lo que dice — teme ser reemplazada si revela demasiado.
-let hadaBusy = false, guideTimer = 2.8;
-let musingTimer = 20 + Math.random()*20;
+// La Hada tiene su propio estado aprendido: confianza (sube con obediencia),
+// solemnidad (sube con cada fusión), sabiduría (sube cada amanecer).
+// No habla espontáneamente — solo cuando el jugador la solicita, o rarísima vez.
+let hadaBusy = false;
+let musingTimer = 900 + Math.random()*300;   // 1 monólogo por partida, no cada minuto
 const hadaSpeaker = { group: hada, alive:true, data:{ name:'La Hada' } };
+const hadaState = { confidence: 0.55, solemnity: 0.1, wisdom: 0.0 };
 
-const HERO_QUESTIONS = {
-  inseguro: '¿Qué… qué hago ahora? No sé ni por dónde empezar.',
-  curioso:  '¿Qué es este lugar? ¿Y esa torre de allá?',
-  frío:     '¿Quién eres tú, y por qué habría de escucharte?',
-  cálido:   '¿Hay algo que deba saber sobre este pueblo?',
-  cauto:    '¿Es seguro estar aquí? No confío en este sitio.',
-  optimista:'¿Por dónde empiezo? Quiero hacer algo útil.',
-  sombrío:  'No entiendo qué hago aquí. Nada tiene sentido.',
-  default:  '¿Dónde estoy? No recuerdo cómo llegué aquí.',
+const HERO_QUESTIONS = [
+  '¿Qué… qué hago ahora? No sé ni por dónde empezar.',
+  '¿Qué es este lugar? ¿Y esa torre de ahí?',
+  '¿Quién eres tú, y por qué habría de escucharte?',
+  '¿Dónde estoy? No recuerdo cómo llegué aquí.',
+  '¿Hay algo que debería saber?',
+  '¿Se puede confiar en este sitio?',
+  '¿La Torre? ¿Qué hay arriba?',
+];
+
+// Pools de variantes por slot — rotan para que no repita nunca la misma frase dos veces seguidas.
+const HA_OBS = {
+  hungry:[
+    'Tienes hambre. Lo veo antes de que lo digas.',
+    'Comes poco. El cuerpo no miente — deja que hable.',
+    'La barriga vacía hace ruido aunque tú no lo digas.',
+  ],
+  tired:[
+    'El agotamiento se te nota. Descansa — no lo pido por cortesía.',
+    'Estás gastado. El cuerpo lleva la cuenta aunque no quieras.',
+    'Puedo verte cansado desde aquí. La Posada, antes que nada.',
+  ],
+  lowConf:[
+    'Sé que lo dudas todo. El que no duda no presta atención.',
+    'La duda no es debilidad — es señal de que piensas. Úsala.',
+    'Te veo vacilar. Eso también es una forma de saber dónde estás.',
+  ],
+  curioso:[
+    'Preguntas. Bien. Los que no preguntan llegan tarde.',
+    'Hay muchos que no preguntan. Tú sí. Eso ya te distingue.',
+    'La curiosidad es tuya — cuídala, no la gastes en respuestas fáciles.',
+  ],
+  default:[
+    'Te veo. Respiras. Eso ya es suficiente por ahora.',
+    'Estás aquí. No siempre sé qué más decir — pero te veo.',
+    'El pueblo te nota, aunque no lo diga. Eso también cuenta.',
+  ],
 };
+const HA_ORI = [
+  'Entrena. No para ganar — para conocer tus límites. Eso es lo único que te pido.',
+  'Ve a la Posada si el cuerpo te lo pide. Luego, el Campo.',
+  'Conoce a los de aquí. Un pueblo que no se conoce no resiste nada.',
+  'Cuídate. Sin cuerpo, no hay nada más que hacer aquí.',
+];
+const HA_TOW_LOW  = [  // lowConf || highCur
+  'La Torre está ahí — cada día que sobrevives eres un paso más cerca.',
+  'La Torre espera. No sube el que quiere; sube el que está listo.',
+  'Esa Torre tiene una verdad. No la que inventas — la que te ganas.',
+];
+const HA_TOW_HIGH = [  // normal/confident
+  'Cuando te sientas listo, la Torre te llamará. Lo sabrás — no habrá duda.',
+  'La Torre no se toma por fuerza. Se llega por mérito.',
+  'Hay algo allá arriba. Merécelo primero.',
+];
+const HA_RES = [   // auto-contención
+  'No puedo decirte más. Hay cosas que solo se revelan cuando llega el momento.',
+  'Hasta aquí puedo llegar. Lo demás lo decides tú.',
+  'El resto no me corresponde decirlo.',
+  'Más que esto no diré — y no porque no quiera.',
+];
+
+// Slot rotante por héroe para evitar repetición
+const heroSlots = {};
+function nextSlot(hid, key, pool){
+  if(!heroSlots[hid]) heroSlots[hid] = {};
+  const idx = ((heroSlots[hid][key]||0) + 1) % pool.length;
+  heroSlots[hid][key] = idx;
+  return pool[idx];
+}
 
 function hadaSpeak(h){
-  const tone = toneOf(h);
-  const nd = h.data._live ? h.data._live.needs : h.data.needs;
-  const ax = h.data.axesNow || h.data.axes || {};
+  const hid  = h.data.id;
+  const nd   = h.data._live ? h.data._live.needs : h.data.needs;
+  const ax   = h.data.axesNow || h.data.axes || {};
   const hungry  = nd && nd.satiety < 0.45;
   const tired   = nd && nd.energy  < 0.40;
   const lowConf = ax.confidence < 0.42;
   const highCur = ax.curiosity  > 0.55;
   const lines = [];
-  // Estado del cuerpo — observable, nunca número
-  if(hungry)       lines.push('Tienes hambre. Lo veo antes de que lo digas. Eso va primero.');
-  else if(tired)   lines.push('El agotamiento se te nota. Descansa — no lo pido por cortesía.');
-  else if(lowConf) lines.push('Sé que lo dudas todo. Está bien. El que no duda no presta atención.');
-  else if(tone==='curioso') lines.push('Preguntas. Bien. Los que no preguntan llegan tarde.');
-  else if(tone==='frío')    lines.push('No tienes que escucharme. Pero soy la única que sabe por qué estás aquí.');
-  else             lines.push('Te veo. Respiras. Eso ya es suficiente por ahora.');
-  // Orientación real
-  if(hungry || tired){
-    lines.push('Ve a la Posada. Come, descansa. Las batallas esperan; el cuerpo, no.');
-  } else {
-    lines.push('Entrena. No para ganar — para conocer tus límites. Eso es lo único que te pido.');
-  }
-  // La Torre: siempre presente, nunca revelada
-  if(highCur || lowConf){
-    lines.push('La Torre está ahí — cada día que sobrevives eres un paso más cerca de lo que buscas.');
-  } else {
-    lines.push('Cuando te sientas listo, la Torre te llamará. Lo sabrás — no habrá duda.');
-  }
-  // Auto-contención: la Hada no puede decir más
-  lines.push('No puedo decirte más. Hay cosas que solo se revelan cuando llega el momento.');
+  // Slot 1 — observación del estado físico/emocional (rotante por héroe)
+  const obsPool = hungry ? HA_OBS.hungry : tired ? HA_OBS.tired :
+                  lowConf ? HA_OBS.lowConf : highCur ? HA_OBS.curioso : HA_OBS.default;
+  lines.push(nextSlot(hid,'obs',obsPool));
+  // Slot 2 — orientación (rotante)
+  lines.push(nextSlot(hid,'ori',HA_ORI));
+  // Slot 3 — la Torre (rotante, tono depende de confianza del héroe Y estado de la Hada)
+  const towPool = (lowConf || highCur || hadaState.wisdom > 0.3) ? HA_TOW_LOW : HA_TOW_HIGH;
+  lines.push(nextSlot(hid,'tow',towPool));
+  // Slot 4 — auto-contención (varía en severidad según solemnidad aprendida)
+  lines.push(nextSlot(hid,'res',HA_RES));
   return lines;
 }
 
+// Monólogos de la Hada: MUY raros (1 por partida larga). Solo si el jugador no está mirando.
 const HADA_MUSINGS = [
-  'Coman. Descansen. Entrenen. Todo lo demás viene después.',
-  'La Torre no espera a los impacientes, ni a los que no se cuidan.',
-  'Los que sobreviven juntos llegan más lejos. Acercaos.',
-  'No os digo qué hay allá arriba. Eso es solo para quien llega.',
-  'Hay una verdad en este pueblo. No soy yo quien os la dará.',
-  'Obedecedme o no — pero cuidad vuestro cuerpo. Sin él, nada más importa.',
+  'Survived another day. Good.',
+  'La Torre no espera a los impacientes.',
+  'Hay una verdad en este pueblo. No soy yo quien os la dará — pero ayudo a merecerla.',
 ];
 
 function guidanceDirector(dt){
   if(TUTORIAL) return;
-  guideTimer -= dt; musingTimer -= dt;
-  // meditación en voz alta (sin héroe que pregunte)
-  if(musingTimer <= 0 && !hadaBusy){
-    musingTimer = 35 + Math.random()*25;
+  // Monólogo rarísimo — 1 por partida larga, sin interrumpir al jugador
+  musingTimer -= dt;
+  if(musingTimer <= 0 && !hadaBusy && !document.getElementById('sheet-hada').classList.contains('open')){
+    musingTimer = 999999;   // no vuelve a sonar hasta que se recargue
     const msg = HADA_MUSINGS[Math.floor(Math.random()*HADA_MUSINGS.length)];
     say(hadaSpeaker, msg);
-    liveChats.unshift({ a:'La Hada', b:'', topic:'voz de la Hada', lines:[{who:'La Hada',text:msg}] });
-    if(liveChats.length>40) liveChats.pop();
-    if(document.getElementById('sheet-dev').classList.contains('open') && devCurrent==='charlas') renderCharlas();
   }
-  if(guideTimer > 0 || hadaBusy) return;
-  guideTimer = 3 + Math.random()*2;
-  const cand = heroes.filter(h=>h.alive && h.state==='idle' && !h.partner &&
-    (toneOf(h)==='inseguro' || toneOf(h)==='curioso' || (h.data.axesNow && h.data.axesNow.confidence<0.45)));
-  if(!cand.length) return;
-  const h = cand[Math.floor(Math.random()*cand.length)];
-  h.state='seekFairy'; h.seekT=0; hadaBusy=true;
+  // La Hada NO busca héroes por sí sola — solo habla si el jugador la abre.
 }
 function askFairy(h){
   h.state='asking'; h.seekT=0;
   h.group.rotation.y = Math.atan2(hada.position.x-h.group.position.x, hada.position.z-h.group.position.z);
-  const q = HERO_QUESTIONS[toneOf(h)] || HERO_QUESTIONS.default;
+  const q = HERO_QUESTIONS[Math.floor(Math.random()*HERO_QUESTIONS.length)];
   const lines = hadaSpeak(h);
   say(h, q);
   const chatLines = [{who:h.data.name,text:q}];
   let delay = 1500;
-  lines.forEach((ln, i)=>{
+  lines.forEach((ln)=>{
     setTimeout(()=>{ say(hadaSpeaker, ln); }, delay);
     chatLines.push({who:'La Hada',text:ln});
     delay += 1400;
@@ -1711,7 +1761,7 @@ function askFairy(h){
   liveChats.unshift({ a:h.data.name, b:'La Hada', topic:'pregunta a la Hada', lines:chatLines });
   if(liveChats.length>40) liveChats.pop();
   if(document.getElementById('sheet-dev').classList.contains('open') && devCurrent==='charlas') renderCharlas();
-  setTimeout(()=>{ h.state='idle'; h.timer=2+Math.random()*3; hadaBusy=false; }, delay + 600);
+  setTimeout(()=>{ h.state='idle'; h.timer=2+Math.random()*3; hadaBusy=false; h._fairyCooldown=120; }, delay + 600);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1768,13 +1818,13 @@ function tutDoSummon(){
   } else {
     tutHintClear(); clearHighlight();
     tutStep = 'explain';
-    setTimeout(tutExplain, 650);  // deja ver al cuarto aparecer, luego la Hada retoma
+    setTimeout(tutExplain, 2800);  // deja ver al cuarto aparecer ~3s antes de que el chat reaparezca
   }
 }
 function tutExplain(){
   tutStep = 'explain'; clearHighlight(); openSheet('sheet-hada');
-  fairySays('Ahora lo importante: <b>yo soy tu única voz hacia ellos</b>. No les das órdenes directas — me dices qué deseas y yo lo susurro. Te escuchan… o no. Son suyas las decisiones.', ()=>{
-    fairySays('Conmigo puedes <b>saber cómo van</b>, <b>pedirme algo</b> (enfocarlos, guiar a uno) o que te <b>explique</b> las reglas del mundo. Nunca verás números: solo lo que se puede observar.', ()=>{
+  fairySays('Ahora lo importante: <b>yo soy tu única voz hacia ellos</b>. No les hablas directamente — pasas por mí. <b>Mis órdenes</b> llegan a todos; ellos deciden si las siguen o no.', ()=>{
+    fairySays('Conmigo puedes <b>saber cómo van</b>, <b>darme órdenes</b> (comer, entrenar, animarse) o que te <b>explique</b> las reglas. Nunca verás números: solo lo que se observa.', ()=>{
       setIntents([{ label:'Pregúntame por uno ✦', act:tutTryAsk }]);
     });
   });
@@ -1849,6 +1899,7 @@ function updateHero(h, dt){
     if(h.state==='train'){ h.group.rotation.y += dt*0.6; }   // gira practicando
     if(h.state==='eat'){ h.group.position.y = Math.abs(Math.sin(h.phase*1.8))*0.04; }  // mordisco suave
     if(h._orderT > 0){ h._orderT -= dt; if(h._orderT <= 0){ h._order=null; h._orderT=0; } }
+    if(h._fairyCooldown > 0) h._fairyCooldown -= dt;
     if(h.timer<=0) pickActivity(h);
     return;
   }
@@ -1875,6 +1926,7 @@ function updateHero(h, dt){
 
 let lastTod = -1;
 let gameDay = 1, prevTod = START_TOD;
+let recentLoss = null;  // { name, timer } — testigos recuerdan al sacrificado ~3 min
 function animate(){
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -1884,10 +1936,12 @@ function animate(){
   // detectar amanecer: tod cruza de ~1 a 0
   if(prevTod > 0.85 && tod < 0.15){
     gameDay++;
+    hadaState.wisdom = Math.min(1, hadaState.wisdom + 0.08);
     const el = document.getElementById('hud-day');
     if(el) el.firstChild.textContent = 'Día ' + gameDay;
   }
   prevTod = tod;
+  if(recentLoss){ recentLoss.timer -= dt; if(recentLoss.timer <= 0) recentLoss = null; }
   updateSky(tod);
   // fuegos: parpadean; SIEMPRE iluminan algo, mucho más de noche
   for(const f of fires){
