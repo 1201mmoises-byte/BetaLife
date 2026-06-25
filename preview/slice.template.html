@@ -182,6 +182,17 @@
        margin:10px 2px 5px;border-top:1px solid var(--line);padding-top:8px;}
   .needs-read{font-size:9px;color:var(--txt-dim);font-style:italic;margin-top:4px;}
 
+  /* ── Overlay de ceremonia: Cámara de los Ecos ── */
+  #echo-overlay{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;
+       justify-content:center;background:rgba(0,0,0,.82);opacity:0;pointer-events:none;transition:opacity .6s;
+       text-align:center;padding:32px;}
+  #echo-overlay.show{opacity:1;pointer-events:auto;}
+  #echo-overlay .eco-title{font-size:13px;letter-spacing:4px;text-transform:uppercase;color:var(--danger-soft);
+       text-shadow:0 0 18px rgba(192,80,106,.7);margin-bottom:18px;}
+  #echo-overlay .eco-body{font-size:15px;line-height:1.8;color:var(--txt);max-width:340px;}
+  #echo-overlay .eco-body b{color:var(--danger-soft);}
+  #echo-overlay .eco-body em{color:var(--violet-soft);}
+
   /* loader */
   #loader{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
        background:var(--bg);color:var(--violet-soft);font-size:13px;letter-spacing:3px;
@@ -217,6 +228,10 @@
 <div class="place-toast" id="place-toast"></div>
 <div id="tut-hint"></div>
 <div id="speech-layer"></div>
+<div id="echo-overlay">
+  <div class="eco-title">❖ Cámara de los Ecos</div>
+  <div class="eco-body" id="echo-text"></div>
+</div>
 
 <!-- ░░ Hada · conversación ░░ -->
 <div class="sheet" id="sheet-hada">
@@ -859,9 +874,32 @@ function spawnHero(data, atIndex){
   return h;
 }
 
-// estado de actividad por héroe — derivado un poco de las "cues" del motor
+// estado de actividad por héroe — derivado de necesidades reales + personalidad
 function pickActivity(h){
-  // la plaza es el corazón social: más probabilidad de juntarse a charlar
+  const nd = h.data._live ? h.data._live.needs : h.data.needs;
+  // Necesidades críticas primero: comer o descansar van a la Posada
+  if(nd && nd.satiety < 0.38 && h.state !== 'eat'){
+    h.target = 'posada'; h._nextState = 'eat'; h.state = 'walking'; return;
+  }
+  if(nd && nd.energy < 0.30 && h.state !== 'rest'){
+    h.target = 'posada'; h._nextState = 'rest'; h.state = 'walking'; return;
+  }
+  // Procesar orden de la Hada si hay una activa
+  if(h._order && h._orderT > 0){
+    const orderTarget = { eat:'posada', rest:'posada', train:'campo', cheer:'plaza' }[h._order];
+    if(orderTarget){
+      const obeyed = obeyChance(h, h._order);
+      if(obeyed){
+        h.target = orderTarget;
+        h._nextState = (h._order==='eat')?'eat':(h._order==='rest')?'rest':(h._order==='train')?'train':'idle';
+        h.state = 'walking';
+        markObeyed(h);
+        return;
+      }
+    }
+    h._order = null; h._orderT = 0;
+  }
+  // Comportamiento libre
   const r = Math.random();
   let spot;
   if(r < 0.38) spot = 'plaza';
@@ -869,6 +907,7 @@ function pickActivity(h){
   else if(h.data.role==='mage') spot = r<0.68?'shrine':'campo';
   else spot = r<0.7?'posada':'campo';
   h.target = spot;
+  h._nextState = null;
   h.state = 'walking';
 }
 
@@ -1022,6 +1061,44 @@ function setIntents(list){
     b.addEventListener('click', it.act); intentsEl.appendChild(b);
   });
 }
+// ── Sistema de órdenes de la Hada ─────────────────────────────────────────────
+const orderStats = {};   // h.id → { given:n, obeyed:n }
+function obeyChance(h, type){
+  const ax = h.data.axesNow || h.data.axes || {};
+  if(type==='train') return Math.random() < (0.4 + (ax.confidence||0.5)*0.6);
+  if(type==='cheer') return Math.random() < (0.3 + (ax.sociability||0.5)*0.7);
+  if(type==='eat')   return Math.random() < 0.85;
+  if(type==='rest')  return Math.random() < 0.75;
+  return Math.random() < 0.6;
+}
+function markObeyed(h){
+  if(!orderStats[h.data.id]) orderStats[h.data.id]={given:0,obeyed:0};
+  orderStats[h.data.id].obeyed++;
+}
+function issueOrder(type){
+  const ORDER_FAIRY = {
+    eat:   'Id a la Posada — es una orden. Un cuerpo vacío no aprende ni lucha.',
+    rest:  'Descansad. El agotamiento mata más lento que la espada, pero igual de seguro.',
+    train: 'Al Campo, todos. El músculo sin uso es músculo perdido. Moved.',
+    cheer: 'Id a la plaza. Un pueblo que no se conoce no resiste. Acercaos.',
+  };
+  fairySays(ORDER_FAIRY[type], ()=>{
+    heroes.filter(h=>h.alive).forEach(h=>{
+      if(!orderStats[h.data.id]) orderStats[h.data.id]={given:0,obeyed:0};
+      orderStats[h.data.id].given++;
+      h._order=type; h._orderT=30;
+    });
+    setIntents([{label:'Volver', cls:'back', act:hadaRoot}]);
+  });
+}
+function obedienceLabel(id){
+  const s = orderStats[id]; if(!s || s.given===0) return null;
+  const r = s.obeyed / s.given;
+  if(r >= 0.8) return 'siempre obedece';
+  if(r >= 0.5) return 'a veces lo hace';
+  return 'hace lo que quiere';
+}
+
 // lista EN VIVO (incluye héroes recién invocados; excluye a los que ya no están)
 function liveRoster(){ return DATA.heroes.filter(h=>h.inRoster && h.alive!==false); }
 function heroPickIntents(then){
@@ -1038,26 +1115,25 @@ function hadaRoot(){
 function askKnow(){
   fairySays('¿De qué quieres que te hable?', ()=> setIntents([
     { label:'Del pueblo', act:()=>{ bub('right','Del pueblo'); fairySays(DATA.hada.situation, hadaRoot); } },
-    { label:'De alguien', act:()=>heroPickIntents(h=>fairySays(DATA.hada.reports[h.id]||'No tengo nada claro de '+h.name+' ahora.', hadaRoot)) },
+    { label:'De alguien', act:()=>heroPickIntents(h=>{
+        const rep = DATA.hada.reports[h.id]||'No tengo nada claro de '+h.name+' ahora.';
+        const obe = obedienceLabel(h.id);
+        const full = obe ? rep+' Las órdenes: '+obe+'.' : rep;
+        fairySays(full, hadaRoot);
+      }) },
     { label:'¿Qué hay arriba?', cls:'back', act:()=>{ bub('right','¿Qué hay en la Torre?'); fairySays('No puedo ver eso. La Torre no me habla — solo sé que llama.', hadaRoot); } },
     { label:'volver', cls:'back', act:hadaRoot },
   ]));
 }
 function askRequest(){
-  fairySays('Dime qué deseas. No todo lo aceptarán — son suyas las decisiones.', ()=> setIntents([
-    { label:'Enfoca a la comunidad', act:()=>{ bub('right','Enfoca a la comunidad'); focusCommunity(); } },
-    { label:'Enfoca a un héroe', act:()=>heroPickIntents(h=>fairySays('Le diré a '+h.name+' hacia dónde mirar. Si su alma lo permite, irá.', hadaRoot)) },
-    { label:'Guía a un héroe', act:()=>heroPickIntents(h=>fairySays('Hablaré con '+h.name+' con calma — para cuando el ánimo flaquea. <span class="cd">vuelve en 2 días</span>', hadaRoot)) },
-    { label:'El Eco…', cls:'danger', act:()=>{ bub('right','Un Eco'); fairySays('Eso es una orden, no un consejo. Ven a la Cámara de los Ecos.', ()=>{ setTimeout(()=>{ openSheet('sheet-merge'); }, 400); }); } },
+  fairySays('Doy la orden. Obedecerán... o no. Eso me dice quiénes son.', ()=> setIntents([
+    { label:'Que coman',          act:()=>{ bub('right','Que coman');          issueOrder('eat');   } },
+    { label:'Que descansen',      act:()=>{ bub('right','Que descansen');      issueOrder('rest');  } },
+    { label:'Que entrenen',       act:()=>{ bub('right','Que entrenen');       issueOrder('train'); } },
+    { label:'Animar al pueblo',   act:()=>{ bub('right','Animar al pueblo');   issueOrder('cheer'); } },
+    { label:'El Eco…', cls:'danger', act:()=>{ bub('right','Un Eco'); fairySays('Eso es la única orden que nadie puede rechazar. Ven a la Cámara.', ()=>{ setTimeout(()=>{ openSheet('sheet-merge'); }, 400); }); } },
     { label:'volver', cls:'back', act:hadaRoot },
   ]));
-}
-function focusCommunity(){
-  fairySays('¿En qué los enfoco a todos?', ()=> setIntents(
-    [['Entrenar','entrenarse'],['Descansar','descansar'],['Socializar','acercarse'],['Sobrevivir','cuidarse']]
-    .map(([lbl,word])=>({ label:lbl, act:()=>{ bub('right',lbl); fairySays('Lo difundiré como un susurro: que el pueblo piense en '+word+'. Lo seguirán según quienes son.', hadaRoot); } }))
-    .concat([{ label:'volver', cls:'back', act:hadaRoot }])
-  ));
 }
 function askExplain(){
   fairySays('¿El qué?', ()=> setIntents(
@@ -1185,23 +1261,92 @@ function paintMerge(){
     btn.classList.remove('ready');
   }
 }
-document.getElementById('btn-do-merge').addEventListener('click', ()=>{
-  if(!sac||!rec) return;
-  const victim = heroes.find(x=>x.data.id===sac.id);
-  // versión simbólica: el sacrificado se desvanece; el receptor pulsa.
+function executeFusion(sacData, recData, onDone){
+  const victim = heroes.find(x=>x.data.id===sacData.id);
+  const recH   = heroes.find(x=>x.data.id===recData.id);
+  // víctima: camina hacia la Cámara y se desvanece
   if(victim){
     victim.alive=false; victim.data.alive=false;
-    const vg=victim.group; let o=1;
-    const fade=setInterval(()=>{ o-=0.08; vg.traverse(m=>{ if(m.material){ m.material.transparent=true; m.material.opacity=Math.max(0,o);} });
-      if(o<=0){ clearInterval(fade); scene.remove(vg); } }, 40);
+    const vg=victim.group;
+    // mueve hacia P_FUSION
+    const moveV = setInterval(()=>{
+      const dx=P_FUSION.x-vg.position.x, dz=P_FUSION.z-vg.position.z;
+      const d=Math.hypot(dx,dz); if(d<0.2){ clearInterval(moveV); return; }
+      vg.position.x+=dx/d*0.07; vg.position.z+=dz/d*0.07;
+      vg.rotation.y=Math.atan2(dx,dz);
+    }, 16);
+    setTimeout(()=>{
+      clearInterval(moveV);
+      let o=1; const fade=setInterval(()=>{ o-=0.06;
+        vg.traverse(m=>{ if(m.material){ m.material.transparent=true; m.material.opacity=Math.max(0,o); } });
+        if(o<=0){ clearInterval(fade); scene.remove(vg); } }, 40);
+    }, 1000);
   }
-  const recH = heroes.find(x=>x.data.id===rec.id);
-  if(recH){ const t=recH.group; t.scale.set(1.18,1.18,1.18); setTimeout(()=>t.scale.set(1,1,1), 500); }
-  sac.inRoster=false;
-  toast('<b>Eco</b> — '+rec.name+' guarda ahora el eco de '+sac.name+'. El pueblo calla.');
+  // receptor: pulsa y sale de la Cámara
+  if(recH){
+    const rg=recH.group;
+    const moveR = setInterval(()=>{
+      const dx=P_FUSION.x-rg.position.x, dz=P_FUSION.z-rg.position.z;
+      const d=Math.hypot(dx,dz); if(d<0.2){ clearInterval(moveR); return; }
+      rg.position.x+=dx/d*0.07; rg.position.z+=dz/d*0.07;
+      rg.rotation.y=Math.atan2(dx,dz);
+    }, 16);
+    setTimeout(()=>{
+      clearInterval(moveR);
+      rg.scale.set(1.22,1.22,1.22); setTimeout(()=>rg.scale.set(1,1,1), 600);
+    }, 1400);
+  }
+  sacData.inRoster=false;
+  if(onDone) setTimeout(onDone, 500);
+}
+function echoCeremony(sacData, recData, afterCb){
   closeSheets();
+  window._echoAccel = true;
+  // testigos giran hacia la Cámara
+  const witnessLines = {
+    inseguro:'¿Qué... qué le pasa a '+sacData.name+'?',
+    curioso: '¿Qué hay dentro?',
+    cálido:  'Que descanse en paz.',
+    frío:    '',
+    optimista:'Esto no lo olvidaré.',
+    cauto:   '¿Eso es seguro?',
+    sombrío: 'Todos tenemos un final.',
+    default: '…',
+  };
+  heroes.filter(h=>h.alive && h.data.id!==sacData.id && h.data.id!==recData.id).forEach(h=>{
+    h.group.rotation.y = Math.atan2(P_FUSION.x-h.group.position.x, P_FUSION.z-h.group.position.z);
+  });
+  // overlay con texto dramático
+  const overlay = document.getElementById('echo-overlay');
+  const textEl  = document.getElementById('echo-text');
+  textEl.innerHTML = '<b>'+sacData.name+'</b> y <b>'+recData.name+'</b> entran a la Cámara.<br><em>El pueblo se detiene.</em>';
+  overlay.classList.add('show');
+  // tras 1.5s: testigos hablan
+  setTimeout(()=>{
+    heroes.filter(h=>h.alive && h.data.id!==sacData.id && h.data.id!==recData.id).forEach(h=>{
+      const line = witnessLines[toneOf(h)] || witnessLines.default;
+      if(line) setTimeout(()=>say(h, line), Math.random()*800);
+    });
+  }, 1500);
+  // tras 2.5s: ejecutar, ocultar overlay, burbuja del receptor
+  setTimeout(()=>{
+    overlay.classList.remove('show');
+    window._echoAccel = false;
+    executeFusion(sacData, recData, ()=>{
+      const recH = heroes.find(x=>x.data.id===recData.id);
+      if(recH) setTimeout(()=>say(recH, 'Cargo con ello ahora.'), 800);
+      toast('<b>Eco</b> — '+recData.name+' guarda el eco de '+sacData.name+'. El pueblo calló.');
+      if(afterCb) afterCb();
+    });
+  }, 2600);
+}
+document.getElementById('btn-do-merge').addEventListener('click', ()=>{
+  if(!sac||!rec) return;
+  const sacCopy=sac, recCopy=rec;
   sac=null; rec=null;
-  if(TUTORIAL) tutAfterFusion();   // el tutorial cierra con esta primera fusión
+  echoCeremony(sacCopy, recCopy, ()=>{
+    if(TUTORIAL) tutAfterFusion();
+  });
 });
 // abrir picker al abrir la Cámara
 const mergeSheet = document.getElementById('sheet-merge');
@@ -1430,11 +1575,11 @@ function composeExchange(A,B){
   return { beat, lines };
 }
 const liveChats = [];
-let socialTimer = 3;
+let socialTimer = 0.6;
 function socialDirector(dt){
   socialTimer -= dt;
   if(socialTimer > 0) return;
-  socialTimer = 2.5 + Math.random()*3.5;
+  socialTimer = 0.5 + Math.random()*0.7;
   const idle = heroes.filter(h=>h.alive && h.state==='idle' && !h.partner);
   for(let i=0;i<idle.length;i++) for(let j=i+1;j<idle.length;j++){
     if(idle[i].group.position.distanceTo(idle[j].group.position) < 3.6){ startConversation(idle[i], idle[j]); return; }
@@ -1471,22 +1616,79 @@ function endConversation(h){
 }
 
 // ── El héroe le pregunta a la Hada (guía, SOLO si preguntan) ──────────────────
-// Un recién llegado confundido camina hasta la Hada y le pregunta; ella responde
-// como mentora (sin números, sin spoilers del mundo). La pregunta se elige por su
-// personalidad real. La Hada se queda quieta durante el intercambio (hadaBusy).
-let hadaBusy = false, guideTimer = 9;
+// Respuesta compuesta desde el estado REAL: necesidades, tono de alma, Torre.
+// La Hada sabe más de lo que dice — teme ser reemplazada si revela demasiado.
+let hadaBusy = false, guideTimer = 2.8;
+let musingTimer = 20 + Math.random()*20;
 const hadaSpeaker = { group: hada, alive:true, data:{ name:'La Hada' } };
-const FAIRY_QA = {
-  inseguro: { q:'¿Qué… qué hago ahora? No sé ni por dónde empezar.', a:'Respira. Es tu pueblo ahora; aquí estás a salvo. Come, descansa, conoce a los demás — lo demás llega solo.' },
-  curioso:  { q:'¿Qué es este lugar? ¿Y esa torre de allá?', a:'Es tu pueblo. La Torre… llama, lo sé; pero aún no es momento de subir. Lo sabrás cuando lo sea.' },
-  'frío':   { q:'¿Quién eres tú, y por qué habría de escucharte?', a:'Una voz que te acompaña, nada más. No haré las cosas por ti; pero si lo pides, te guío.' },
-  'default':{ q:'¿Dónde estoy? No recuerdo cómo llegué aquí.', a:'Pocos lo recuerdan. Algo te trajo a este pueblo. Con el tiempo, quizá un sueño te diga el resto.' },
+
+const HERO_QUESTIONS = {
+  inseguro: '¿Qué… qué hago ahora? No sé ni por dónde empezar.',
+  curioso:  '¿Qué es este lugar? ¿Y esa torre de allá?',
+  frío:     '¿Quién eres tú, y por qué habría de escucharte?',
+  cálido:   '¿Hay algo que deba saber sobre este pueblo?',
+  cauto:    '¿Es seguro estar aquí? No confío en este sitio.',
+  optimista:'¿Por dónde empiezo? Quiero hacer algo útil.',
+  sombrío:  'No entiendo qué hago aquí. Nada tiene sentido.',
+  default:  '¿Dónde estoy? No recuerdo cómo llegué aquí.',
 };
+
+function hadaSpeak(h){
+  const tone = toneOf(h);
+  const nd = h.data._live ? h.data._live.needs : h.data.needs;
+  const ax = h.data.axesNow || h.data.axes || {};
+  const hungry  = nd && nd.satiety < 0.45;
+  const tired   = nd && nd.energy  < 0.40;
+  const lowConf = ax.confidence < 0.42;
+  const highCur = ax.curiosity  > 0.55;
+  const lines = [];
+  // Estado del cuerpo — observable, nunca número
+  if(hungry)       lines.push('Tienes hambre. Lo veo antes de que lo digas. Eso va primero.');
+  else if(tired)   lines.push('El agotamiento se te nota. Descansa — no lo pido por cortesía.');
+  else if(lowConf) lines.push('Sé que lo dudas todo. Está bien. El que no duda no presta atención.');
+  else if(tone==='curioso') lines.push('Preguntas. Bien. Los que no preguntan llegan tarde.');
+  else if(tone==='frío')    lines.push('No tienes que escucharme. Pero soy la única que sabe por qué estás aquí.');
+  else             lines.push('Te veo. Respiras. Eso ya es suficiente por ahora.');
+  // Orientación real
+  if(hungry || tired){
+    lines.push('Ve a la Posada. Come, descansa. Las batallas esperan; el cuerpo, no.');
+  } else {
+    lines.push('Entrena. No para ganar — para conocer tus límites. Eso es lo único que te pido.');
+  }
+  // La Torre: siempre presente, nunca revelada
+  if(highCur || lowConf){
+    lines.push('La Torre está ahí — cada día que sobrevives eres un paso más cerca de lo que buscas.');
+  } else {
+    lines.push('Cuando te sientas listo, la Torre te llamará. Lo sabrás — no habrá duda.');
+  }
+  // Auto-contención: la Hada no puede decir más
+  lines.push('No puedo decirte más. Hay cosas que solo se revelan cuando llega el momento.');
+  return lines;
+}
+
+const HADA_MUSINGS = [
+  'Coman. Descansen. Entrenen. Todo lo demás viene después.',
+  'La Torre no espera a los impacientes, ni a los que no se cuidan.',
+  'Los que sobreviven juntos llegan más lejos. Acercaos.',
+  'No os digo qué hay allá arriba. Eso es solo para quien llega.',
+  'Hay una verdad en este pueblo. No soy yo quien os la dará.',
+  'Obedecedme o no — pero cuidad vuestro cuerpo. Sin él, nada más importa.',
+];
+
 function guidanceDirector(dt){
-  if(TUTORIAL) return;     // durante el onboarding la Hada la conduce el tutorial
-  guideTimer -= dt;
+  if(TUTORIAL) return;
+  guideTimer -= dt; musingTimer -= dt;
+  // meditación en voz alta (sin héroe que pregunte)
+  if(musingTimer <= 0 && !hadaBusy){
+    musingTimer = 35 + Math.random()*25;
+    const msg = HADA_MUSINGS[Math.floor(Math.random()*HADA_MUSINGS.length)];
+    say(hadaSpeaker, msg);
+    liveChats.unshift({ a:'La Hada', b:'', topic:'voz de la Hada', lines:[{who:'La Hada',text:msg}] });
+    if(liveChats.length>40) liveChats.pop();
+    if(document.getElementById('sheet-dev').classList.contains('open') && devCurrent==='charlas') renderCharlas();
+  }
   if(guideTimer > 0 || hadaBusy) return;
-  guideTimer = 14 + Math.random()*8;
+  guideTimer = 3 + Math.random()*2;
   const cand = heroes.filter(h=>h.alive && h.state==='idle' && !h.partner &&
     (toneOf(h)==='inseguro' || toneOf(h)==='curioso' || (h.data.axesNow && h.data.axesNow.confidence<0.45)));
   if(!cand.length) return;
@@ -1496,14 +1698,20 @@ function guidanceDirector(dt){
 function askFairy(h){
   h.state='asking'; h.seekT=0;
   h.group.rotation.y = Math.atan2(hada.position.x-h.group.position.x, hada.position.z-h.group.position.z);
-  const qa = FAIRY_QA[toneOf(h)] || FAIRY_QA.default;
-  say(h, qa.q);
-  setTimeout(()=>{ say(hadaSpeaker, qa.a); }, 1500);
-  liveChats.unshift({ a:h.data.name, b:'La Hada', topic:'pregunta a la Hada',
-    lines:[{who:h.data.name,text:qa.q},{who:'La Hada',text:qa.a}] });
+  const q = HERO_QUESTIONS[toneOf(h)] || HERO_QUESTIONS.default;
+  const lines = hadaSpeak(h);
+  say(h, q);
+  const chatLines = [{who:h.data.name,text:q}];
+  let delay = 1500;
+  lines.forEach((ln, i)=>{
+    setTimeout(()=>{ say(hadaSpeaker, ln); }, delay);
+    chatLines.push({who:'La Hada',text:ln});
+    delay += 1400;
+  });
+  liveChats.unshift({ a:h.data.name, b:'La Hada', topic:'pregunta a la Hada', lines:chatLines });
   if(liveChats.length>40) liveChats.pop();
   if(document.getElementById('sheet-dev').classList.contains('open') && devCurrent==='charlas') renderCharlas();
-  setTimeout(()=>{ h.state='idle'; h.timer=2+Math.random()*3; hadaBusy=false; }, 4200);
+  setTimeout(()=>{ h.state='idle'; h.timer=2+Math.random()*3; hadaBusy=false; }, delay + 600);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1617,7 +1825,7 @@ function tutDone(){
 // ─────────────────────────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
 let worldT = 0;
-const DAY_LENGTH = 150;     // segundos por ciclo completo (día+noche)
+const DAY_LENGTH = 1200;    // segundos por ciclo (20 min reales = 1 día de juego)
 const START_TOD  = 0.18;    // arranca de mañana (no en lo oscuro)
 const SPOT_RADIUS = { campo:3.0, posada:1.8, plaza:2.2, shrine:1.6 };
 function spotPos(k){ const p=PLACES[k].pos; return p; }
@@ -1636,9 +1844,11 @@ function updateHero(h, dt){
     h.group.rotation.y=Math.atan2(dx,dz);
     return;
   }
-  if(h.state==='idle' || h.state==='train' || h.state==='rest'){
+  if(h.state==='idle' || h.state==='train' || h.state==='rest' || h.state==='eat'){
     h.timer -= dt;
     if(h.state==='train'){ h.group.rotation.y += dt*0.6; }   // gira practicando
+    if(h.state==='eat'){ h.group.position.y = Math.abs(Math.sin(h.phase*1.8))*0.04; }  // mordisco suave
+    if(h._orderT > 0){ h._orderT -= dt; if(h._orderT <= 0){ h._order=null; h._orderT=0; } }
     if(h.timer<=0) pickActivity(h);
     return;
   }
@@ -1650,8 +1860,10 @@ function updateHero(h, dt){
     const dx = tx-h.group.position.x, dz = tz-h.group.position.z;
     const d = Math.hypot(dx,dz);
     if(d < 0.25){
-      h.state = (h.target==='campo')?'train':(h.target==='posada')?'rest':'idle';
-      h.timer = 3+Math.random()*5;
+      const def = (h.target==='campo')?'train':(h.target==='posada')?'rest':'idle';
+      h.state = h._nextState || def;
+      h._nextState = null;
+      h.timer = 1.2 + Math.random()*1.6;
     } else {
       const sp = h.speed*dt*1.6;
       h.group.position.x += dx/d*sp;
@@ -1662,12 +1874,20 @@ function updateHero(h, dt){
 }
 
 let lastTod = -1;
+let gameDay = 1, prevTod = START_TOD;
 function animate(){
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
   worldT += dt;
   // ciclo día/noche
   const tod = ((worldT / DAY_LENGTH) + START_TOD) % 1;
+  // detectar amanecer: tod cruza de ~1 a 0
+  if(prevTod > 0.85 && tod < 0.15){
+    gameDay++;
+    const el = document.getElementById('hud-day');
+    if(el) el.firstChild.textContent = 'Día ' + gameDay;
+  }
+  prevTod = tod;
   updateSky(tod);
   // fuegos: parpadean; SIEMPRE iluminan algo, mucho más de noche
   for(const f of fires){
@@ -1702,10 +1922,11 @@ function animate(){
   const cr = PLACES.shrine.crystal; if(cr){ cr.rotation.y += dt*0.5; cr.position.y = 1.8 + Math.sin(worldT*1.6)*0.06; }
   // Cámara de los Ecos: cristal gira/flota y los anillos ondean hacia afuera
   const ce = PLACES.fusion.echo; if(ce){ ce.rotation.y += dt*0.7; ce.position.y = 1.6 + Math.sin(worldT*1.4)*0.08; }
+  let echoSpeed = window._echoAccel ? 1.65 : 0.55;
   for(const e of echoRings){
-    const t = (worldT*0.55 + e.phase) % 1;
+    const t = (worldT*echoSpeed + e.phase) % 1;
     e.ring.scale.set(1 + t*2.4, 1 + t*2.4, 1);
-    e.ring.material.opacity = 0.5 * (1 - t);
+    e.ring.material.opacity = (window._echoAccel?0.8:0.5) * (1 - t);
   }
   for(const h of heroes){ if(h.alive) updateHero(h, dt); }
   socialDirector(dt);      // los héroes se juntan y charlan en vivo
@@ -1722,11 +1943,11 @@ let _engineAccum = 0;
 function liveTick(dt){
   if(!LIVE || !BL) return;
   _engineAccum += dt;
-  if(_engineAccum < 2) return;
+  if(_engineAccum < 0.2) return;
   _engineAccum = 0; LIVE.tick++;
   for(const h of heroes){
     const lh = h.data && h.data._live; if(!lh || !lh.alive) continue;
-    const act = h.state==='train' ? 'train' : h.state==='rest' ? 'rest' : h.state==='talk' ? 'idle' : 'idle';
+    const act = h.state==='train' ? 'train' : h.state==='rest' ? 'rest' : h.state==='eat' ? 'eat' : 'idle';
     BL.tickHeroNeeds(lh, act, 1);
   }
   saveThrottled();
