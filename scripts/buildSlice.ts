@@ -186,7 +186,7 @@ const catchup = rawLog.slice(-5).reverse().slice(0, 3).map((e) => {
 });
 
 const DATA = {
-  town: { difficulty: town.difficulty },
+  town: { seed: town.seed, difficulty: town.difficulty },
   initial: INITIAL,
   heroes,
   hada: { situation, reports, rules },

@@ -67,6 +67,25 @@ Promueve el "Norte Narrativo" a base real y determinista del motor:
   acertijos/soporte) y la Torre revela los `beats`. La misma data por personaje
   alimentará la IA on-device (Fase 5).
 
+## Mundo VIVO + persistencia (device) — EN CURSO (Fase 1/2)
+El slice deja de ser una "foto": el motor determinista corre EN EL NAVEGADOR y se guarda.
+- `src/runtime/liveWorld.ts` — `createLiveWorld(seed)`, `applyConversation` (las charlas
+  MUTAN los ejes con techo suave + sellan growth-stamps), `tickHeroNeeds`, `tryDream`,
+  `simulateOffline` (catch-up offline determinista).
+- `src/save/saveState.ts` — `serializeSave`/`restoreSave` compactos (semillas + estado
+  mutable; nombre/lore/mundo se REGENERAN del seed con `regenerateNPC`).
+- `src/runtime/browser.ts` + `esbuild` → `preview/engine.bundle.js` (ESM, importmap
+  `betalife-engine`). Comando: `npm run bundle`.
+- `preview/slice.template.html` — importa el bundle (`await import`), `bindLive` vuelve
+  cada héroe horneado en una VISTA viva del NPC (getters axes/needs/emergent/memories);
+  el loop hace `liveTick` (necesidades por actividad + autoguardado a localStorage); las
+  charlas evolucionan los ejes. Persistencia `betalife_save_v1` + catch-up offline. Si
+  hay save, RESTAURA el roster y omite el tutorial; botón dev "↺ reiniciar partida".
+  **Defensivo:** si el bundle no carga, cae a modo horneado (no se rompe).
+- `scripts/testLive.ts` — evolución/save/determinismo, todo PASS.
+- **Pendiente:** la lectura de la Hada (`reading`) sigue horneada (no refleja la deriva
+  en vivo aún); Fase 3 = cuenta Supabase (sync); Fases 4-5 = LLM on-device + aprendizaje.
+
 ## Fases completadas
 
 ### Fase A — Motor de pueblo + scaffold de estrellas ✓

@@ -283,20 +283,71 @@
     </div>
     <div id="dev-charlas"></div>
     <div id="dev-stats" style="display:none;"></div>
+    <div style="text-align:center;margin-top:14px;">
+      <button class="hud-btn" id="btn-reset" style="pointer-events:auto;border-color:var(--danger);color:var(--danger-soft);">↺ reiniciar partida</button>
+      <div class="stat-hint" style="margin-top:6px;">borra el guardado y vuelve al tutorial</div>
+    </div>
   </div>
 </div>
 
 <script type="importmap">
-{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js" } }
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+  "betalife-engine": "./engine.bundle.js"
+} }
 </script>
 <script type="module">
 import * as THREE from 'three';
+// Motor determinista empaquetado (esbuild → engine.bundle.js): permite correr el
+// mundo EN VIVO y persistirlo. Si fallara la carga, el slice sigue con los datos
+// horneados (modo foto), así nunca se rompe.
+let BL = null;
+try { BL = await import('betalife-engine'); } catch(e){ console.warn('engine.bundle no cargó; modo horneado', e); }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Datos del MOTOR (horneados por scripts/buildSlice.ts). El motor no se toca:
-// esto es solo la capa de render que lee su estado.
+// Datos del MOTOR. Arranque: snapshot horneado por buildSlice; si BL cargó, lo
+// volvemos VIVO (los ejes/needs evolucionan y se guardan), conservando el snapshot
+// como respaldo.
 // ─────────────────────────────────────────────────────────────────────────────
 const DATA = __BETALIFE_DATA__;
+const TOWN_SEED = (DATA.town && DATA.town.seed) || 'shrine-dev-town';
+
+// ── Mundo VIVO + persistencia (device) ───────────────────────────────────────
+const SAVE_KEY = 'betalife_save_v1';
+let LIVE = null;
+function loadSave(){ try{ const s=localStorage.getItem(SAVE_KEY); return s?JSON.parse(s):null; }catch(e){ return null; } }
+let _saveT = 0;
+function doSave(){ if(!LIVE||!BL) return; try{ localStorage.setItem(SAVE_KEY, JSON.stringify(BL.serializeSave(LIVE, Date.now()))); }catch(e){} }
+function saveThrottled(){ const n=Date.now(); if(n-_saveT<4000) return; _saveT=n; doSave(); }
+
+// Vuelve VIVO un héroe horneado `d`: sus campos dinámicos pasan a leer del NPC vivo.
+function bindLive(d, lh){
+  d._live = lh;
+  const defun = (k, get, set) => Object.defineProperty(d, k, { get, set, configurable:true });
+  defun('axesNow', ()=>lh.npc.axes);
+  defun('needs', ()=>lh.needs, (v)=>{ lh.needs=v; });
+  defun('needsStatus', ()=> BL.needsStatus(lh.needs));
+  defun('emergent', ()=> BL.readEmergentTraits(lh.npc.axes));
+  defun('memories', ()=> lh.npc.lore.memories.map(m=>m.text));
+  defun('inRoster', ()=>lh.inRoster, (v)=>{ lh.inRoster=!!v; });
+  defun('alive', ()=>lh.alive, (v)=>{ lh.alive=!!v; });
+}
+let HAS_SAVE = false;
+if(BL){
+  try{
+    const saved = loadSave();
+    HAS_SAVE = !!(saved && saved.heroes && saved.heroes.length);
+    LIVE = HAS_SAVE ? BL.restoreSave(saved) : BL.createLiveWorld(TOWN_SEED, DATA.heroes.length, 0);
+    if(HAS_SAVE){
+      // catch-up offline: el mundo no paró mientras no estabas (determinista, acotado)
+      const secs = Math.max(0, (Date.now() - (saved.lastSeen||Date.now()))/1000);
+      const ticks = Math.min(2000, Math.floor(secs/2));   // ~1 tick / 2s, tope sano
+      if(ticks>0){ BL.simulateOffline(LIVE, ticks); window.__catchupMins = Math.floor(secs/60); }
+    }
+    // enlazar cada héroe horneado con su NPC vivo (mismo orden/semilla)
+    DATA.heroes.forEach((d,i)=>{ if(LIVE.heroes[i]) bindLive(d, LIVE.heroes[i]); });
+  }catch(e){ console.warn('mundo vivo no inicializó; modo horneado', e); LIVE=null; }
+}
 
 // Paleta visual por rol (espejo de ROLE_VIS en devPreview.ts).
 const ROLE_VIS = {
@@ -1228,6 +1279,10 @@ function devTab(which){
 document.getElementById('tab-charlas').addEventListener('click', ()=>devTab('charlas'));
 document.getElementById('tab-stats').addEventListener('click', ()=>devTab('stats'));
 document.getElementById('btn-dev').addEventListener('click', ()=>{ renderCharlas(); renderStats(); openSheet('sheet-dev'); });
+document.getElementById('btn-reset').addEventListener('click', ()=>{
+  try{ localStorage.removeItem(SAVE_KEY); localStorage.removeItem(LS_KEY); }catch(e){}
+  location.reload();
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Charlas EN VIVO entre héroes: se juntan y hablan en tiempo real, con burbujas.
@@ -1392,6 +1447,13 @@ function faceEachOther(A,B){
 function startConversation(A,B){
   A.state=B.state='talk'; A.partner=B; B.partner=A;
   faceEachOther(A,B);
+  // EVOLUCIÓN VIVA: hablar empuja de verdad los ejes de ambos (el motor decide cuánto).
+  if(LIVE && BL && A.data._live && B.data._live){
+    try{
+      const ai=LIVE.heroes.indexOf(A.data._live), bi=LIVE.heroes.indexOf(B.data._live);
+      BL.applyConversation(LIVE, ai, bi, TOWN_SEED+':live:'+LIVE.tick+':'+(A.data.id)+(B.data.id)+':'+Math.floor(Math.random()*1e9));
+    }catch(e){}
+  }
   const { beat, lines } = composeExchange(A,B);
   liveChats.unshift({ a:A.data.name, b:B.data.name, topic:beat, lines: lines.map(l=>({who:l.hero.data.name,text:l.text})) });
   if(liveChats.length>40) liveChats.pop();
@@ -1648,21 +1710,44 @@ function animate(){
   for(const h of heroes){ if(h.alive) updateHero(h, dt); }
   socialDirector(dt);      // los héroes se juntan y charlan en vivo
   guidanceDirector(dt);    // un recién llegado confundido va a preguntarle a la Hada
+  liveTick(dt);            // motor vivo: necesidades por actividad + autoguardado
   updateSpeeches(dt);      // burbujas de diálogo flotando sobre ellos
   renderer.render(scene, cam);
 }
 
+// El motor corre EN VIVO: cada ~2s avanza las necesidades de cada héroe según lo que
+// está haciendo (entrenar gasta, descansar recupera) y autoguarda. Las charlas mueven
+// los ejes aparte (ver startConversation). Si no hay mundo vivo, no hace nada.
+let _engineAccum = 0;
+function liveTick(dt){
+  if(!LIVE || !BL) return;
+  _engineAccum += dt;
+  if(_engineAccum < 2) return;
+  _engineAccum = 0; LIVE.tick++;
+  for(const h of heroes){
+    const lh = h.data && h.data._live; if(!lh || !lh.alive) continue;
+    const act = h.state==='train' ? 'train' : h.state==='rest' ? 'rest' : h.state==='talk' ? 'idle' : 'idle';
+    BL.tickHeroNeeds(lh, act, 1);
+  }
+  saveThrottled();
+}
+
 // ── Arranque ─────────────────────────────────────────────────────────────────
 function start(){
-  // El pueblo arranca VACÍO: el tutorial guía la invocación de los primeros 4.
-  DATA.heroes.forEach(h=>{ h.inRoster = false; });
   document.getElementById('hud-day').firstChild.textContent = 'Día 1';
+  if(HAS_SAVE){
+    // Partida guardada: el pueblo RECUERDA. Restaura el roster y omite el tutorial.
+    DATA.heroes.forEach((d,i)=>{ if(d.inRoster) spawnHero(d, heroes.length); });
+    if(window.__catchupMins){ const sub=document.getElementById('hud-sub'); if(sub) sub.textContent='siguió sin ti'; }
+  } else {
+    // Primera vez: el pueblo arranca VACÍO y el tutorial guía la invocación.
+    DATA.heroes.forEach(h=>{ h.inRoster = false; });
+  }
   animate();
   setTimeout(()=>document.getElementById('loader').classList.add('hide'), 500);
-  // guarda timestamp al salir
-  window.addEventListener('beforeunload', ()=>localStorage.setItem(LS_KEY, String(Date.now())));
-  // arranca el tutorial cuando la escena ya está a la vista
-  setTimeout(startTutorial, 750);
+  // persistencia: guarda al salir (estado vivo) y de respaldo el timestamp legacy
+  window.addEventListener('beforeunload', ()=>{ doSave(); localStorage.setItem(LS_KEY, String(Date.now())); });
+  if(!HAS_SAVE) setTimeout(startTutorial, 750);   // tutorial solo en partida nueva
 }
 start();
 </script>
