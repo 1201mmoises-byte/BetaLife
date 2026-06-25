@@ -2,7 +2,10 @@
 
 ## Fase 1 — Vertical Slice "Pueblo Vivo" (3D) — EN CURSO
 Diseño completo en `docs/DISENO-VERTICAL-SLICE.md`. Primera versión jugable:
-- `preview/slice.template.html` — escena **Three.js isométrica** (CDN, corre en el
+- `preview/slice.template.html` + `preview/slice.css` + `preview/slice.js` — el slice
+  3D está partido en tres archivos: HTML esqueleto (~111 líneas), CSS (~205 líneas) y JS
+  (~1 622 líneas). `buildSlice.ts` inyecta `window.BL_DATA = __BETALIFE_DATA__` en el HTML;
+  el JS lee `const DATA = window.BL_DATA`. Escena **Three.js isométrica** (CDN, corre en el
   navegador del jugador). El motor NO se toca: es solo capa de render que lee su estado.
   Las 5 estructuras (Torre no-enterable, Shrine, Posada, Campo, Cámara de Fusión),
   4 héroes vivos en tiempo real (caminan/entrenan/descansan solos), la **Hada como
@@ -117,8 +120,10 @@ El slice deja de ser una "foto": el motor determinista corre EN EL NAVEGADOR y s
 URL: `https://raw.githack.com/1201mmoises-byte/BetaLife/gh-pages/index.html`
 Branch: `gh-pages` → `index.html` = **el slice 3D** (el dev tool 2D fue retirado).
 Fuente: `preview/slice.template.html` → `npm run build:slice` → `preview/slice.html`.
-Deploy: copiar `preview/slice.html` a `index.html` y `preview/engine.bundle.js` a la
-raíz de `gh-pages` (el slice importa `./engine.bundle.js`, relativo).
+Deploy: copiar a la raíz de `gh-pages`:
+`preview/slice.html` → `index.html`, `preview/engine.bundle.js` → `engine.bundle.js`,
+`preview/slice.css` → `slice.css`, `preview/slice.js` → `slice.js`
+(el slice importa `./engine.bundle.js`, `./slice.css` y `./slice.js`, todos relativos).
 
 ## Arquitectura del motor
 - Determinismo: `seeder.branch(suffix)` crea seeders hijos independientes.
