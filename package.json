@@ -5,12 +5,14 @@
   "main": "dist/engine/index.js",
   "scripts": {
     "build": "tsc",
+    "bundle": "esbuild src/runtime/browser.ts --bundle --format=esm --outfile=preview/engine.bundle.js",
     "test": "node --loader ts-node/esm scripts/testEngine.ts",
     "validate": "ts-node scripts/testEngine.ts"
   },
   "devDependencies": {
     "typescript": "^5.4.5",
     "ts-node": "^10.9.2",
-    "@types/node": "^20.14.0"
+    "@types/node": "^20.14.0",
+    "esbuild": "^0.21.5"
   }
 }
