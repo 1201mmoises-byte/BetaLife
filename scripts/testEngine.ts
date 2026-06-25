@@ -13,6 +13,7 @@ import { createNeeds, tickNeeds, needsStatus, criticalNeed } from '../src/engine
 import { createTown, summonInTown } from '../src/engine/town';
 import { generateWorld } from '../src/engine/world';
 import { surfaceDream, dreamChance } from '../src/engine/dreams';
+import { generateName, generateCulture, nameNamespaceSize } from '../src/engine/nameGenerator';
 import { StarRating } from '../src/engine/types';
 
 const SEEDS = [
@@ -502,6 +503,38 @@ console.log('\n=== La entidad (hada) — única voz al jefe, reactiva ===\n');
   // Comer restaura la saciedad.
   const fed = tickNeeds({ satiety: 0.1, energy: 0.6, health: 0.7 }, hero.axes, 'eat', 5);
   console.log(`  comer 5t restaura saciedad: ${fed.satiety > 0.1 ? 'PASS' : 'FAIL'} (0.1 → ${fed.satiety})`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Namespace de nombres: el pool curado debe dar ≥ 1.25M combinaciones únicas, y
+// los nombres generados deben ser pronunciables (no vacíos) y poco colisionantes.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  console.log('\n=== Namespace de nombres (variedad de héroes) ===\n');
+  const size = nameNamespaceSize();
+  const bigEnough = size >= 1_250_000;
+  console.log(`  combinaciones teóricas únicas: ${size.toLocaleString()} (≥1.25M) → ${bigEnough ? 'PASS' : 'FAIL'}`);
+
+  // Muestreo: nombres no vacíos y baja colisión a 40k semillas distintas.
+  const N = 40_000;
+  const seen = new Set<string>();
+  let empty = 0, collisions = 0;
+  const axes = { passivity: 0.6, warmth: 0.6 } as any;
+  for (let i = 0; i < N; i++) {
+    const s = createSeeder('namegen:' + i);
+    const c = generateCulture(s);
+    const nm = generateName(s, c, axes);
+    if (!nm) empty++;
+    if (seen.has(nm)) collisions++; else seen.add(nm);
+  }
+  const collRate = collisions / N;
+  console.log(`  ${N.toLocaleString()} muestras: ${seen.size.toLocaleString()} únicos, ${empty} vacíos, colisión ${(collRate * 100).toFixed(2)}%`);
+  console.log(`  nombres no vacíos:            ${empty === 0 ? 'PASS' : 'FAIL'}`);
+  console.log(`  colisión < 3% a 40k muestras: ${collRate < 0.03 ? 'PASS' : 'FAIL'}`);
+
+  // Mismo seed → mismo nombre (determinismo).
+  const det = generateName(createSeeder('fixed'), 'nordico', axes) === generateName(createSeeder('fixed'), 'nordico', axes);
+  console.log(`  nombre reproducible por seed: ${det ? 'PASS' : 'FAIL'}`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -325,7 +325,17 @@ try { BL = await import('betalife-engine'); } catch(e){ console.warn('engine.bun
 // como respaldo.
 // ─────────────────────────────────────────────────────────────────────────────
 const DATA = __BETALIFE_DATA__;
-const TOWN_SEED = (DATA.town && DATA.town.seed) || 'shrine-dev-town';
+// La semilla del pueblo. Si hay save, viene del save (restoreSave la reconstruye).
+// Si es partida nueva, se genera ALEATORIA → cada partida tiene héroes y nombres
+// distintos (antes era una constante, por eso siempre salían los mismos 8). El
+// horneado DATA.town.seed queda solo como respaldo (modo horneado sin motor vivo).
+function freshSeed(){
+  const r = (window.crypto && crypto.getRandomValues)
+    ? Array.from(crypto.getRandomValues(new Uint32Array(2))).join('')
+    : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+  return 'town-' + r;
+}
+let TOWN_SEED = (DATA.town && DATA.town.seed) || 'shrine-dev-town';   // se reasigna al pueblo activo
 
 // ── Mundo VIVO + persistencia (device) ───────────────────────────────────────
 const SAVE_KEY = 'betalife_save_v1';
@@ -346,13 +356,35 @@ function bindLive(d, lh){
   defun('memories', ()=> lh.npc.lore.memories.map(m=>m.text));
   defun('inRoster', ()=>lh.inRoster, (v)=>{ lh.inRoster=!!v; });
   defun('alive', ()=>lh.alive, (v)=>{ lh.alive=!!v; });
+  // Identidad: leerla del NPC vivo (no del horneado) para que el roster refleje la
+  // semilla aleatoria de la partida. `role` se queda posicional (no depende de semilla).
+  defun('id',         ()=> lh.npc.id);   // así las reports horneadas (semilla vieja) caen a liveReading
+  defun('name',       ()=> lh.npc.name);
+  defun('stars',      ()=> lh.npc.stars);
+  defun('trade',      ()=> lh.npc.pastLife.trade);
+  defun('place',      ()=> lh.npc.pastLife.place);
+  defun('tier',       ()=> lh.npc.lore.tier);
+  defun('impression', ()=> lh.npc.observation);
+}
+// Lectura cualitativa de la Hada compuesta EN VIVO (sin números). Para héroes cuya
+// semilla aleatoria no tiene reporte horneado: usa lo observable (impresión, rasgos
+// emergentes, estado de necesidades). Sirve igual en modo horneado (lee los baked).
+function liveReading(d){
+  const imp = (d.impression||'nada salta a la vista todavía').replace(/\.+$/,'');
+  const out = ['Veo a '+d.name+': '+imp+'.'];
+  const em = d.emergent || [];
+  if(em.length) out.push('Por dentro asoma '+em.slice(0,2).join(' y ')+'.');
+  const ns = d.needsStatus || [];
+  if(ns.length) out.push(ns.join('; ')+'.');
+  return out.join(' ');
 }
 let HAS_SAVE = false;
 if(BL){
   try{
     const saved = loadSave();
     HAS_SAVE = !!(saved && saved.heroes && saved.heroes.length);
-    LIVE = HAS_SAVE ? BL.restoreSave(saved) : BL.createLiveWorld(TOWN_SEED, DATA.heroes.length, 0);
+    LIVE = HAS_SAVE ? BL.restoreSave(saved) : BL.createLiveWorld(freshSeed(), DATA.heroes.length, 0);
+    TOWN_SEED = LIVE.town.seed;   // semilla activa: la del save o la nueva aleatoria
     if(HAS_SAVE){
       // catch-up offline: el mundo no paró mientras no estabas (determinista, acotado)
       const secs = Math.max(0, (Date.now() - (saved.lastSeen||Date.now()))/1000);
@@ -1116,7 +1148,7 @@ function askKnow(){
   fairySays('¿De qué quieres que te hable?', ()=> setIntents([
     { label:'Del pueblo', act:()=>{ bub('right','Del pueblo'); fairySays(DATA.hada.situation, hadaRoot); } },
     { label:'De alguien', act:()=>heroPickIntents(h=>{
-        const rep = DATA.hada.reports[h.id]||'No tengo nada claro de '+h.name+' ahora.';
+        const rep = DATA.hada.reports[h.id] || liveReading(h);
         const obe = obedienceLabel(h.id);
         const full = obe ? rep+' Las órdenes: '+obe+'.' : rep;
         fairySays(full, hadaRoot);
@@ -1160,7 +1192,7 @@ function heroReading(h){
   focusOn(h.group.position);
   openSheet('sheet-hada');
   bub('right','¿Cómo está '+h.data.name+'?');
-  fairySays(DATA.hada.reports[h.data.id] || ('Veo a '+h.data.name+': '+(h.data.impression||'nada destaca ahora mismo.')), hadaRoot);
+  fairySays(DATA.hada.reports[h.data.id] || liveReading(h.data), hadaRoot);
   if(!hadaOpened) hadaOpened=true;
 }
 
@@ -1833,7 +1865,7 @@ function tutTryAsk(){
   fairySays('Adelante. ¿Por quién preguntas?', ()=> setIntents(
     liveRoster().map(h=>({ label:h.name, act:()=>{
       bub('right','¿Cómo está '+h.name+'?');
-      fairySays(DATA.hada.reports[h.id] || ('Veo a '+h.name+', pero nada me dice gran cosa aún.'), ()=>{
+      fairySays(DATA.hada.reports[h.id] || liveReading(h), ()=>{
         fairySays('¿Lo ves? Ni un solo número. Así te hablaré siempre de ellos.', ()=>{
           setIntents([{ label:'Entiendo. Sigue.', act:tutFusionIntro }]);
         });
