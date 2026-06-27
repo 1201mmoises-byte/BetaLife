@@ -91,6 +91,7 @@ export function applyExperience(
   axes: SoulAxes,
   stamps: Stamp[],
   event: ExperienceEvent,
+  stars?: StarRating, // opcional: si se pasa, las estrellas aceleran el progreso
 ): ExperienceResult {
   const updated = { ...axes };
   const newStamps: Stamp[] = [];
@@ -101,7 +102,10 @@ export function applyExperience(
   // aprenden en pasos perfectamente uniformes.
   const jitter = 0.85 + es.nextFloat() * 0.30;
   const intensity = Math.min(1, event.intensity * jitter);
-  const delta = BASE_DELTA * intensity;
+  // Estrellas activas: un 5★ mueve sus ejes ~60% más rápido que un 1★ ante la
+  // misma exposición (gancho del handoff, ahora conectado y opt-in).
+  const starMul = stars ? starProgressionMultiplier(stars) : 1;
+  const delta = BASE_DELTA * intensity * starMul;
 
   function apply(axisKey: keyof SoulAxes, rawDelta: number) {
     const { newValue, stamp } = moveAxis(axisKey, updated, stamps, rawDelta);
@@ -148,9 +152,15 @@ export function applyExperience(
       apply('caution', delta * 0.3);
     }
 
+  } else if (event.kind === 'rest') {
+    // Descanso: el alma se recompone. Recupera aplomo y optimismo; la cautela
+    // se relaja un poco hacia el centro (baja la guardia tras la calma). El
+    // outcome modula: un descanso interrumpido ('failure') recupera menos.
+    const recover = event.outcome === 'failure' ? 0.4 : 1.0;
+    apply('confidence', delta * 0.5 * recover);
+    apply('optimism', delta * 0.6 * recover);
+    apply('caution', (0.5 - axes.caution) * delta * 0.2 * recover);
   }
-  // 'rest': sin movimiento de ejes en Fase 4. Fase 5 lo expande
-  // (recuperación de confianza, optimismo, etc.)
 
   return { axes: updated, newStamps };
 }
