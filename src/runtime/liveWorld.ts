@@ -19,6 +19,7 @@ import { rollConversation } from '../engine/conversations';
 import { applyConversationNudges } from '../engine/experience';
 import { Needs, createNeeds, tickNeeds, Activity } from '../engine/needs';
 import { surfaceDream } from '../engine/dreams';
+import type { ExpeditionResult } from '../engine/expedition';
 
 export interface LiveHero {
   npc: NPC;             // identidad + ejes VIVOS (npc.axes se reasigna al evolucionar)
@@ -28,10 +29,18 @@ export interface LiveHero {
   alive: boolean;
 }
 
+export interface LiveExpedition {
+  partyIds: string[];              // npc.id of heroes currently inside
+  floor: number;
+  returnAt: number;                // epoch ms when they emerge
+  resolvedResult?: ExpeditionResult; // pre-computed; absent after page-reload restore
+}
+
 export interface LiveWorld {
   town: Town;
   heroes: LiveHero[];
   tick: number;         // ticks de motor transcurridos (avanza el catch-up offline)
+  expedition?: LiveExpedition;     // present while heroes are inside the Tower
 }
 
 /** Crea un pueblo vivo desde una semilla: invoca el pool y arranca sus necesidades. */
