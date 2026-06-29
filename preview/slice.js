@@ -79,6 +79,15 @@ if(BL){
     }
     // enlazar cada héroe horneado con su NPC vivo (mismo orden/semilla)
     DATA.heroes.forEach((d,i)=>{ if(LIVE.heroes[i]) bindLive(d, LIVE.heroes[i]); });
+    // If a page reload happened mid-expedition, recompute the result
+    if(LIVE.expedition && !LIVE.expedition.resolvedResult){
+      try{
+        const expParty = LIVE.heroes.filter(h=>LIVE.expedition.partyIds.includes(h.npc.id)).map(h=>h.npc);
+        LIVE.expedition.resolvedResult = BL.runExpedition(LIVE.town, LIVE.expedition.floor, expParty);
+        // Heroes are hidden (they're inside); hide their 3D groups after spawn
+        window.__pendingHiddenIds = LIVE.expedition.partyIds.slice();
+      }catch(e){ console.warn('expedition restore failed', e); LIVE.expedition=undefined; }
+    }
   }catch(e){ console.warn('mundo vivo no inicializó; modo horneado', e); LIVE=null; }
 }
 
@@ -861,7 +870,8 @@ function askExplain(){
 let hadaOpened=false;
 function openHada(){
   openSheet('sheet-hada');
-  if(TUTORIAL) return;   // el tutorial ya conduce el hilo; no lo pisamos
+  if(TUTORIAL) return;
+  if(pendingReport){ deliverReport(); return; }
   if(!hadaOpened){
     hadaOpened=true;
     if(window.__catchupMins){
@@ -1672,6 +1682,101 @@ let gameDay = 1, prevTod = START_TOD;
 let recentLoss = null;  // { name, timer } — testigos recuerdan al sacrificado ~3 min
 let torreHeld = new Set();   // data.id of heroes held back by player
 let pendingReport = null;    // Fairy report text queued while sheets were open
+
+function composeTowerReport(expResult, towerHeroes, preLevels){
+  const { result, party:updatedParty, drops } = expResult;
+  const fallen = new Set(result.fallenNpcIds);
+  const survivors = towerHeroes.filter(h=>!fallen.has(h.data.id));
+  const dead      = towerHeroes.filter(h=> fallen.has(h.data.id));
+  const lines = [];
+  if(result.outcome==='defeat'){
+    lines.push('No volvió nadie. El pueblo los recuerda.');
+  } else if(dead.length===0){
+    lines.push(survivors.length===1
+      ? survivors[0].data.name+' vuelve. Solo, pero vuelve.'
+      : 'Volvieron. '+survivors[0].data.name+' marcó el camino; los demás lo siguieron.');
+  } else {
+    const survNames = survivors.map(h=>h.data.name).join(' y ');
+    const deadNames = dead.map(h=>h.data.name).join(' y ');
+    lines.push((survivors.length?'Volvió '+survNames+'. ':'')+deadNames+' no. La Torre se lo quedó.');
+  }
+  // Level-up (qualitative: "salió distinto")
+  updatedParty.forEach(n=>{
+    if(!fallen.has(n.id) && n.level>(preLevels[n.id]||1)){
+      const h = towerHeroes.find(x=>x.data.id===n.id);
+      if(h) lines.push(h.data.name+' salió distinto. No sé explicarlo bien, pero lo noto.');
+    }
+  });
+  if(drops && drops.length) lines.push('Trajeron algo de allá dentro. No sé qué significa aún.');
+  return lines.join(' ');
+}
+
+function walkHeroFromTower(h){
+  const g = h.group;
+  g.position.set(P_TORRE.x+(Math.random()-0.5)*1.5, 0, P_TORRE.z+(Math.random()-0.5)*1.5);
+  g.visible = true;
+  const iv = setInterval(()=>{
+    const dx=P_PLAZA.x-g.position.x, dz=P_PLAZA.z-g.position.z;
+    const d=Math.hypot(dx,dz);
+    if(d<2.0){ clearInterval(iv); h.state='idle'; h.timer=2+Math.random()*2; }
+    else { const sp=0.07; g.position.x+=dx/d*sp; g.position.z+=dz/d*sp; g.rotation.y=Math.atan2(dx,dz); }
+  },16);
+}
+
+function resolveExpedition(){
+  if(!LIVE||!LIVE.expedition) return;
+  const { partyIds, floor, resolvedResult } = LIVE.expedition;
+  LIVE.expedition = undefined;
+
+  // Save pre-levels for level-up detection
+  const preLevels = {};
+  LIVE.heroes.forEach(lh=>{ preLevels[lh.npc.id]=lh.npc.level; });
+
+  // Recompute if missing (edge case: resolved immediately after restore)
+  const expResult = resolvedResult ||
+    BL.runExpedition(LIVE.town, floor,
+      LIVE.heroes.filter(h=>partyIds.includes(h.npc.id)).map(h=>h.npc));
+
+  // Apply updated NPCs back to the live world
+  expResult.party.forEach(updatedNpc=>{
+    const lh = LIVE.heroes.find(h=>h.npc.id===updatedNpc.id);
+    if(lh){ lh.npc=updatedNpc; lh.alive=updatedNpc.isAlive; }
+  });
+  doSave();
+
+  const fallen = new Set(expResult.result.fallenNpcIds);
+  const towerHeroes = heroes.filter(h=>partyIds.includes(h.data.id));
+
+  towerHeroes.forEach(h=>{
+    if(fallen.has(h.data.id)){
+      h.state='idle'; h.alive=false;
+      if(h.data._live) h.data._live.alive=false;
+      scene.remove(h.group);
+      recentLoss = { name:h.data.name, timer:180 };
+    } else {
+      walkHeroFromTower(h);
+    }
+  });
+
+  // Queue Fairy report
+  pendingReport = composeTowerReport(expResult, towerHeroes, preLevels);
+  const sub = document.getElementById('hud-sub');
+  if(sub && !TUTORIAL) sub.textContent = heroes.some(h=>h.alive)?'el pueblo vive':'silencio';
+
+  // Auto-deliver if no sheet open
+  if(SHEETS.every(s=>!document.getElementById(s).classList.contains('open'))){
+    setTimeout(deliverReport, 800);
+  }
+}
+
+function deliverReport(){
+  if(!pendingReport) return;
+  const report = pendingReport; pendingReport = null;
+  openSheet('sheet-hada');
+  if(!hadaOpened) hadaOpened=true;
+  fairySays(report, hadaRoot);
+}
+
 function animate(){
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -1749,6 +1854,7 @@ function liveTick(dt){
     const act = h.state==='train' ? 'train' : h.state==='rest' ? 'rest' : h.state==='eat' ? 'eat' : 'idle';
     BL.tickHeroNeeds(lh, act, 1);
   }
+  if(LIVE.expedition && Date.now()/1000 >= LIVE.expedition.returnAt) resolveExpedition();
   saveThrottled();
 }
 
@@ -1758,6 +1864,13 @@ function start(){
   if(HAS_SAVE){
     // Partida guardada: el pueblo RECUERDA. Restaura el roster y omite el tutorial.
     DATA.heroes.forEach((d,i)=>{ if(d.inRoster) spawnHero(d, heroes.length); });
+    // Hide heroes that were inside the Tower when the page reloaded
+    if(window.__pendingHiddenIds && window.__pendingHiddenIds.length){
+      setTimeout(()=>{
+        heroes.forEach(h=>{ if(window.__pendingHiddenIds.includes(h.data.id)){ h.group.visible=false; h.state='tower'; } });
+        window.__pendingHiddenIds=null;
+      }, 200);
+    }
     if(window.__catchupMins){ const sub=document.getElementById('hud-sub'); if(sub) sub.textContent='siguió sin ti'; }
   } else {
     // Primera vez: el pueblo arranca VACÍO y el tutorial guía la invocación.
