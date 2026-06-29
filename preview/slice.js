@@ -1054,6 +1054,23 @@ function invoke(){
 }
 
 // ── Roster ───────────────────────────────────────────────────────────────────
+function depthBlocks(floorReached){
+  const max=5, filled=Math.min(max,(floorReached||0)+1);
+  return '<span class="depth-blocks">'+'▪'.repeat(filled)+'▫'.repeat(max-filled)+'</span>';
+}
+
+function readinessLabel(d){
+  if(d.alive===false) return '<span class="readiness caido">caído</span>';
+  if(!BL||!d._live) return '';
+  try{
+    const st = BL.deriveStats(d._live.npc);
+    const ratio = st.hp/st.maxHp;
+    if(ratio>=0.7) return '<span class="readiness en-forma">en forma</span>';
+    if(ratio>=0.4) return '<span class="readiness herido">herido</span>';
+    return '<span class="readiness malherido">malherido</span>';
+  }catch(e){ return ''; }
+}
+
 function bustHTML(d){
   const v = ROLE_VIS[d.role]||ROLE_VIS.archer;
   let cap='';
@@ -1072,7 +1089,8 @@ function renderRoster(){
       '<div class="hero-name">'+d.name+'</div>'+
       '<div class="hero-class">'+(CLASS_ES[d.role]||d.role)+'</div>'+
       '<div class="hero-stars">'+('★'.repeat(d.stars))+'</div>'+
-      '<div class="hero-future">lvl · stats — próximamente</div>';
+      depthBlocks(d._live ? d._live.npc.floorReached : (d.floorReached||0)) +
+      readinessLabel(d);
     card.addEventListener('click', ()=>{
       const h = heroes.find(x=>x.data.id===d.id);
       closeSheets();
@@ -1232,6 +1250,34 @@ const AXIS_LABELS = {
 const AXIS_ORDER = ['caution','passivity','submission','warmth','trust','altruism','sociability','integrity','loyalty','optimism','discipline','curiosity','confidence','forgiveness'];
 function barColor(v){ if(v<0.25)return '#604060'; if(v<0.5)return '#504880'; if(v<0.75)return '#406088'; return '#5a8868'; }
 
+let lastExpeditionResult = null;   // stored by resolveExpedition for the dev panel
+
+function renderExpedition(){
+  const box = document.getElementById('dev-expedition');
+  if(!lastExpeditionResult && !(LIVE && LIVE.expedition)){
+    box.innerHTML='<div class="dev-count">sin expedición aún en esta sesión.</div>'; return;
+  }
+  // Active expedition
+  if(LIVE && LIVE.expedition){
+    const secs = Math.max(0, Math.floor((LIVE.expedition.returnAt-Date.now()/1000)));
+    const mins = Math.floor(secs/60), s=secs%60;
+    box.innerHTML='<div class="dev-count">Expedición activa — piso '+LIVE.expedition.floor+
+      ' — vuelven en '+(mins?mins+'m ':'')+s+'s</div>'+
+      '<div class="dev-count" style="margin-top:6px">party: '+LIVE.expedition.partyIds.join(', ')+'</div>';
+    return;
+  }
+  // Last result
+  const { result, floor, drops } = lastExpeditionResult;
+  let html='<div class="dev-count">Última expedición — piso '+floor+' — '+result.outcome+'</div>';
+  html+='<div class="exp-result"><div class="exp-narration">';
+  html+=result.narration.map(l=>'<div class="log-line">'+l+'</div>').join('');
+  html+='</div>';
+  if(result.fallenNpcIds.length) html+='<div class="log-line" style="color:var(--danger-soft)">Caídos: '+result.fallenNpcIds.join(', ')+'</div>';
+  if(drops && drops.length) html+='<div class="log-line" style="color:var(--gold)">Botín: '+drops.map(d=>d.slot+' ('+d.rarity+')').join(', ')+'</div>';
+  html+='</div>';
+  box.innerHTML=html;
+}
+
 function renderCharlas(){
   const box=document.getElementById('dev-charlas');
   if(!liveChats.length){
@@ -1286,11 +1332,14 @@ function devTab(which){
   devCurrent=which;
   document.getElementById('tab-charlas').classList.toggle('active', which==='charlas');
   document.getElementById('tab-stats').classList.toggle('active', which==='stats');
+  document.getElementById('tab-expedition').classList.toggle('active', which==='expedition');
   document.getElementById('dev-charlas').style.display = which==='charlas'?'block':'none';
   document.getElementById('dev-stats').style.display = which==='stats'?'block':'none';
+  document.getElementById('dev-expedition').style.display = which==='expedition'?'block':'none';
 }
 document.getElementById('tab-charlas').addEventListener('click', ()=>devTab('charlas'));
 document.getElementById('tab-stats').addEventListener('click', ()=>devTab('stats'));
+document.getElementById('tab-expedition').addEventListener('click', ()=>{ renderExpedition(); devTab('expedition'); });
 document.getElementById('btn-dev').addEventListener('click', ()=>{ renderCharlas(); renderStats(); openSheet('sheet-dev'); });
 document.getElementById('btn-reset').addEventListener('click', ()=>{
   try{ localStorage.removeItem(SAVE_KEY); localStorage.removeItem(LS_KEY); }catch(e){}
@@ -1743,6 +1792,7 @@ function resolveExpedition(){
     if(lh){ lh.npc=updatedNpc; lh.alive=updatedNpc.isAlive; }
   });
   doSave();
+  lastExpeditionResult = { ...expResult, floor };
 
   const fallen = new Set(expResult.result.fallenNpcIds);
   const towerHeroes = heroes.filter(h=>partyIds.includes(h.data.id));
