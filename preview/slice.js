@@ -1054,9 +1054,9 @@ function invoke(){
 }
 
 // ── Roster ───────────────────────────────────────────────────────────────────
-function depthBlocks(floorReached){
-  const max=5, filled=Math.min(max,(floorReached||0)+1);
-  return '<span class="depth-blocks">'+'▪'.repeat(filled)+'▫'.repeat(max-filled)+'</span>';
+function depthBlocks(level){
+  const filled=Math.min(level||1,5);
+  return '<span class="depth-blocks">'+'▪'.repeat(filled)+'▫'.repeat(5-filled)+'</span>';
 }
 
 function readinessLabel(d){
@@ -1089,7 +1089,7 @@ function renderRoster(){
       '<div class="hero-name">'+d.name+'</div>'+
       '<div class="hero-class">'+(CLASS_ES[d.role]||d.role)+'</div>'+
       '<div class="hero-stars">'+('★'.repeat(d.stars))+'</div>'+
-      depthBlocks(d._live ? d._live.npc.floorReached : (d.floorReached||0)) +
+      depthBlocks(d._live ? d._live.npc.level : (d.level||1)) +
       readinessLabel(d);
     card.addEventListener('click', ()=>{
       const h = heroes.find(x=>x.data.id===d.id);
@@ -1799,7 +1799,7 @@ function resolveExpedition(){
 
   towerHeroes.forEach(h=>{
     if(fallen.has(h.data.id)){
-      h.state='idle'; h.alive=false;
+      h.state='idle'; h.alive=false; h.data.alive=false;  // sync baked data so readinessLabel shows "caído"
       if(h.data._live) h.data._live.alive=false;
       scene.remove(h.group);
       recentLoss = { name:h.data.name, timer:180 };
