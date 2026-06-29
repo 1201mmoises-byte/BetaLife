@@ -1906,7 +1906,8 @@ function serializeSave(world, lastSeen = Date.now()) {
       bornAxes: h.bornAxes,
       inRoster: h.inRoster,
       alive: h.alive
-    }))
+    })),
+    expedition: world.expedition ? { partyIds: world.expedition.partyIds, floor: world.expedition.floor, returnAt: world.expedition.returnAt } : void 0
   };
 }
 function restoreSave(save) {
@@ -1923,7 +1924,7 @@ function restoreSave(save) {
     });
     return { npc, bornAxes: sh.bornAxes, needs: sh.needs, inRoster: sh.inRoster, alive: sh.alive };
   });
-  return { town, heroes, tick: save.tick };
+  return { town, heroes, tick: save.tick, expedition: save.expedition };
 }
 export {
   ARCHETYPES,
