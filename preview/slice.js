@@ -985,7 +985,8 @@ function launchExpedition(confirmedHeroes){
   const party = confirmedHeroes.map(h=>h.data._live.npc);
   const floor = Math.max(1, Math.round(party.reduce((s,n)=>s+n.level,0)/party.length));
   const resolvedResult = BL.runExpedition(LIVE.town, floor, party);
-  const returnAt = Date.now() + Math.min((floor+1)*90*1000, 480000);
+  const duration = Math.min((floor + 1) * 90, 480);
+  const returnAt = Math.floor(Date.now() / 1000) + duration;
   LIVE.expedition = { partyIds: party.map(n=>n.id), floor, returnAt, resolvedResult };
   doSave();
 
