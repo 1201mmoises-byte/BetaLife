@@ -970,6 +970,48 @@ function openTowerSheet(){
   openSheet('sheet-torre');
 }
 
+function walkHeroToTower(h, onArrival){
+  const g = h.group;
+  const iv = setInterval(()=>{
+    const dx=P_TORRE.x-g.position.x, dz=P_TORRE.z-g.position.z;
+    const d=Math.hypot(dx,dz);
+    if(d<1.2){ clearInterval(iv); onArrival(); }
+    else { const sp=0.08; g.position.x+=dx/d*sp; g.position.z+=dz/d*sp; g.rotation.y=Math.atan2(dx,dz); }
+  },16);
+}
+
+function launchExpedition(confirmedHeroes){
+  if(!LIVE||!BL){ toast('El motor no está disponible.'); return; }
+  const party = confirmedHeroes.map(h=>h.data._live.npc);
+  const floor = Math.max(1, Math.round(party.reduce((s,n)=>s+n.level,0)/party.length));
+  const resolvedResult = BL.runExpedition(LIVE.town, floor, party);
+  const returnAt = Date.now() + Math.min((floor+1)*90*1000, 480000);
+  LIVE.expedition = { partyIds: party.map(n=>n.id), floor, returnAt, resolvedResult };
+  doSave();
+
+  // Departure speech by personality
+  const DEPART_LINES = {
+    optimista:'Será rápido.', cauto:'No tengo otra opción.',
+    inseguro:'Ojalá.', sombrío:'Así termina todo.',
+    sereno:'Vuelvo.', cálido:'Cuidaos mientras.', curioso:'Quiero ver qué hay arriba.',
+  };
+  confirmedHeroes.forEach((h,idx)=>{
+    h.state = 'tower';
+    setTimeout(()=>{ if(h.alive) say(h, DEPART_LINES[toneOf(h)]||'Vuelvo.'); }, idx*400);
+    setTimeout(()=>{
+      walkHeroToTower(h, ()=>{ h.group.visible=false; });
+    }, idx*300);
+  });
+
+  // Tower tip pulse
+  const tip = PLACES.torre.tipLight;
+  if(tip){ tip.intensity=22; setTimeout(()=>{ tip.intensity=12; },2000); }
+
+  // HUD
+  const sub = document.getElementById('hud-sub');
+  if(sub && !TUTORIAL) sub.textContent='esperando noticias…';
+}
+
 // ── Estructuras ──────────────────────────────────────────────────────────────
 function onPlace(k){
   if(k==='shrine'){ invoke(); }
@@ -1335,6 +1377,12 @@ const BANKS = {
     ['El sitio donde dormía {lost} está vacío.', 'Lo noté esta mañana. El pueblo es más callado.'],
     ['¿Crees que {lost} sabía lo que iba a pasar?', 'Nadie sabe. Pero fue rápido.'],
   ],
+  tower: [
+    ['¿Cuánto tardan?','No lo sé. Nadie sabe lo que hay ahí arriba.'],
+    ['¿Y si no vuelven?','…Esperamos.'],
+    ['El silencio de la Torre me pesa.','A todos.'],
+    ['¿Crees que están bien?','Pregúntale a la Hada. Yo no me atrevo a pensar en eso.'],
+  ],
 };
 function fillTokens(t,s1,s2,food,frag){
   return t.split('{1t}').join(s1.data.trade||'alguien').split('{2t}').join(s2.data.trade||'alguien')
@@ -1379,6 +1427,8 @@ function composeExchange(A,B){
   add('idle', isTone('solitario')?2:1);
   // pérdida reciente: testigos recuerdan al sacrificado
   if(recentLoss) add('loss', 5);
+  const inTower = LIVE && LIVE.expedition && LIVE.expedition.partyIds.length>0;
+  add('tower', inTower ? 6 : 0);
 
   // anti-repetición: castiga repetir el último beat
   for(const c of cands){ if(c[0]===lastBeat) c[1]*=0.25; }
