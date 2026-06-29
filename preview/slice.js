@@ -305,6 +305,7 @@ const P_PLAZA  = place('plaza',  0,   1);
     w.position.set(0, 3+i*2.2, 2.1); g.add(w);
   }
   const tip = new THREE.PointLight(0xb080ff, 12, 22, 1.5); tip.position.set(0,15,0); g.add(tip);
+  PLACES.torre.tipLight = tip;
   g.position.copy(P_TORRE); scene.add(g);
   const lbl = makeLabel('La Torre', '#b080ff'); lbl.position.set(0, 17, 0); g.add(lbl);
   PLACES.torre.group = g;
@@ -739,7 +740,7 @@ window.addEventListener('resize', ()=>{ renderer.setSize(innerWidth,innerHeight)
 // ─────────────────────────────────────────────────────────────────────────────
 // OVERLAYS (HTML) — la Hada conversación, roster, merger
 // ─────────────────────────────────────────────────────────────────────────────
-const SHEETS = ['sheet-hada','sheet-roster','sheet-merge','sheet-dev'];
+const SHEETS = ['sheet-hada','sheet-roster','sheet-merge','sheet-dev','sheet-torre'];
 function openSheet(id){ SHEETS.forEach(s=>document.getElementById(s).classList.toggle('open', s===id)); }
 function closeSheets(){ SHEETS.forEach(s=>document.getElementById(s).classList.remove('open')); }
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeSheets()));
@@ -837,7 +838,7 @@ function askKnow(){
         const full = obe ? rep+' Las órdenes: '+obe+'.' : rep;
         fairySays(full, hadaRoot);
       }) },
-    { label:'¿Qué hay arriba?', cls:'back', act:()=>{ bub('right','¿Qué hay en la Torre?'); fairySays('No puedo ver eso. La Torre no me habla — solo sé que llama.', hadaRoot); } },
+    { label:'¿Qué hay arriba?', cls:'back', act:()=>{ bub('right','¿Qué hay en la Torre?'); fairySays('La Torre llama. Si hay almas dispuestas a subir, puedes enviarlas desde ella. Yo estaré aquí cuando vuelvan — o cuando no.', hadaRoot); } },
     { label:'volver', cls:'back', act:hadaRoot },
   ]));
 }
@@ -880,11 +881,100 @@ function heroReading(h){
   if(!hadaOpened) hadaOpened=true;
 }
 
+// ── Torre: voluntarios ────────────────────────────────────────────────────────
+function volunteerAxes(h){
+  return (h.data._live && h.data._live.npc.axes) || h.data.axesNow || {};
+}
+function isVolunteer(h){
+  const ax = volunteerAxes(h);
+  return (ax.confidence||0.5) > 0.45 && (ax.passivity||0.5) < 0.70;
+}
+function isStrongVolunteer(h){
+  const ax = volunteerAxes(h);
+  return (ax.confidence||0.5) > 0.65 && (ax.optimism||0.5) > 0.55;
+}
+
+function torreTypeLine(text){
+  const el = document.getElementById('torre-fairy-line');
+  el.textContent = '';
+  let i = 0;
+  const iv = setInterval(()=>{ el.textContent += text[i++]; if(i>=text.length) clearInterval(iv); }, 18);
+}
+
+function updateSendButton(volunteers){
+  const btn = document.getElementById('btn-send-tower');
+  const confirmed = volunteers.filter(h=>!torreHeld.has(h.data.id));
+  if(!confirmed.length){
+    btn.classList.remove('ready'); btn.disabled=true; btn.textContent='Enviarlos →';
+  } else {
+    btn.classList.add('ready'); btn.disabled=false;
+    btn.textContent = confirmed.length===1 ? 'Enviar a '+confirmed[0].data.name+' →' : 'Enviarlos →';
+  }
+}
+
+function toggleHeld(h, card){
+  const volunteers = heroes.filter(x=>x.alive && isVolunteer(x));
+  if(torreHeld.has(h.data.id)){
+    torreHeld.delete(h.data.id);
+    card.classList.remove('held-back');
+    document.getElementById('vlabel-'+h.data.id).textContent = isStrongVolunteer(h)?'listo':'dudoso';
+  } else {
+    torreHeld.add(h.data.id);
+    card.classList.add('held-back');
+    document.getElementById('vlabel-'+h.data.id).textContent = 'retenido';
+  }
+  updateSendButton(volunteers);
+}
+
+function renderTorreSheet(volunteers){
+  torreHeld = new Set();
+  // Fairy opening line
+  const strong = volunteers.filter(h=>isStrongVolunteer(h));
+  const reluctant = volunteers.filter(h=>!isStrongVolunteer(h));
+  let line;
+  if(strong.length===0){
+    line = reluctant.length===1
+      ? 'Solo '+reluctant[0].data.name+' da un paso, aunque con dudas.'
+      : reluctant.length+' dan un paso, sin mucha certeza. Es su decisión.';
+  } else if(strong.length===1 && reluctant.length===0){
+    line = strong[0].data.name+' da un paso adelante sin dudarlo. Nadie más siente el llamado ahora.';
+  } else if(strong.length===1){
+    line = strong[0].data.name+' da un paso sin dudar. '+(reluctant.length===1?reluctant[0].data.name+' lo sigue, aunque sin la misma certeza.':reluctant.length+' más lo siguen, con reservas.');
+  } else {
+    const strongNames = strong.map(h=>h.data.name).join(' y ');
+    line = strongNames+' dan un paso sin dudar.'+(reluctant.length?' Hay '+reluctant.length+' más que los siguen, con reservas.':'');
+  }
+  torreTypeLine(line);
+  // Volunteer cards
+  const grid = document.getElementById('torre-volunteers'); grid.innerHTML='';
+  volunteers.forEach(h=>{
+    const card = document.createElement('div'); card.className='hero-card';
+    const label = isStrongVolunteer(h)?'listo':'dudoso';
+    card.innerHTML = '<div class="portrait">'+bustHTML(h.data)+'</div>'+
+      '<div class="hero-name">'+h.data.name+'</div>'+
+      '<div class="hero-stars">'+('★'.repeat(h.data.stars))+'</div>'+
+      '<div class="hero-volunteer-label" id="vlabel-'+h.data.id+'">'+label+'</div>';
+    card.addEventListener('click',()=>toggleHeld(h,card));
+    grid.appendChild(card);
+  });
+  updateSendButton(volunteers);
+}
+
+function openTowerSheet(){
+  if(TUTORIAL) return;
+  // Block if expedition already running
+  if(LIVE && LIVE.expedition){ toast('<b>La Torre</b> — ya hay almas dentro. Espera a que vuelvan.'); return; }
+  const volunteers = heroes.filter(h=>h.alive && isVolunteer(h));
+  if(!volunteers.length){ toast('<b>La Torre</b> — nadie siente el llamado todavía.'); return; }
+  renderTorreSheet(volunteers);
+  openSheet('sheet-torre');
+}
+
 // ── Estructuras ──────────────────────────────────────────────────────────────
 function onPlace(k){
   if(k==='shrine'){ invoke(); }
   else if(k==='fusion'){ openSheet('sheet-merge'); }
-  else if(k==='torre'){ toast('<b>La Torre</b> — algo llama desde lo alto. Aún no se puede entrar.'); }
+  else if(k==='torre'){ openTowerSheet(); }
   else if(k==='posada'){ toast('<b>Posada</b> — aquí descansan, comen y se cuentan cosas.'); }
   else if(k==='campo'){ toast('<b>Campo de Entrenamiento</b> — crecen practicando. Tiene su techo y su riesgo.'); }
 }
@@ -939,6 +1029,13 @@ function renderRoster(){
   });
 }
 document.getElementById('btn-roster').addEventListener('click', ()=>{ renderRoster(); openSheet('sheet-roster'); });
+document.getElementById('btn-send-tower').addEventListener('click',()=>{
+  const volunteers = heroes.filter(h=>h.alive && isVolunteer(h));
+  const confirmed = volunteers.filter(h=>!torreHeld.has(h.data.id));
+  if(!confirmed.length) return;
+  closeSheets();
+  launchExpedition(confirmed);
+});
 
 // ── Merger / Cámara de Fusión ────────────────────────────────────────────────
 let sac=null, rec=null;
@@ -1522,6 +1619,8 @@ function updateHero(h, dt){
 let lastTod = -1;
 let gameDay = 1, prevTod = START_TOD;
 let recentLoss = null;  // { name, timer } — testigos recuerdan al sacrificado ~3 min
+let torreHeld = new Set();   // data.id of heroes held back by player
+let pendingReport = null;    // Fairy report text queued while sheets were open
 function animate(){
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
