@@ -1060,15 +1060,8 @@ function depthBlocks(level){
 }
 
 function readinessLabel(d){
-  if(d.alive===false) return '<span class="readiness caido">caído</span>';
-  if(!BL||!d._live) return '';
-  try{
-    const st = BL.deriveStats(d._live.npc);
-    const ratio = st.hp/st.maxHp;
-    if(ratio>=0.7) return '<span class="readiness en-forma">en forma</span>';
-    if(ratio>=0.4) return '<span class="readiness herido">herido</span>';
-    return '<span class="readiness malherido">malherido</span>';
-  }catch(e){ return ''; }
+  if (d.alive === false) return '<span class="readiness caido">caído</span>';
+  return '<span class="readiness en-forma">en forma</span>';
 }
 
 function bustHTML(d){
@@ -1774,6 +1767,7 @@ function walkHeroFromTower(h){
 
 function resolveExpedition(){
   if(!LIVE||!LIVE.expedition) return;
+  window.__pendingHiddenIds = null;   // defuse the reload-hide timeout if it hasn't fired yet
   const { partyIds, floor, resolvedResult } = LIVE.expedition;
   LIVE.expedition = undefined;
 
