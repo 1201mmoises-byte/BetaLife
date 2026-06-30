@@ -157,8 +157,8 @@ output.stamps = {
     { value: 0.5, delta: 0.1 }, { value: 0.9, delta: 0.2 }, { value: 0.1, delta: -0.2 },
     { value: 0.99, delta: 0.5 }, { value: 0.01, delta: -0.5 },
   ].map((c) => ({ ...c, result: softCeiling(c.value, c.delta) })),
-  growthStamp: sealIfBandCrossed('caution', 0.2, 0.3, 123),
-  growthStampNone: sealIfBandCrossed('caution', 0.2, 0.24, 123),
+  growthStamp: sealIfBandCrossed('caution', 0.2, 0.4, 123), // 0.2 (band 1) -> 0.4 (band 2): crosses the 0.375 boundary
+  growthStampNone: sealIfBandCrossed('caution', 0.2, 0.24, 123), // both in band 1: no crossing
 };
 output.birthStamps = {};
 for (const seed of SEEDS) {
@@ -779,7 +779,7 @@ func test_soft_ceiling_matches_golden_vectors() -> void:
 
 func test_seal_if_band_crossed_matches_golden_vectors() -> void:
 	var crossed: Dictionary = golden["stamps"]["growthStamp"]
-	var stamp: BLStamps.Stamp = BLStamps.seal_if_band_crossed("caution", 0.2, 0.3, 123)
+	var stamp: BLStamps.Stamp = BLStamps.seal_if_band_crossed("caution", 0.2, 0.4, 123)
 	assert_str(stamp.kind).is_equal(String(crossed["kind"]))
 	assert_str(stamp.axis_key).is_equal(String(crossed["axisKey"]))
 	assert_float(stamp.band_value).is_equal_approx(float(crossed["bandValue"]), 0.00001)
