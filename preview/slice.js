@@ -978,6 +978,7 @@ function renderRosterCards(){
       '<div class="hero-name">'+h.data.name+'</div>'+
       '<div class="hero-stars">'+('★'.repeat(h.data.stars))+'</div>'+
       '<div class="hero-level">Lv. '+lv2+'</div>'+
+      heroStatsHTML(h.data, lv2)+
       '<div class="hero-volunteer-label disp-'+disp+'">'+DISP_LABEL[disp]+'</div>';
     if(disp!=='niega') card.addEventListener('click',()=>toggleHeroTeam(h));
     grid.appendChild(card);
@@ -1137,6 +1138,20 @@ function readinessLabel(d){
   return '<span class="readiness en-forma">en forma</span>';
 }
 
+/** Stats de combate compactos para el jugador — para armar estrategia, no microgestión. */
+function heroStatsHTML(d, lv){
+  if(!BL || !BL.deriveStats) return '';
+  const axes = d._live ? d._live.npc.axes : d.axesNow;
+  if(!axes) return '';
+  const st = BL.deriveStats({axes, stars:d.stars, level:lv});
+  return '<div class="hero-stats">'+
+    '<span class="hs hp"><b>HP</b>'+st.maxHp+'</span>'+
+    '<span class="hs atk"><b>ATK</b>'+st.atk+'</span>'+
+    '<span class="hs def"><b>DEF</b>'+st.def+'</span>'+
+    '<span class="hs spd"><b>VEL</b>'+st.spd+'</span>'+
+  '</div>';
+}
+
 function bustHTML(d){
   const v = ROLE_VIS[d.role]||ROLE_VIS.archer;
   let cap='';
@@ -1158,6 +1173,7 @@ function renderRoster(){
       '<div class="hero-class">'+(CLASS_ES[d.role]||d.role)+'</div>'+
       '<div class="hero-stars">'+('★'.repeat(d.stars))+'</div>'+
       '<div class="hero-level">Lv. '+lv+(flr>0?' · piso '+flr:'')+'</div>'+
+      heroStatsHTML(d, lv)+
       depthBlocks(lv) +
       readinessLabel(d);
     card.addEventListener('click', ()=>{
