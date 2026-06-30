@@ -973,9 +973,11 @@ function renderRosterCards(){
     const card = document.createElement('div');
     card.className = 'hero-card' + (disp==='niega'?' refuses':'') + (t>=0?' in-party':'');
     const badge = t>=0 ? '<div class="team-badge">E'+(t+1)+'</div>' : '';
+    const lv2 = h.data._live ? h.data._live.npc.level : (h.data.level||1);
     card.innerHTML = badge + '<div class="portrait">'+bustHTML(h.data)+'</div>'+
       '<div class="hero-name">'+h.data.name+'</div>'+
       '<div class="hero-stars">'+('★'.repeat(h.data.stars))+'</div>'+
+      '<div class="hero-level">Lv. '+lv2+'</div>'+
       '<div class="hero-volunteer-label disp-'+disp+'">'+DISP_LABEL[disp]+'</div>';
     if(disp!=='niega') card.addEventListener('click',()=>toggleHeroTeam(h));
     grid.appendChild(card);
@@ -1148,12 +1150,15 @@ const CLASS_ES = { warrior:'guerrero', mage:'mago', rogue:'pícaro', archer:'arq
 function renderRoster(){
   const grid = document.getElementById('roster-grid'); grid.innerHTML='';
   DATA.heroes.filter(h=>h.inRoster).forEach(d=>{
+    const lv  = d._live ? d._live.npc.level       : (d.level||1);
+    const flr = d._live ? d._live.npc.floorReached : (d.floorReached||0);
     const card = document.createElement('div'); card.className='hero-card';
     card.innerHTML = '<div class="portrait">'+bustHTML(d)+'</div>'+
       '<div class="hero-name">'+d.name+'</div>'+
       '<div class="hero-class">'+(CLASS_ES[d.role]||d.role)+'</div>'+
       '<div class="hero-stars">'+('★'.repeat(d.stars))+'</div>'+
-      depthBlocks(d._live ? d._live.npc.level : (d.level||1)) +
+      '<div class="hero-level">Lv. '+lv+(flr>0?' · piso '+flr:'')+'</div>'+
+      depthBlocks(lv) +
       readinessLabel(d);
     card.addEventListener('click', ()=>{
       const h = heroes.find(x=>x.data.id===d.id);
@@ -1384,9 +1389,24 @@ function renderStats(){
     const needsHtml='<div class="stat-sub">necesidades — base Fase 2</div>'+
       nb('hambre',nd.satiety,'#c08a3a')+nb('energía',nd.energy,'#3a78b0')+nb('salud',nd.health,hCol)+
       '<div class="needs-read">'+((h.needsStatus||[]).join(' · '))+'</div>';
+    // RPG: nivel, piso alcanzado y stats de combate derivados del alma
+    const lv  = h._live ? h._live.npc.level       : (h.level||1);
+    const flr = h._live ? h._live.npc.floorReached : (h.floorReached||0);
+    let rpgHtml = '<div class="stat-sub">rpg — nivel y combate</div>'+
+      '<div class="stat-rpg-row"><span class="rpg-lv">Lv. '+lv+'</span>'+
+      (flr>0?'<span class="rpg-floor">piso '+flr+'</span>':'')+'</div>';
+    if(BL && BL.deriveStats){
+      const st = BL.deriveStats({axes:h.axesNow, stars:h.stars, level:lv});
+      rpgHtml += '<div class="stat-rpg-grid">'+
+        '<span class="rpg-stat rpg-hp"><b>HP</b> '+st.maxHp+'</span>'+
+        '<span class="rpg-stat rpg-atk"><b>ATK</b> '+st.atk+'</span>'+
+        '<span class="rpg-stat rpg-def"><b>DEF</b> '+st.def+'</span>'+
+        '<span class="rpg-stat rpg-spd"><b>VEL</b> '+st.spd+'</span>'+
+      '</div>';
+    }
     box.insertAdjacentHTML('beforeend',
       '<div class="stat-hero"><div class="stat-name">'+h.name+'<span class="st">'+('★'.repeat(h.stars))+'</span><span class="cl">'+(CLASS_ES[h.role]||h.role)+'</span></div>'+
-      '<div class="stat-emergent">'+em+'</div>'+rows+needsHtml+'</div>');
+      '<div class="stat-emergent">'+em+'</div>'+rows+needsHtml+rpgHtml+'</div>');
   });
 }
 let devCurrent='charlas';

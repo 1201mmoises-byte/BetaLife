@@ -110,6 +110,7 @@
   .hero-name{font-size:11px;letter-spacing:1.5px;color:var(--txt);text-transform:uppercase;}
   .hero-class{font-size:8.5px;letter-spacing:1.5px;color:var(--violet-dim);text-transform:uppercase;margin-top:1px;}
   .hero-stars{color:var(--gold);font-size:10px;letter-spacing:1px;text-shadow:0 0 5px var(--gold);margin-top:2px;}
+  .hero-level{font-size:8.5px;letter-spacing:1px;color:var(--violet-dim);text-transform:uppercase;margin-top:2px;}
   .hero-future{margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);
        font-size:8.5px;letter-spacing:1px;color:rgba(150,135,190,.4);font-style:italic;}
 
@@ -174,6 +175,13 @@
   .stat-sub{font-size:8px;letter-spacing:2px;color:var(--violet-dim);text-transform:uppercase;
        margin:10px 2px 5px;border-top:1px solid var(--line);padding-top:8px;}
   .needs-read{font-size:9px;color:var(--txt-dim);font-style:italic;margin-top:4px;}
+  .stat-rpg-row{display:flex;gap:10px;align-items:baseline;margin-bottom:5px;}
+  .rpg-lv{font-size:11px;color:var(--violet-soft);letter-spacing:1px;}
+  .rpg-floor{font-size:9px;color:var(--txt-dim);letter-spacing:1px;}
+  .stat-rpg-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;}
+  .rpg-stat{font-size:9.5px;color:var(--txt-dim);}
+  .rpg-stat b{color:var(--txt);font-weight:600;}
+  .rpg-hp b{color:#5a8868;} .rpg-atk b{color:#b05050;} .rpg-def b{color:#3a78b0;} .rpg-spd b{color:#b0903a;}
 
   /* ── Overlay de ceremonia: Cámara de los Ecos ── */
   #echo-overlay{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;
