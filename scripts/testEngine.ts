@@ -487,22 +487,22 @@ console.log('\n=== La entidad (hada) — única voz al jefe, reactiva ===\n');
   // Entrenar mucho sin descansar agota; descansar recupera.
   const start = createNeeds(seeder, hero.axes);
   const trained = tickNeeds(start, hero.axes, 'train', 60);
-  const drains = trained.energy < start.energy;
-  console.log(`  entrenar 60t agota energía: ${drains ? 'PASS' : 'FAIL'} (${start.energy} → ${trained.energy})`);
+  const drains = trained.energia < start.energia;
+  console.log(`  entrenar 60t agota energía: ${drains ? 'PASS' : 'FAIL'} (${start.energia} → ${trained.energia})`);
   const rested = tickNeeds(trained, hero.axes, 'rest', 30);
-  const recovers = rested.energy > trained.energy;
-  console.log(`  descansar 30t recupera:    ${recovers ? 'PASS' : 'FAIL'} (${trained.energy} → ${rested.energy})`);
+  const recovers = rested.energia > trained.energia;
+  console.log(`  descansar 30t recupera:    ${recovers ? 'PASS' : 'FAIL'} (${trained.energia} → ${rested.energia})`);
 
   // Hambre extrema daña la salud; criticalNeed la detecta.
-  const starved = tickNeeds({ satiety: 1, energy: 1, health: 1 }, hero.axes, 'idle', 200);
+  const starved = tickNeeds({ hambre: 1, descanso: 1, energia: 1, health: 1 }, hero.axes, 'idle', 200);
   const healthFell = starved.health < 1;
-  console.log(`  inanición larga daña salud: ${healthFell ? 'PASS' : 'FAIL'} (satiety=${starved.satiety} health=${starved.health})`);
+  console.log(`  inanición larga daña salud: ${healthFell ? 'PASS' : 'FAIL'} (hambre=${starved.hambre} health=${starved.health})`);
   console.log(`  estado observable          → "${needsStatus(starved).join('; ')}"`);
   console.log(`  necesidad crítica          → ${criticalNeed(starved) ?? '(ninguna)'}`);
 
-  // Comer restaura la saciedad.
-  const fed = tickNeeds({ satiety: 0.1, energy: 0.6, health: 0.7 }, hero.axes, 'eat', 5);
-  console.log(`  comer 5t restaura saciedad: ${fed.satiety > 0.1 ? 'PASS' : 'FAIL'} (0.1 → ${fed.satiety})`);
+  // Comer restaura el hambre.
+  const fed = tickNeeds({ hambre: 0.1, descanso: 0.6, energia: 0.6, health: 0.7 }, hero.axes, 'eat', 5);
+  console.log(`  comer 5t restaura hambre:   ${fed.hambre > 0.1 ? 'PASS' : 'FAIL'} (0.1 → ${fed.hambre})`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

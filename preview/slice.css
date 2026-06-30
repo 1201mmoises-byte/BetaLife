@@ -115,7 +115,17 @@
        background:rgba(0,0,0,.25);border-radius:6px;border:1px solid var(--line);}
   .hs{font-size:9px;color:var(--txt-dim);white-space:nowrap;}
   .hs b{font-size:8px;letter-spacing:.5px;margin-right:3px;}
-  .hs.hp b{color:#5a8868;} .hs.atk b{color:#b05050;} .hs.def b{color:#3a78b0;} .hs.spd b{color:#b0903a;}
+  .hs.hp-max b{color:#5a8868;} .hs.atk b{color:#b05050;} .hs.def b{color:#3a78b0;} .hs.spd b{color:#b0903a;}
+  /* HP bar — único medidor visible al jugador con número */
+  .hero-hp-wrap{margin:5px 0 3px;}
+  .hero-hp-label{display:flex;justify-content:space-between;font-size:8.5px;letter-spacing:.5px;
+       text-transform:uppercase;margin-bottom:3px;}
+  .hero-hp-label b{color:#5a8868;} .hero-hp-label span{color:var(--txt);}
+  .hero-hp-wrap.hp-low .hero-hp-label b,.hero-hp-wrap.hp-low .hero-hp-label span{color:#b0903a;}
+  .hero-hp-wrap.hp-crit .hero-hp-label b,.hero-hp-wrap.hp-crit .hero-hp-label span{color:#b05050;animation:hpblink 0.8s ease-in-out infinite;}
+  @keyframes hpblink{0%,100%{opacity:1;}50%{opacity:.5;}}
+  .hero-hp-track{height:5px;background:rgba(0,0,0,.4);border-radius:3px;overflow:hidden;border:1px solid var(--line);}
+  .hero-hp-fill{height:100%;border-radius:3px;transition:width .4s ease;}
   .hero-future{margin-top:7px;padding-top:7px;border-top:1px dashed var(--line);
        font-size:8.5px;letter-spacing:1px;color:rgba(150,135,190,.4);font-style:italic;}
 

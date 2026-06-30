@@ -83,10 +83,11 @@ export function applyConversation(world: LiveWorld, ai: number, bi: number, seed
   return ex.topic;
 }
 
-/** Avanza las necesidades de un héroe según su actividad (hambre/agotamiento/salud). */
+/** Avanza las necesidades de un héroe según su actividad. Marca como caído si HP = 0. */
 export function tickHeroNeeds(h: LiveHero, activity: Activity, n = 1): void {
   if (!h.alive) return;
   h.needs = tickNeeds(h.needs, h.npc.axes, activity, n);
+  if (h.needs.health <= 0) h.alive = false;
 }
 
 /** Intenta aflorar un sueño (raro, escala con estrellas). Devuelve el fragmento o null. */

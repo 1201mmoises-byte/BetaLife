@@ -609,10 +609,10 @@ function spawnHero(data, atIndex){
 function pickActivity(h){
   const nd = h.data._live ? h.data._live.needs : h.data.needs;
   // Necesidades críticas primero: comer o descansar van a la Posada
-  if(nd && nd.satiety < 0.38 && h.state !== 'eat'){
+  if(nd && nd.hambre < 0.38 && h.state !== 'eat'){
     h.target = 'posada'; h._nextState = 'eat'; h.state = 'walking'; return;
   }
-  if(nd && nd.energy < 0.30 && h.state !== 'rest'){
+  if(nd && nd.descanso < 0.30 && h.state !== 'rest'){
     h.target = 'posada'; h._nextState = 'rest'; h.state = 'walking'; return;
   }
   // Procesar orden de la Hada si hay una activa
@@ -1144,11 +1144,19 @@ function heroStatsHTML(d, lv){
   const axes = d._live ? d._live.npc.axes : d.axesNow;
   if(!axes) return '';
   const st = BL.deriveStats({axes, stars:d.stars, level:lv});
-  return '<div class="hero-stats">'+
-    '<span class="hs hp"><b>HP</b>'+st.maxHp+'</span>'+
+  // HP bar: color bands 100-70 green · 69-40 yellow · 39-10 red · 9-0 all-red warning
+  const nd = d._live ? d._live.needs : d.needs;
+  const hp = nd ? Math.max(0, nd.health) : 1;
+  const hpPct = Math.round(hp * 100);
+  const hpCol = hp <= 0.09 ? '#b05050' : hp <= 0.39 ? '#b05050' : hp <= 0.69 ? '#b0903a' : '#5a8868';
+  const hpClass = hp <= 0.09 ? 'hp-crit' : hp <= 0.39 ? 'hp-low' : hp <= 0.69 ? 'hp-mid' : 'hp-ok';
+  const hpBar = '<div class="hero-hp-wrap '+hpClass+'"><div class="hero-hp-label"><b>HP</b><span>'+hpPct+'%</span></div>'+
+    '<div class="hero-hp-track"><div class="hero-hp-fill" style="width:'+hpPct+'%;background:'+hpCol+'"></div></div></div>';
+  return hpBar+'<div class="hero-stats">'+
     '<span class="hs atk"><b>ATK</b>'+st.atk+'</span>'+
     '<span class="hs def"><b>DEF</b>'+st.def+'</span>'+
     '<span class="hs spd"><b>VEL</b>'+st.spd+'</span>'+
+    '<span class="hs hp-max"><b>HP máx</b>'+st.maxHp+'</span>'+
   '</div>';
 }
 
@@ -1400,10 +1408,11 @@ function renderStats(){
     const em=(h.emergent&&h.emergent.length)?h.emergent.join(' · '):'sin rasgos marcados aún';
     // necesidades vitales (base Fase 2)
     const nb=(label,v,col)=>'<div class="ax"><span class="ax-lo">'+label+'</span><span class="ax-bar"><span class="ax-fill" style="width:'+Math.round(v*100)+'%;background:'+col+'"></span></span><span class="ax-hi"></span></div>';
-    const nd=h.needs||{satiety:1,energy:1,health:1};
+    const nd=h.needs||{hambre:1,descanso:1,energia:1,health:1};
     const hCol=nd.health<0.3?'#b05050':nd.health<0.6?'#b0903a':'#5a8868';
-    const needsHtml='<div class="stat-sub">necesidades — base Fase 2</div>'+
-      nb('hambre',nd.satiety,'#c08a3a')+nb('energía',nd.energy,'#3a78b0')+nb('salud',nd.health,hCol)+
+    const needsHtml='<div class="stat-sub">necesidades — 4 medidores</div>'+
+      nb('hambre',Math.max(0,nd.hambre),'#c08a3a')+nb('descanso',Math.max(0,nd.descanso),'#7a6ab0')+
+      nb('energía',Math.max(0,nd.energia),'#3a78b0')+nb('salud',nd.health,hCol)+
       '<div class="needs-read">'+((h.needsStatus||[]).join(' · '))+'</div>';
     // RPG: nivel, piso alcanzado y stats de combate derivados del alma
     const lv  = h._live ? h._live.npc.level       : (h.level||1);

@@ -2,52 +2,57 @@ import { SoulAxes } from './types';
 import { Seeder } from './seeder';
 
 /**
- * Necesidades vitales — base para Fase 2/3 (capa de supervivencia, estilo Sims).
+ * Necesidades vitales — sistema de 4 medidores (Blueprint §4).
  *
- * Lo esencial para vivir: SACIEDAD (hambre), ENERGÍA (agotamiento) y SALUD.
- * Convención: floats 0..1 donde 1 = bien (saciado / descansado / sano) y 0 = al
- * límite (hambriento / agotado / al borde). Igual que los ejes, NUNCA se muestran
- * como números al jugador — `needsStatus` los traduce a conducta observable.
+ * HAMBRE   — 1=saciado; puede ir a −0.30 (debilidad < 0.30; crítico < 0).
+ * DESCANSO — 1=descansado; puede ir a −0.30. Independiente del hambre.
+ * ENERGÍA  — modificador NO letal. Principal: entreno/movimiento. A ≤0.30
+ *            hambre+descanso drenan al doble; a ≤0 el agotamiento duplica/triplica.
+ * SALUD    — HP real (0..1). ÚNICA visible al jugador (% con bandas de color).
+ *            La mueve sobre todo el daño directo (combate). Las otras la erosionan
+ *            poco a poco. MUERTE cuando HP = 0.
  *
- * PURE + determinista: `tickNeeds` devuelve copias y depende solo de sus entradas
- * (estado + ejes + actividad), sin azar; `createNeeds` usa el seeder para una
- * variación inicial reproducible. El motor no se conecta a nada todavía — es la
- * base lista para cuando la capa RPG (Torre, combate, fatiga, Arena) la consuma.
- *
- * Conexión con el alma: la DISCIPLINA modula el ritmo (los disciplinados gastan
- * menos y se recuperan mejor) — así las necesidades no son un sistema aislado,
- * sino otra cara de la personalidad que el motor ya rastrea.
+ * PURE + determinista. La UI conecta HP=0 al permadeath.
  */
 
 export interface Needs {
-  satiety: number; // 1 = saciado, 0 = hambriento
-  energy: number;  // 1 = descansado, 0 = agotado
-  health: number;  // 1 = sano, 0 = al borde de caer
+  hambre:   number;  // 1=saciado,    puede llegar a −0.30
+  descanso: number;  // 1=descansado, puede llegar a −0.30
+  energia:  number;  // modificador,  puede ser negativo; NUNCA mata
+  health:   number;  // HP 0..1 — MUERTE en 0
 }
 
-/** Lo que el héroe está haciendo en este tick (afecta gasto/recuperación). */
+/** Lo que el héroe está haciendo en este tick. */
 export type Activity = 'idle' | 'rest' | 'eat' | 'work' | 'train' | 'fight';
 
-/** Necesidad crítica que, mantenida, llevaría a la muerte (gancho Fase 2/3). */
-export type Vital = 'starvation' | 'exhaustion' | 'collapse';
+/** Causa de muerte (solo la salud puede causar muerte directa). */
+export type Vital = 'collapse';
 
-// Tasas base por tick (lentas — una vida transcurre en muchos ticks).
-const SATIETY_DECAY = 0.012; // hambre que crece por tick en reposo
-const ENERGY_DECAY  = 0.010; // agotamiento que crece por tick en reposo
-const EAT_RECOVER   = 0.14;  // saciedad recuperada al comer
-const REST_RECOVER  = 0.05;  // energía recuperada al descansar
-const HEALTH_REGEN  = 0.006; // salud que vuelve cuando todo va bien
-const HEALTH_DRAIN  = 0.020; // salud perdida con necesidad crítica
-const CRITICAL      = 0.12;  // umbral: por debajo, empieza a dañar la salud
+// ── Tasas base por tick ────────────────────────────────────────────────────
+// A 5 s/tick en el pueblo (10×): hambre en ~3.5 días de juego (idle).
+const HAMBRE_DECAY       = 0.012;
+const DESCANSO_DECAY     = 0.010;
+const ENERGIA_DECAY      = 0.008;
+const EAT_RECOVER        = 0.14;
+const REST_RECOVER       = 0.05;
+const ENERGIA_RECOVER    = 0.06;
+const HEALTH_REGEN       = 0.003;  // regenera con condición buena (lento)
+const HEALTH_DRAIN_DEBIL = 0.002;  // drena en debilidad (muy lento)
+const HEALTH_DRAIN_CRIT  = 0.015;  // drena rápido con hambre/descanso < 0
+export const DEBILIDAD   = 0.30;   // umbral de debilidad (< 30%)
 
-const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+const clampH  = (v: number) => Math.max(-0.30, Math.min(1, v)); // hambre/descanso
+const clampE  = (v: number) => Math.max(-1,    Math.min(1, v)); // energía
+const clamp01 = (v: number) => Math.max(0,     Math.min(1, v)); // health
+const round4  = (v: number) => parseFloat(v.toFixed(4));
+
 const round = (n: Needs): Needs => ({
-  satiety: parseFloat(n.satiety.toFixed(4)),
-  energy:  parseFloat(n.energy.toFixed(4)),
-  health:  parseFloat(n.health.toFixed(4)),
+  hambre:   round4(n.hambre),
+  descanso: round4(n.descanso),
+  energia:  round4(n.energia),
+  health:   round4(n.health),
 });
 
-// Cuánto esfuerzo/comida consume cada actividad (multiplicador sobre la tasa base).
 function effortOf(a: Activity): number {
   return a === 'fight' ? 2.6 : a === 'train' ? 2.0 : a === 'work' ? 1.4 : 1.0;
 }
@@ -55,46 +60,77 @@ function appetiteOf(a: Activity): number {
   return a === 'fight' || a === 'train' ? 1.4 : a === 'work' ? 1.2 : 1.0;
 }
 
-/** Necesidades iniciales de un héroe: casi llenas, con leve variación por seed/alma. */
+/** Necesidades iniciales: casi llenas, leve variación por seed/alma. */
 export function createNeeds(seeder: Seeder, axes: SoulAxes): Needs {
   const s = seeder.branch('needs');
-  const j = () => 0.82 + s.nextFloat() * 0.18; // 0.82..1.0
+  const j = () => 0.82 + s.nextFloat() * 0.18;
+  const resil = axes.discipline;
   return round({
-    satiety: clamp01(0.65 * j() + 0.25),
-    energy:  clamp01(0.65 * j() + 0.25 + (axes.discipline - 0.5) * 0.1),
-    health:  clamp01(0.85 + s.nextFloat() * 0.15),
+    hambre:   clamp01(0.65 * j() + 0.25),
+    descanso: clamp01(0.65 * j() + 0.25 + (resil - 0.5) * 0.1),
+    energia:  clamp01(0.70 * j() + 0.20),
+    health:   clamp01(0.85 + s.nextFloat() * 0.15),
   });
 }
 
-/** Avanza un tick. PURE: no muta, depende solo de las entradas. */
 function step(n: Needs, axes: SoulAxes, activity: Activity): Needs {
-  const drainMul = 1.1 - axes.discipline * 0.3;  // disciplinado gasta menos
-  const recovMul = 0.85 + axes.discipline * 0.3; // y se recupera mejor
+  const resil    = axes.discipline;
+  const drainMul = 1.2 - resil * 0.4;
+  const recovMul = 0.8 + resil * 0.4;
 
-  let satiety = n.satiety;
-  if (activity === 'eat') satiety += EAT_RECOVER * recovMul;
-  else satiety -= SATIETY_DECAY * drainMul * appetiteOf(activity);
+  // ── Energía (modificador, no letal) ──────────────────────────────────────
+  let energia = n.energia;
+  if (activity === 'rest') {
+    energia += ENERGIA_RECOVER * recovMul;
+  } else {
+    energia -= ENERGIA_DECAY * drainMul * effortOf(activity);
+  }
+  energia = clampE(energia);
 
-  let energy = n.energy;
-  if (activity === 'rest') energy += REST_RECOVER * recovMul;
-  else energy -= ENERGY_DECAY * drainMul * effortOf(activity);
+  // Multiplicador de drain cuando la energía está baja:
+  // ≤ 0.30 → hambre/descanso al doble; ≤ 0 → 2x…3x según cuán abajo
+  const energiaMul = energia <= 0
+    ? 2 + Math.min(1, -energia)
+    : energia <= DEBILIDAD
+    ? 2
+    : 1;
 
-  satiety = clamp01(satiety);
-  energy = clamp01(energy);
+  // ── Hambre ───────────────────────────────────────────────────────────────
+  let hambre = n.hambre;
+  if (activity === 'eat') {
+    hambre += EAT_RECOVER * recovMul;
+  } else {
+    hambre -= HAMBRE_DECAY * drainMul * appetiteOf(activity) * energiaMul;
+  }
+  hambre = clampH(hambre);
 
-  // Salud: cae con hambre/agotamiento crítico; regenera si todo va holgado.
+  // ── Descanso ─────────────────────────────────────────────────────────────
+  let descanso = n.descanso;
+  if (activity === 'rest') {
+    descanso += REST_RECOVER * recovMul;
+  } else {
+    descanso -= DESCANSO_DECAY * drainMul * effortOf(activity) * energiaMul;
+  }
+  descanso = clampH(descanso);
+
+  // ── Salud / HP ───────────────────────────────────────────────────────────
   let health = n.health;
-  const starving = satiety <= CRITICAL;
-  const exhausted = energy <= CRITICAL;
-  if (starving || exhausted) {
-    const deficit = (starving ? CRITICAL - satiety : 0) + (exhausted ? CRITICAL - energy : 0);
-    health -= HEALTH_DRAIN * (0.5 + deficit / CRITICAL);
-  } else if (satiety > 0.5 && energy > 0.5) {
+  const hambreDebil   = hambre   < DEBILIDAD && hambre   >= 0;
+  const descansoDebil = descanso < DEBILIDAD && descanso >= 0;
+  const hambreCrit    = hambre   < 0;
+  const descansoCrit  = descanso < 0;
+
+  if (hambreCrit || descansoCrit) {
+    const deficit = (hambreCrit ? -hambre : 0) + (descansoCrit ? -descanso : 0);
+    health -= HEALTH_DRAIN_CRIT * (0.5 + deficit);
+  } else if (hambreDebil || descansoDebil) {
+    health -= HEALTH_DRAIN_DEBIL;
+  } else if (hambre > 0.5 && descanso > 0.5) {
     health += HEALTH_REGEN * recovMul;
   }
   health = clamp01(health);
 
-  return { satiety, energy, health };
+  return { hambre, descanso, energia, health };
 }
 
 /** Avanza `ticks` ticks de la misma actividad. Devuelve copia nueva. */
@@ -104,24 +140,33 @@ export function tickNeeds(needs: Needs, axes: SoulAxes, activity: Activity, tick
   return round(n);
 }
 
-/** Lectura OBSERVABLE (sin números) — reutilizable por la Hada / el dev panel. */
+/** Lectura OBSERVABLE (sin números) — para la Hada y el dev panel. */
 export function needsStatus(n: Needs): string[] {
   const out: string[] = [];
-  if (n.energy <= CRITICAL) out.push('está al borde del colapso por agotamiento');
-  else if (n.energy < 0.3) out.push('se le ve agotado, arrastra los pies');
-  else if (n.energy < 0.5) out.push('anda algo cansado');
-  if (n.satiety <= CRITICAL) out.push('se muere de hambre');
-  else if (n.satiety < 0.3) out.push('está hambriento');
-  else if (n.satiety < 0.5) out.push('le vendría bien comer');
-  if (n.health < 0.3) out.push('se le ve débil, como enfermo');
-  if (out.length === 0) out.push('se le ve entero');
+  if (n.descanso < 0)            out.push('al borde del colapso por agotamiento extremo');
+  else if (n.descanso < DEBILIDAD) out.push('se le ve agotado, arrastra los pies');
+  else if (n.descanso < 0.5)     out.push('anda algo cansado');
+  if (n.hambre < 0)              out.push('se muere de hambre, en estado crítico');
+  else if (n.hambre < DEBILIDAD)   out.push('está hambriento, le falla el cuerpo');
+  else if (n.hambre < 0.5)       out.push('le vendría bien comer');
+  if (n.energia <= 0)            out.push('agotado sin fuerza para nada');
+  else if (n.energia < DEBILIDAD)  out.push('sin energía');
+  if (n.health < 0.10)           out.push('al límite — podría caer en cualquier momento');
+  else if (n.health < DEBILIDAD)   out.push('se le ve débil, como enfermo');
+  if (out.length === 0)          out.push('se le ve entero');
   return out;
 }
 
-/** Necesidad crítica (o null). Gancho para la muerte emergente de Fase 2/3. */
+/** Qué medidores están en debilidad. */
+export function debilidadStatus(n: Needs): { hambre: boolean; descanso: boolean; salud: boolean } {
+  return {
+    hambre:   n.hambre   < DEBILIDAD,
+    descanso: n.descanso < DEBILIDAD,
+    salud:    n.health   < DEBILIDAD,
+  };
+}
+
+/** Devuelve 'collapse' si HP = 0 (única causa de muerte). */
 export function criticalNeed(n: Needs): Vital | null {
-  if (n.health <= 0.02) return 'collapse';
-  if (n.satiety <= 0) return 'starvation';
-  if (n.energy <= 0) return 'exhaustion';
-  return null;
+  return n.health <= 0 ? 'collapse' : null;
 }

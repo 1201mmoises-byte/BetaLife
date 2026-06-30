@@ -791,18 +791,25 @@ function rareWhisper(npcs) {
 }
 
 // src/engine/needs.ts
-var SATIETY_DECAY = 0.012;
-var ENERGY_DECAY = 0.01;
+var HAMBRE_DECAY = 0.012;
+var DESCANSO_DECAY = 0.01;
+var ENERGIA_DECAY = 8e-3;
 var EAT_RECOVER = 0.14;
 var REST_RECOVER = 0.05;
-var HEALTH_REGEN = 6e-3;
-var HEALTH_DRAIN = 0.02;
-var CRITICAL = 0.12;
+var ENERGIA_RECOVER = 0.06;
+var HEALTH_REGEN = 3e-3;
+var HEALTH_DRAIN_DEBIL = 2e-3;
+var HEALTH_DRAIN_CRIT = 0.015;
+var DEBILIDAD = 0.3;
+var clampH = (v) => Math.max(-0.3, Math.min(1, v));
+var clampE = (v) => Math.max(-1, Math.min(1, v));
 var clamp013 = (v) => Math.max(0, Math.min(1, v));
+var round4 = (v) => parseFloat(v.toFixed(4));
 var round = (n) => ({
-  satiety: parseFloat(n.satiety.toFixed(4)),
-  energy: parseFloat(n.energy.toFixed(4)),
-  health: parseFloat(n.health.toFixed(4))
+  hambre: round4(n.hambre),
+  descanso: round4(n.descanso),
+  energia: round4(n.energia),
+  health: round4(n.health)
 });
 function effortOf(a) {
   return a === "fight" ? 2.6 : a === "train" ? 2 : a === "work" ? 1.4 : 1;
@@ -813,34 +820,55 @@ function appetiteOf(a) {
 function createNeeds(seeder, axes) {
   const s = seeder.branch("needs");
   const j = () => 0.82 + s.nextFloat() * 0.18;
+  const resil = axes.discipline;
   return round({
-    satiety: clamp013(0.65 * j() + 0.25),
-    energy: clamp013(0.65 * j() + 0.25 + (axes.discipline - 0.5) * 0.1),
+    hambre: clamp013(0.65 * j() + 0.25),
+    descanso: clamp013(0.65 * j() + 0.25 + (resil - 0.5) * 0.1),
+    energia: clamp013(0.7 * j() + 0.2),
     health: clamp013(0.85 + s.nextFloat() * 0.15)
   });
 }
 function step(n, axes, activity) {
-  const drainMul = 1.1 - axes.discipline * 0.3;
-  const recovMul = 0.85 + axes.discipline * 0.3;
-  let satiety = n.satiety;
-  if (activity === "eat") satiety += EAT_RECOVER * recovMul;
-  else satiety -= SATIETY_DECAY * drainMul * appetiteOf(activity);
-  let energy = n.energy;
-  if (activity === "rest") energy += REST_RECOVER * recovMul;
-  else energy -= ENERGY_DECAY * drainMul * effortOf(activity);
-  satiety = clamp013(satiety);
-  energy = clamp013(energy);
+  const resil = axes.discipline;
+  const drainMul = 1.2 - resil * 0.4;
+  const recovMul = 0.8 + resil * 0.4;
+  let energia = n.energia;
+  if (activity === "rest") {
+    energia += ENERGIA_RECOVER * recovMul;
+  } else {
+    energia -= ENERGIA_DECAY * drainMul * effortOf(activity);
+  }
+  energia = clampE(energia);
+  const energiaMul = energia <= 0 ? 2 + Math.min(1, -energia) : energia <= DEBILIDAD ? 2 : 1;
+  let hambre = n.hambre;
+  if (activity === "eat") {
+    hambre += EAT_RECOVER * recovMul;
+  } else {
+    hambre -= HAMBRE_DECAY * drainMul * appetiteOf(activity) * energiaMul;
+  }
+  hambre = clampH(hambre);
+  let descanso = n.descanso;
+  if (activity === "rest") {
+    descanso += REST_RECOVER * recovMul;
+  } else {
+    descanso -= DESCANSO_DECAY * drainMul * effortOf(activity) * energiaMul;
+  }
+  descanso = clampH(descanso);
   let health = n.health;
-  const starving = satiety <= CRITICAL;
-  const exhausted = energy <= CRITICAL;
-  if (starving || exhausted) {
-    const deficit = (starving ? CRITICAL - satiety : 0) + (exhausted ? CRITICAL - energy : 0);
-    health -= HEALTH_DRAIN * (0.5 + deficit / CRITICAL);
-  } else if (satiety > 0.5 && energy > 0.5) {
+  const hambreDebil = hambre < DEBILIDAD && hambre >= 0;
+  const descansoDebil = descanso < DEBILIDAD && descanso >= 0;
+  const hambreCrit = hambre < 0;
+  const descansoCrit = descanso < 0;
+  if (hambreCrit || descansoCrit) {
+    const deficit = (hambreCrit ? -hambre : 0) + (descansoCrit ? -descanso : 0);
+    health -= HEALTH_DRAIN_CRIT * (0.5 + deficit);
+  } else if (hambreDebil || descansoDebil) {
+    health -= HEALTH_DRAIN_DEBIL;
+  } else if (hambre > 0.5 && descanso > 0.5) {
     health += HEALTH_REGEN * recovMul;
   }
   health = clamp013(health);
-  return { satiety, energy, health };
+  return { hambre, descanso, energia, health };
 }
 function tickNeeds(needs, axes, activity, ticks = 1) {
   let n = needs;
@@ -849,21 +877,28 @@ function tickNeeds(needs, axes, activity, ticks = 1) {
 }
 function needsStatus(n) {
   const out = [];
-  if (n.energy <= CRITICAL) out.push("est\xE1 al borde del colapso por agotamiento");
-  else if (n.energy < 0.3) out.push("se le ve agotado, arrastra los pies");
-  else if (n.energy < 0.5) out.push("anda algo cansado");
-  if (n.satiety <= CRITICAL) out.push("se muere de hambre");
-  else if (n.satiety < 0.3) out.push("est\xE1 hambriento");
-  else if (n.satiety < 0.5) out.push("le vendr\xEDa bien comer");
-  if (n.health < 0.3) out.push("se le ve d\xE9bil, como enfermo");
+  if (n.descanso < 0) out.push("al borde del colapso por agotamiento extremo");
+  else if (n.descanso < DEBILIDAD) out.push("se le ve agotado, arrastra los pies");
+  else if (n.descanso < 0.5) out.push("anda algo cansado");
+  if (n.hambre < 0) out.push("se muere de hambre, en estado cr\xEDtico");
+  else if (n.hambre < DEBILIDAD) out.push("est\xE1 hambriento, le falla el cuerpo");
+  else if (n.hambre < 0.5) out.push("le vendr\xEDa bien comer");
+  if (n.energia <= 0) out.push("agotado sin fuerza para nada");
+  else if (n.energia < DEBILIDAD) out.push("sin energ\xEDa");
+  if (n.health < 0.1) out.push("al l\xEDmite \u2014 podr\xEDa caer en cualquier momento");
+  else if (n.health < DEBILIDAD) out.push("se le ve d\xE9bil, como enfermo");
   if (out.length === 0) out.push("se le ve entero");
   return out;
 }
+function debilidadStatus(n) {
+  return {
+    hambre: n.hambre < DEBILIDAD,
+    descanso: n.descanso < DEBILIDAD,
+    salud: n.health < DEBILIDAD
+  };
+}
 function criticalNeed(n) {
-  if (n.health <= 0.02) return "collapse";
-  if (n.satiety <= 0) return "starvation";
-  if (n.energy <= 0) return "exhaustion";
-  return null;
+  return n.health <= 0 ? "collapse" : null;
 }
 
 // src/engine/world.ts
@@ -1862,6 +1897,7 @@ function applyConversation(world, ai, bi, seederKey) {
 function tickHeroNeeds(h, activity, n = 1) {
   if (!h.alive) return;
   h.needs = tickNeeds(h.needs, h.npc.axes, activity, n);
+  if (h.needs.health <= 0) h.alive = false;
 }
 function tryDream(h, seederKey) {
   const m = surfaceDream(createSeeder(seederKey), h.npc);
@@ -1931,6 +1967,7 @@ export {
   AXIS_KEYS,
   BANDS,
   CONVERSATION_COOLDOWN,
+  DEBILIDAD,
   DEV_MODE,
   SAVE_VERSION,
   affinityFor,
@@ -1950,6 +1987,7 @@ export {
   createSeeder,
   createTown,
   criticalNeed,
+  debilidadStatus,
   deriveSkills,
   deriveStats,
   describeNPC,
