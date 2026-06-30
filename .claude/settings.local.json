@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(update-config)",
+      "Bash(npm -v)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git config *)",
+      "Bash(ls -d .worktrees)",
+      "Bash(ls -d worktrees)",
+      "Bash(git commit *)",
+      "Bash(git check-ignore *)",
+      "Bash(git worktree *)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(echo \"exit1=$?\")",
+      "Bash(mkdir -p .worktrees)",
+      "Bash(echo \"exit2=$?\")"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "godot",
+    "better-godot-mcp",
+    "firebase"
+  ]
+}

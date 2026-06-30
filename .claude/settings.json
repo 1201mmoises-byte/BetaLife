@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx -y @coding-solo/godot-mcp*)",
+      "Bash(npx -y @n24q02m/better-godot-mcp*)",
+      "Bash(npx -y firebase-tools*)",
+      "Bash(C:\\Users\\Noobi\\Godot\\Godot_v4.7-stable_win64.exe*)",
+      "Bash(C:\\Users\\Noobi\\Godot\\Godot_v4.7-stable_win64_console.exe*)"
+    ]
+  }
+}
