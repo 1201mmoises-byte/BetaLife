@@ -89,13 +89,30 @@
     <div class="tabs">
       <button class="tab active" id="tab-charlas">Charlas</button>
       <button class="tab" id="tab-stats">Stats</button>
+      <button class="tab" id="tab-expedition">Expedición</button>
     </div>
     <div id="dev-charlas"></div>
     <div id="dev-stats" style="display:none;"></div>
+    <div id="dev-expedition" style="display:none;"></div>
     <div style="text-align:center;margin-top:14px;">
       <button class="hud-btn" id="btn-reset" style="pointer-events:auto;border-color:var(--danger);color:var(--danger-soft);">↺ reiniciar partida</button>
       <div class="stat-hint" style="margin-top:6px;">borra el guardado y vuelve al tutorial</div>
     </div>
+  </div>
+</div>
+
+<!-- ░░ Torre — expedición ░░ -->
+<div class="sheet" id="sheet-torre">
+  <div class="sheet-grip"></div>
+  <div class="sheet-head">
+    <span class="sheet-icon" style="color:var(--violet-soft);text-shadow:0 0 10px var(--violet-soft);">⬡</span>
+    <div class="sheet-title">La Torre<small>algo llama desde lo alto</small></div>
+    <span class="sheet-close" data-close="sheet-torre">✕</span>
+  </div>
+  <div class="sheet-body mw">
+    <div class="torre-fairy-line" id="torre-fairy-line"></div>
+    <div class="torre-volunteers" id="torre-volunteers"></div>
+    <button class="btn-merge" id="btn-send-tower" disabled>Enviarlos →</button>
   </div>
 </div>
 

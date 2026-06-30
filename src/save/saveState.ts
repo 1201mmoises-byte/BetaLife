@@ -26,6 +26,13 @@ export interface SavedHero {
   alive: boolean;
 }
 
+export interface ExpeditionSave {
+  partyIds: string[];
+  floor: number;
+  returnAt: number;
+  // resolvedResult is NOT saved — it is recomputed from the hero state on restore
+}
+
 export interface SaveState {
   v: number;
   townSeed: string;
@@ -34,6 +41,7 @@ export interface SaveState {
   tick: number;
   lastSeen: number;     // epoch ms — para el catch-up offline
   heroes: SavedHero[];
+  expedition?: ExpeditionSave;
 }
 
 export function serializeSave(world: LiveWorld, lastSeen = Date.now()): SaveState {
@@ -56,6 +64,9 @@ export function serializeSave(world: LiveWorld, lastSeen = Date.now()): SaveStat
       inRoster: h.inRoster,
       alive: h.alive,
     })),
+    expedition: world.expedition
+      ? { partyIds: world.expedition.partyIds, floor: world.expedition.floor, returnAt: world.expedition.returnAt }
+      : undefined,
   };
 }
 
@@ -73,5 +84,5 @@ export function restoreSave(save: SaveState): LiveWorld {
     sh.surfaced.forEach((i) => { if (npc.lore.memories[i]) npc.lore.memories[i].surfaced = true; });
     return { npc, bornAxes: sh.bornAxes, needs: sh.needs, inRoster: sh.inRoster, alive: sh.alive };
   });
-  return { town, heroes, tick: save.tick };
+  return { town, heroes, tick: save.tick, expedition: save.expedition };
 }

@@ -203,3 +203,33 @@
        max-width:86%;box-shadow:0 0 22px rgba(120,70,200,.45);opacity:0;pointer-events:none;transition:.3s;}
   #tut-hint.show{opacity:1;transform:translateX(-50%) translateY(0);}
   #tut-hint b{color:var(--gold);}
+
+  /* ── Torre: expedición ── */
+  .torre-fairy-line{font-size:13px;line-height:1.65;color:var(--txt);margin-bottom:18px;
+       min-height:48px;font-style:italic;}
+  .torre-volunteers{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px;}
+  .torre-volunteers .hero-card{flex:1 1 120px;max-width:150px;cursor:pointer;
+       transition:opacity .2s,border-color .2s;}
+  .torre-volunteers .hero-card:hover{border-color:var(--violet);}
+  .hero-volunteer-label{font-size:10px;letter-spacing:1px;color:var(--gold);
+       text-align:center;margin-top:4px;text-transform:uppercase;}
+  .hero-card.held-back{opacity:.38;}
+  .hero-card.held-back .hero-name{text-decoration:line-through;color:var(--txt-dim);}
+  .hero-card.held-back .hero-volunteer-label{color:var(--danger-soft);}
+
+  /* ── Profundidad + disposición en tarjetas del Roster ── */
+  .depth-blocks{font-size:11px;color:var(--violet-soft);letter-spacing:3px;display:block;
+       text-align:center;margin:3px 0 2px;}
+  .readiness{font-size:9.5px;letter-spacing:1px;text-transform:uppercase;display:block;
+       text-align:center;margin-top:2px;}
+  .readiness.en-forma{color:#5a8868;}
+  .readiness.herido{color:var(--gold);}
+  .readiness.malherido{color:var(--danger-soft);}
+  .readiness.caido{color:var(--txt-dim);text-decoration:line-through;}
+
+  /* ── Dev panel: Expedición tab ── */
+  #dev-expedition{font-size:12px;line-height:1.6;}
+  .exp-result{margin:10px 0;padding:10px 12px;background:var(--panel2);
+       border-radius:10px;border:1px solid var(--line);}
+  .exp-narration{color:var(--txt-dim);margin-top:6px;}
+  .exp-narration .log-line{margin:2px 0;}

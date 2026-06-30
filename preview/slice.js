@@ -79,6 +79,15 @@ if(BL){
     }
     // enlazar cada héroe horneado con su NPC vivo (mismo orden/semilla)
     DATA.heroes.forEach((d,i)=>{ if(LIVE.heroes[i]) bindLive(d, LIVE.heroes[i]); });
+    // If a page reload happened mid-expedition, recompute the result
+    if(LIVE.expedition && !LIVE.expedition.resolvedResult){
+      try{
+        const expParty = LIVE.heroes.filter(h=>LIVE.expedition.partyIds.includes(h.npc.id)).map(h=>h.npc);
+        LIVE.expedition.resolvedResult = BL.runExpedition(LIVE.town, LIVE.expedition.floor, expParty);
+        // Heroes are hidden (they're inside); hide their 3D groups after spawn
+        window.__pendingHiddenIds = LIVE.expedition.partyIds.slice();
+      }catch(e){ console.warn('expedition restore failed', e); LIVE.expedition=undefined; }
+    }
   }catch(e){ console.warn('mundo vivo no inicializó; modo horneado', e); LIVE=null; }
 }
 
@@ -305,6 +314,7 @@ const P_PLAZA  = place('plaza',  0,   1);
     w.position.set(0, 3+i*2.2, 2.1); g.add(w);
   }
   const tip = new THREE.PointLight(0xb080ff, 12, 22, 1.5); tip.position.set(0,15,0); g.add(tip);
+  PLACES.torre.tipLight = tip;
   g.position.copy(P_TORRE); scene.add(g);
   const lbl = makeLabel('La Torre', '#b080ff'); lbl.position.set(0, 17, 0); g.add(lbl);
   PLACES.torre.group = g;
@@ -739,7 +749,7 @@ window.addEventListener('resize', ()=>{ renderer.setSize(innerWidth,innerHeight)
 // ─────────────────────────────────────────────────────────────────────────────
 // OVERLAYS (HTML) — la Hada conversación, roster, merger
 // ─────────────────────────────────────────────────────────────────────────────
-const SHEETS = ['sheet-hada','sheet-roster','sheet-merge','sheet-dev'];
+const SHEETS = ['sheet-hada','sheet-roster','sheet-merge','sheet-dev','sheet-torre'];
 function openSheet(id){ SHEETS.forEach(s=>document.getElementById(s).classList.toggle('open', s===id)); }
 function closeSheets(){ SHEETS.forEach(s=>document.getElementById(s).classList.remove('open')); }
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeSheets()));
@@ -837,7 +847,7 @@ function askKnow(){
         const full = obe ? rep+' Las órdenes: '+obe+'.' : rep;
         fairySays(full, hadaRoot);
       }) },
-    { label:'¿Qué hay arriba?', cls:'back', act:()=>{ bub('right','¿Qué hay en la Torre?'); fairySays('No puedo ver eso. La Torre no me habla — solo sé que llama.', hadaRoot); } },
+    { label:'¿Qué hay arriba?', cls:'back', act:()=>{ bub('right','¿Qué hay en la Torre?'); fairySays('La Torre llama. Si hay almas dispuestas a subir, puedes enviarlas desde ella. Yo estaré aquí cuando vuelvan — o cuando no.', hadaRoot); } },
     { label:'volver', cls:'back', act:hadaRoot },
   ]));
 }
@@ -860,7 +870,8 @@ function askExplain(){
 let hadaOpened=false;
 function openHada(){
   openSheet('sheet-hada');
-  if(TUTORIAL) return;   // el tutorial ya conduce el hilo; no lo pisamos
+  if(TUTORIAL) return;
+  if(pendingReport){ deliverReport(); return; }
   if(!hadaOpened){
     hadaOpened=true;
     if(window.__catchupMins){
@@ -880,11 +891,143 @@ function heroReading(h){
   if(!hadaOpened) hadaOpened=true;
 }
 
+// ── Torre: voluntarios ────────────────────────────────────────────────────────
+function volunteerAxes(h){
+  return (h.data._live && h.data._live.npc.axes) || h.data.axesNow || {};
+}
+function isVolunteer(h){
+  const ax = volunteerAxes(h);
+  return (ax.confidence||0.5) > 0.45 && (ax.passivity||0.5) < 0.70;
+}
+function isStrongVolunteer(h){
+  const ax = volunteerAxes(h);
+  return (ax.confidence||0.5) > 0.65 && (ax.optimism||0.5) > 0.55;
+}
+
+function torreTypeLine(text){
+  const el = document.getElementById('torre-fairy-line');
+  el.textContent = '';
+  let i = 0;
+  const iv = setInterval(()=>{ el.textContent += text[i++]; if(i>=text.length) clearInterval(iv); }, 18);
+}
+
+function updateSendButton(volunteers){
+  const btn = document.getElementById('btn-send-tower');
+  const confirmed = volunteers.filter(h=>!torreHeld.has(h.data.id));
+  if(!confirmed.length){
+    btn.classList.remove('ready'); btn.disabled=true; btn.textContent='Enviarlos →';
+  } else {
+    btn.classList.add('ready'); btn.disabled=false;
+    btn.textContent = confirmed.length===1 ? 'Enviar a '+confirmed[0].data.name+' →' : 'Enviarlos →';
+  }
+}
+
+function toggleHeld(h, card){
+  const volunteers = heroes.filter(x=>x.alive && isVolunteer(x));
+  if(torreHeld.has(h.data.id)){
+    torreHeld.delete(h.data.id);
+    card.classList.remove('held-back');
+    document.getElementById('vlabel-'+h.data.id).textContent = isStrongVolunteer(h)?'listo':'dudoso';
+  } else {
+    torreHeld.add(h.data.id);
+    card.classList.add('held-back');
+    document.getElementById('vlabel-'+h.data.id).textContent = 'retenido';
+  }
+  updateSendButton(volunteers);
+}
+
+function renderTorreSheet(volunteers){
+  torreHeld = new Set();
+  // Fairy opening line
+  const strong = volunteers.filter(h=>isStrongVolunteer(h));
+  const reluctant = volunteers.filter(h=>!isStrongVolunteer(h));
+  let line;
+  if(strong.length===0){
+    line = reluctant.length===1
+      ? 'Solo '+reluctant[0].data.name+' da un paso, aunque con dudas.'
+      : reluctant.length+' dan un paso, sin mucha certeza. Es su decisión.';
+  } else if(strong.length===1 && reluctant.length===0){
+    line = strong[0].data.name+' da un paso adelante sin dudarlo. Nadie más siente el llamado ahora.';
+  } else if(strong.length===1){
+    line = strong[0].data.name+' da un paso sin dudar. '+(reluctant.length===1?reluctant[0].data.name+' lo sigue, aunque sin la misma certeza.':reluctant.length+' más lo siguen, con reservas.');
+  } else {
+    const strongNames = strong.map(h=>h.data.name).join(' y ');
+    line = strongNames+' dan un paso sin dudar.'+(reluctant.length?' Hay '+reluctant.length+' más que los siguen, con reservas.':'');
+  }
+  torreTypeLine(line);
+  // Volunteer cards
+  const grid = document.getElementById('torre-volunteers'); grid.innerHTML='';
+  volunteers.forEach(h=>{
+    const card = document.createElement('div'); card.className='hero-card';
+    const label = isStrongVolunteer(h)?'listo':'dudoso';
+    card.innerHTML = '<div class="portrait">'+bustHTML(h.data)+'</div>'+
+      '<div class="hero-name">'+h.data.name+'</div>'+
+      '<div class="hero-stars">'+('★'.repeat(h.data.stars))+'</div>'+
+      '<div class="hero-volunteer-label" id="vlabel-'+h.data.id+'">'+label+'</div>';
+    card.addEventListener('click',()=>toggleHeld(h,card));
+    grid.appendChild(card);
+  });
+  updateSendButton(volunteers);
+}
+
+function openTowerSheet(){
+  if(TUTORIAL) return;
+  // Block if expedition already running
+  if(LIVE && LIVE.expedition){ toast('<b>La Torre</b> — ya hay almas dentro. Espera a que vuelvan.'); return; }
+  const volunteers = heroes.filter(h=>h.alive && isVolunteer(h));
+  if(!volunteers.length){ toast('<b>La Torre</b> — nadie siente el llamado todavía.'); return; }
+  renderTorreSheet(volunteers);
+  openSheet('sheet-torre');
+}
+
+function walkHeroToTower(h, onArrival){
+  const g = h.group;
+  const iv = setInterval(()=>{
+    const dx=P_TORRE.x-g.position.x, dz=P_TORRE.z-g.position.z;
+    const d=Math.hypot(dx,dz);
+    if(d<1.2){ clearInterval(iv); onArrival(); }
+    else { const sp=0.08; g.position.x+=dx/d*sp; g.position.z+=dz/d*sp; g.rotation.y=Math.atan2(dx,dz); }
+  },16);
+}
+
+function launchExpedition(confirmedHeroes){
+  if(!LIVE||!BL){ toast('El motor no está disponible.'); return; }
+  const party = confirmedHeroes.map(h=>h.data._live.npc);
+  const floor = Math.max(1, Math.round(party.reduce((s,n)=>s+n.level,0)/party.length));
+  const resolvedResult = BL.runExpedition(LIVE.town, floor, party);
+  const duration = Math.min((floor + 1) * 90, 480);
+  const returnAt = Math.floor(Date.now() / 1000) + duration;
+  LIVE.expedition = { partyIds: party.map(n=>n.id), floor, returnAt, resolvedResult };
+  doSave();
+
+  // Departure speech by personality
+  const DEPART_LINES = {
+    optimista:'Será rápido.', cauto:'No tengo otra opción.',
+    inseguro:'Ojalá.', sombrío:'Así termina todo.',
+    sereno:'Vuelvo.', cálido:'Cuidaos mientras.', curioso:'Quiero ver qué hay arriba.',
+  };
+  confirmedHeroes.forEach((h,idx)=>{
+    h.state = 'tower';
+    setTimeout(()=>{ if(h.alive) say(h, DEPART_LINES[toneOf(h)]||'Vuelvo.'); }, idx*400);
+    setTimeout(()=>{
+      walkHeroToTower(h, ()=>{ h.group.visible=false; });
+    }, idx*300);
+  });
+
+  // Tower tip pulse
+  const tip = PLACES.torre.tipLight;
+  if(tip){ tip.intensity=22; setTimeout(()=>{ tip.intensity=12; },2000); }
+
+  // HUD
+  const sub = document.getElementById('hud-sub');
+  if(sub && !TUTORIAL) sub.textContent='esperando noticias…';
+}
+
 // ── Estructuras ──────────────────────────────────────────────────────────────
 function onPlace(k){
   if(k==='shrine'){ invoke(); }
   else if(k==='fusion'){ openSheet('sheet-merge'); }
-  else if(k==='torre'){ toast('<b>La Torre</b> — algo llama desde lo alto. Aún no se puede entrar.'); }
+  else if(k==='torre'){ openTowerSheet(); }
   else if(k==='posada'){ toast('<b>Posada</b> — aquí descansan, comen y se cuentan cosas.'); }
   else if(k==='campo'){ toast('<b>Campo de Entrenamiento</b> — crecen practicando. Tiene su techo y su riesgo.'); }
 }
@@ -911,6 +1054,16 @@ function invoke(){
 }
 
 // ── Roster ───────────────────────────────────────────────────────────────────
+function depthBlocks(level){
+  const filled=Math.min(level||1,5);
+  return '<span class="depth-blocks">'+'▪'.repeat(filled)+'▫'.repeat(5-filled)+'</span>';
+}
+
+function readinessLabel(d){
+  if (d.alive === false) return '<span class="readiness caido">caído</span>';
+  return '<span class="readiness en-forma">en forma</span>';
+}
+
 function bustHTML(d){
   const v = ROLE_VIS[d.role]||ROLE_VIS.archer;
   let cap='';
@@ -929,7 +1082,8 @@ function renderRoster(){
       '<div class="hero-name">'+d.name+'</div>'+
       '<div class="hero-class">'+(CLASS_ES[d.role]||d.role)+'</div>'+
       '<div class="hero-stars">'+('★'.repeat(d.stars))+'</div>'+
-      '<div class="hero-future">lvl · stats — próximamente</div>';
+      depthBlocks(d._live ? d._live.npc.level : (d.level||1)) +
+      readinessLabel(d);
     card.addEventListener('click', ()=>{
       const h = heroes.find(x=>x.data.id===d.id);
       closeSheets();
@@ -939,6 +1093,13 @@ function renderRoster(){
   });
 }
 document.getElementById('btn-roster').addEventListener('click', ()=>{ renderRoster(); openSheet('sheet-roster'); });
+document.getElementById('btn-send-tower').addEventListener('click',()=>{
+  const volunteers = heroes.filter(h=>h.alive && isVolunteer(h));
+  const confirmed = volunteers.filter(h=>!torreHeld.has(h.data.id));
+  if(!confirmed.length) return;
+  closeSheets();
+  launchExpedition(confirmed);
+});
 
 // ── Merger / Cámara de Fusión ────────────────────────────────────────────────
 let sac=null, rec=null;
@@ -1082,6 +1243,34 @@ const AXIS_LABELS = {
 const AXIS_ORDER = ['caution','passivity','submission','warmth','trust','altruism','sociability','integrity','loyalty','optimism','discipline','curiosity','confidence','forgiveness'];
 function barColor(v){ if(v<0.25)return '#604060'; if(v<0.5)return '#504880'; if(v<0.75)return '#406088'; return '#5a8868'; }
 
+let lastExpeditionResult = null;   // stored by resolveExpedition for the dev panel
+
+function renderExpedition(){
+  const box = document.getElementById('dev-expedition');
+  if(!lastExpeditionResult && !(LIVE && LIVE.expedition)){
+    box.innerHTML='<div class="dev-count">sin expedición aún en esta sesión.</div>'; return;
+  }
+  // Active expedition
+  if(LIVE && LIVE.expedition){
+    const secs = Math.max(0, Math.floor((LIVE.expedition.returnAt-Date.now()/1000)));
+    const mins = Math.floor(secs/60), s=secs%60;
+    box.innerHTML='<div class="dev-count">Expedición activa — piso '+LIVE.expedition.floor+
+      ' — vuelven en '+(mins?mins+'m ':'')+s+'s</div>'+
+      '<div class="dev-count" style="margin-top:6px">party: '+LIVE.expedition.partyIds.join(', ')+'</div>';
+    return;
+  }
+  // Last result
+  const { result, floor, drops } = lastExpeditionResult;
+  let html='<div class="dev-count">Última expedición — piso '+floor+' — '+result.outcome+'</div>';
+  html+='<div class="exp-result"><div class="exp-narration">';
+  html+=result.narration.map(l=>'<div class="log-line">'+l+'</div>').join('');
+  html+='</div>';
+  if(result.fallenNpcIds.length) html+='<div class="log-line" style="color:var(--danger-soft)">Caídos: '+result.fallenNpcIds.join(', ')+'</div>';
+  if(drops && drops.length) html+='<div class="log-line" style="color:var(--gold)">Botín: '+drops.map(d=>d.slot+' ('+d.rarity+')').join(', ')+'</div>';
+  html+='</div>';
+  box.innerHTML=html;
+}
+
 function renderCharlas(){
   const box=document.getElementById('dev-charlas');
   if(!liveChats.length){
@@ -1136,11 +1325,14 @@ function devTab(which){
   devCurrent=which;
   document.getElementById('tab-charlas').classList.toggle('active', which==='charlas');
   document.getElementById('tab-stats').classList.toggle('active', which==='stats');
+  document.getElementById('tab-expedition').classList.toggle('active', which==='expedition');
   document.getElementById('dev-charlas').style.display = which==='charlas'?'block':'none';
   document.getElementById('dev-stats').style.display = which==='stats'?'block':'none';
+  document.getElementById('dev-expedition').style.display = which==='expedition'?'block':'none';
 }
 document.getElementById('tab-charlas').addEventListener('click', ()=>devTab('charlas'));
 document.getElementById('tab-stats').addEventListener('click', ()=>devTab('stats'));
+document.getElementById('tab-expedition').addEventListener('click', ()=>{ renderExpedition(); devTab('expedition'); });
 document.getElementById('btn-dev').addEventListener('click', ()=>{ renderCharlas(); renderStats(); openSheet('sheet-dev'); });
 document.getElementById('btn-reset').addEventListener('click', ()=>{
   try{ localStorage.removeItem(SAVE_KEY); localStorage.removeItem(LS_KEY); }catch(e){}
@@ -1238,6 +1430,12 @@ const BANKS = {
     ['El sitio donde dormía {lost} está vacío.', 'Lo noté esta mañana. El pueblo es más callado.'],
     ['¿Crees que {lost} sabía lo que iba a pasar?', 'Nadie sabe. Pero fue rápido.'],
   ],
+  tower: [
+    ['¿Cuánto tardan?','No lo sé. Nadie sabe lo que hay ahí arriba.'],
+    ['¿Y si no vuelven?','…Esperamos.'],
+    ['El silencio de la Torre me pesa.','A todos.'],
+    ['¿Crees que están bien?','Pregúntale a la Hada. Yo no me atrevo a pensar en eso.'],
+  ],
 };
 function fillTokens(t,s1,s2,food,frag){
   return t.split('{1t}').join(s1.data.trade||'alguien').split('{2t}').join(s2.data.trade||'alguien')
@@ -1282,6 +1480,8 @@ function composeExchange(A,B){
   add('idle', isTone('solitario')?2:1);
   // pérdida reciente: testigos recuerdan al sacrificado
   if(recentLoss) add('loss', 5);
+  const inTower = LIVE && LIVE.expedition && LIVE.expedition.partyIds.length>0;
+  add('tower', inTower ? 6 : 0);
 
   // anti-repetición: castiga repetir el último beat
   for(const c of cands){ if(c[0]===lastBeat) c[1]*=0.25; }
@@ -1522,6 +1722,105 @@ function updateHero(h, dt){
 let lastTod = -1;
 let gameDay = 1, prevTod = START_TOD;
 let recentLoss = null;  // { name, timer } — testigos recuerdan al sacrificado ~3 min
+let torreHeld = new Set();   // data.id of heroes held back by player
+let pendingReport = null;    // Fairy report text queued while sheets were open
+
+function composeTowerReport(expResult, towerHeroes, preLevels){
+  const { result, party:updatedParty, drops } = expResult;
+  const fallen = new Set(result.fallenNpcIds);
+  const survivors = towerHeroes.filter(h=>!fallen.has(h.data.id));
+  const dead      = towerHeroes.filter(h=> fallen.has(h.data.id));
+  const lines = [];
+  if(result.outcome==='defeat'){
+    lines.push('No volvió nadie. El pueblo los recuerda.');
+  } else if(dead.length===0){
+    lines.push(survivors.length===1
+      ? survivors[0].data.name+' vuelve. Solo, pero vuelve.'
+      : 'Volvieron. '+survivors[0].data.name+' marcó el camino; los demás lo siguieron.');
+  } else {
+    const survNames = survivors.map(h=>h.data.name).join(' y ');
+    const deadNames = dead.map(h=>h.data.name).join(' y ');
+    lines.push((survivors.length?'Volvió '+survNames+'. ':'')+deadNames+' no. La Torre se lo quedó.');
+  }
+  // Level-up (qualitative: "salió distinto")
+  updatedParty.forEach(n=>{
+    if(!fallen.has(n.id) && n.level>(preLevels[n.id]||1)){
+      const h = towerHeroes.find(x=>x.data.id===n.id);
+      if(h) lines.push(h.data.name+' salió distinto. No sé explicarlo bien, pero lo noto.');
+    }
+  });
+  if(drops && drops.length) lines.push('Trajeron algo de allá dentro. No sé qué significa aún.');
+  return lines.join(' ');
+}
+
+function walkHeroFromTower(h){
+  const g = h.group;
+  g.position.set(P_TORRE.x+(Math.random()-0.5)*1.5, 0, P_TORRE.z+(Math.random()-0.5)*1.5);
+  g.visible = true;
+  const iv = setInterval(()=>{
+    const dx=P_PLAZA.x-g.position.x, dz=P_PLAZA.z-g.position.z;
+    const d=Math.hypot(dx,dz);
+    if(d<2.0){ clearInterval(iv); h.state='idle'; h.timer=2+Math.random()*2; }
+    else { const sp=0.07; g.position.x+=dx/d*sp; g.position.z+=dz/d*sp; g.rotation.y=Math.atan2(dx,dz); }
+  },16);
+}
+
+function resolveExpedition(){
+  if(!LIVE||!LIVE.expedition) return;
+  window.__pendingHiddenIds = null;   // defuse the reload-hide timeout if it hasn't fired yet
+  const { partyIds, floor, resolvedResult } = LIVE.expedition;
+  LIVE.expedition = undefined;
+
+  // Save pre-levels for level-up detection
+  const preLevels = {};
+  LIVE.heroes.forEach(lh=>{ preLevels[lh.npc.id]=lh.npc.level; });
+
+  // Recompute if missing (edge case: resolved immediately after restore)
+  const expResult = resolvedResult ||
+    BL.runExpedition(LIVE.town, floor,
+      LIVE.heroes.filter(h=>partyIds.includes(h.npc.id)).map(h=>h.npc));
+
+  // Apply updated NPCs back to the live world
+  expResult.party.forEach(updatedNpc=>{
+    const lh = LIVE.heroes.find(h=>h.npc.id===updatedNpc.id);
+    if(lh){ lh.npc=updatedNpc; lh.alive=updatedNpc.isAlive; }
+  });
+  doSave();
+  lastExpeditionResult = { ...expResult, floor };
+
+  const fallen = new Set(expResult.result.fallenNpcIds);
+  const towerHeroes = heroes.filter(h=>partyIds.includes(h.data.id));
+
+  towerHeroes.forEach(h=>{
+    if(fallen.has(h.data.id)){
+      h.state='idle'; h.alive=false; h.data.alive=false;  // sync baked data so readinessLabel shows "caído"
+      if(h.data._live) h.data._live.alive=false;
+      scene.remove(h.group);
+      recentLoss = { name:h.data.name, timer:180 };
+    } else {
+      walkHeroFromTower(h);
+    }
+  });
+
+  // Queue Fairy report
+  pendingReport = composeTowerReport(expResult, towerHeroes, preLevels);
+  const sub = document.getElementById('hud-sub');
+  if(sub && !TUTORIAL) sub.textContent = heroes.some(h=>h.alive)?'el pueblo vive':'silencio';
+
+  // Auto-deliver if no sheet open
+  if(SHEETS.every(s=>!document.getElementById(s).classList.contains('open'))){
+    setTimeout(deliverReport, 800);
+  }
+}
+
+function deliverReport(){
+  if(!pendingReport) return;
+  const report = pendingReport; pendingReport = null;
+  openSheet('sheet-hada');
+  if(!hadaOpened) hadaOpened=true;
+  fairySays(report, hadaRoot);
+}
+
 function animate(){
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -1599,6 +1898,7 @@ function liveTick(dt){
     const act = h.state==='train' ? 'train' : h.state==='rest' ? 'rest' : h.state==='eat' ? 'eat' : 'idle';
     BL.tickHeroNeeds(lh, act, 1);
   }
+  if(LIVE.expedition && Date.now()/1000 >= LIVE.expedition.returnAt) resolveExpedition();
   saveThrottled();
 }
 
@@ -1608,6 +1908,13 @@ function start(){
   if(HAS_SAVE){
     // Partida guardada: el pueblo RECUERDA. Restaura el roster y omite el tutorial.
     DATA.heroes.forEach((d,i)=>{ if(d.inRoster) spawnHero(d, heroes.length); });
+    // Hide heroes that were inside the Tower when the page reloaded
+    if(window.__pendingHiddenIds && window.__pendingHiddenIds.length){
+      setTimeout(()=>{
+        heroes.forEach(h=>{ if(window.__pendingHiddenIds.includes(h.data.id)){ h.group.visible=false; h.state='tower'; } });
+        window.__pendingHiddenIds=null;
+      }, 200);
+    }
     if(window.__catchupMins){ const sub=document.getElementById('hud-sub'); if(sub) sub.textContent='siguió sin ti'; }
   } else {
     // Primera vez: el pueblo arranca VACÍO y el tutorial guía la invocación.

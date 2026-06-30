@@ -154,6 +154,8 @@ const heroes = pool.map((n, i) => {
     tier: n.lore.tier,                 // 5★ core … 1-2★ mundane
     memories: n.lore.memories.map((m) => m.text),  // fragmentos del mundo perdido
     dreamed,                           // recuerdo aflorado (o null)
+    level: n.level,
+    floorReached: n.floorReached,
   };
 });
 

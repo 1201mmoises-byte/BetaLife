@@ -588,13 +588,14 @@ function moveAxis(axisKey, axes, stamps, rawDelta) {
   const stamp = sealIfBandCrossed(axisKey, oldValue, newValue);
   return { newValue, stamp };
 }
-function applyExperience(seeder, axes, stamps, event) {
+function applyExperience(seeder, axes, stamps, event, stars) {
   const updated = { ...axes };
   const newStamps = [];
   const es = seeder.branch("experience");
   const jitter = 0.85 + es.nextFloat() * 0.3;
   const intensity = Math.min(1, event.intensity * jitter);
-  const delta = BASE_DELTA * intensity;
+  const starMul = stars ? starProgressionMultiplier(stars) : 1;
+  const delta = BASE_DELTA * intensity * starMul;
   function apply(axisKey, rawDelta) {
     const { newValue, stamp } = moveAxis(axisKey, updated, stamps, rawDelta);
     updated[axisKey] = newValue;
@@ -621,6 +622,11 @@ function applyExperience(seeder, axes, stamps, event) {
     } else if (event.outcome === "failure") {
       apply("caution", delta * 0.3);
     }
+  } else if (event.kind === "rest") {
+    const recover = event.outcome === "failure" ? 0.4 : 1;
+    apply("confidence", delta * 0.5 * recover);
+    apply("optimism", delta * 0.6 * recover);
+    apply("caution", (0.5 - axes.caution) * delta * 0.2 * recover);
   }
   return { axes: updated, newStamps };
 }
@@ -1346,6 +1352,479 @@ function summonInTown(town, index) {
   });
 }
 
+// src/engine/stats.ts
+var HP_BASE = 40;
+var HP_SPAN = 60;
+var ATK_BASE = 12;
+var ATK_SPAN = 28;
+var DEF_BASE = 8;
+var DEF_SPAN = 24;
+var SPD_BASE = 10;
+var SPD_SPAN = 20;
+var STAR_STAT_SLOPE = 0.15;
+var LEVEL_STAT_SLOPE = 0.08;
+function blend(...pairs) {
+  let acc = 0, wsum = 0;
+  for (const [value, weight] of pairs) {
+    acc += value * weight;
+    wsum += weight;
+  }
+  return wsum === 0 ? 0.5 : acc / wsum;
+}
+function starStatFactor(stars) {
+  return 1 + (stars - 1) * STAR_STAT_SLOPE;
+}
+function levelStatFactor(level) {
+  return 1 + Math.max(0, level - 1) * LEVEL_STAT_SLOPE;
+}
+function deriveStats(npc) {
+  const a = npc.axes;
+  const starF = starStatFactor(npc.stars);
+  const lvlF = levelStatFactor(npc.level);
+  const hpMix = blend([a.confidence, 1], [a.caution, 0.7]);
+  const atkMix = blend([1 - a.passivity, 1], [a.confidence, 0.6]);
+  const defMix = blend([a.caution, 1], [a.discipline, 0.8]);
+  const spdMix = blend([1 - a.caution, 1], [a.curiosity, 0.5]);
+  const maxHp = Math.round((HP_BASE + HP_SPAN * hpMix) * starF * lvlF);
+  const atk = Math.round((ATK_BASE + ATK_SPAN * atkMix) * starF * lvlF);
+  const def = Math.round((DEF_BASE + DEF_SPAN * defMix) * starF * lvlF);
+  const spd = Math.round((SPD_BASE + SPD_SPAN * spdMix) * starF);
+  return { maxHp, hp: maxHp, atk, def, spd };
+}
+function fullHeal(stats) {
+  return { ...stats, hp: stats.maxHp };
+}
+
+// src/engine/skills.ts
+var AXIS_SKILLS = [
+  {
+    id: "intimidar",
+    name: "Intimidar",
+    kind: "offensive",
+    power: 0.55,
+    observation: "Se planta de frente y obliga a la amenaza a fijarse en \xE9l.",
+    when: (a) => a.confidence > 0.75
+  },
+  {
+    id: "proteger",
+    name: "Proteger",
+    kind: "defensive",
+    power: 0.6,
+    observation: "Se interpone para que el golpe lo reciba \xE9l y no su aliado.",
+    when: (a) => a.altruism > 0.7
+  },
+  {
+    id: "explorar",
+    name: "Explorar",
+    kind: "support",
+    power: 0.4,
+    observation: "Lee el terreno antes que nadie y se\xF1ala lo que otros no ven.",
+    when: (a) => a.curiosity > 0.7
+  },
+  {
+    id: "tecnica-perfecta",
+    name: "T\xE9cnica perfecta",
+    kind: "passive",
+    power: 0.5,
+    observation: "Cada movimiento repite al anterior, sin un gesto de m\xE1s.",
+    when: (a) => a.discipline > 0.75
+  },
+  {
+    id: "galvanizar",
+    name: "Galvanizar",
+    kind: "support",
+    power: 0.5,
+    observation: "Su sola presencia levanta el \xE1nimo de quienes pelean a su lado.",
+    when: (a) => a.warmth > 0.75
+  },
+  {
+    id: "escudo-lealtad",
+    name: "Escudo de lealtad",
+    kind: "defensive",
+    power: 0.65,
+    observation: "Se vuelve inquebrantable cuando cubre a alguien de los suyos.",
+    when: (a) => a.loyalty > 0.75
+  },
+  {
+    id: "rencor-acumulado",
+    name: "Rencor acumulado",
+    kind: "offensive",
+    power: 0.7,
+    observation: "Golpea m\xE1s fuerte a quien ya lo hiri\xF3 antes; no olvida una herida.",
+    when: (a) => a.forgiveness < 0.25
+  }
+];
+var STAMP_MASTERIES = {
+  discipline: {
+    id: "maestria-tecnica",
+    name: "Maestr\xEDa: t\xE9cnica sellada",
+    kind: "passive",
+    power: 0.65,
+    observation: "Hay una calma de oficio en c\xF3mo se mueve, ganada y ya imborrable."
+  },
+  confidence: {
+    id: "maestria-aplomo",
+    name: "Maestr\xEDa: aplomo sellado",
+    kind: "offensive",
+    power: 0.7,
+    observation: "Ya no duda al avanzar; lo aprendi\xF3 a golpes y se le qued\xF3."
+  },
+  altruism: {
+    id: "maestria-guardian",
+    name: "Maestr\xEDa: guardi\xE1n sellado",
+    kind: "defensive",
+    power: 0.75,
+    observation: "Cubrir a otro le sale antes que pensar; es parte de qui\xE9n es ahora."
+  },
+  curiosity: {
+    id: "maestria-rastreador",
+    name: "Maestr\xEDa: rastreador sellado",
+    kind: "support",
+    power: 0.6,
+    observation: "Nada del entorno se le escapa; ese ojo ya no se apaga."
+  }
+};
+var HIGH_BANDS = [0.75, 1];
+function deriveSkills(npc) {
+  const out = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const def of AXIS_SKILLS) {
+    if (def.when(npc.axes)) {
+      out.push({ id: def.id, name: def.name, kind: def.kind, observation: def.observation, power: def.power, source: "axis" });
+      seen.add(def.id);
+    }
+  }
+  for (const stamp of npc.stamps) {
+    if (stamp.kind !== "growth") continue;
+    if (!HIGH_BANDS.includes(stamp.bandValue)) continue;
+    const m = STAMP_MASTERIES[stamp.axisKey];
+    if (m && !seen.has(m.id)) {
+      out.push({ id: m.id, name: m.name, kind: m.kind, observation: m.observation, power: m.power, source: "stamp" });
+      seen.add(m.id);
+    }
+  }
+  return out;
+}
+function bestOffensive(skills) {
+  return skills.filter((s) => s.kind === "offensive").reduce((best, s) => !best || s.power > best.power ? s : best, null);
+}
+function bestDefensive(skills) {
+  return skills.filter((s) => s.kind === "defensive").reduce((best, s) => !best || s.power > best.power ? s : best, null);
+}
+
+// src/engine/equipment.ts
+var TYPE_SLOT = {
+  "weapon-heavy": "mainHand",
+  "weapon-light": "mainHand",
+  "staff": "mainHand",
+  "shield": "offHand",
+  "trinket": "trinket"
+};
+var ARCHETYPE_AFFINITY = {
+  honor: ["weapon-heavy", "shield"],
+  imprudente: ["weapon-light"],
+  calido: ["trinket", "staff"],
+  rencoroso: ["weapon-heavy", "weapon-light"],
+  erudito: ["staff", "trinket"],
+  difuso: ["weapon-heavy", "weapon-light", "staff", "shield", "trinket"]
+};
+var ALL_TYPES = ["weapon-heavy", "weapon-light", "staff", "shield", "trinket"];
+var TYPE_NAMES = {
+  "weapon-heavy": ["Mandoble", "Hacha de guerra", "Maza pesada"],
+  "weapon-light": ["Daga", "Estoque", "Par de cuchillas"],
+  "staff": ["Bast\xF3n r\xFAnico", "Cayado tallado", "Vara de sa\xFAco"],
+  "shield": ["Escudo torre", "Broquel", "\xC9gida abollada"],
+  "trinket": ["Amuleto gastado", "Anillo deslustrado", "Talism\xE1n de hueso"]
+};
+var QUALITY_WORD = ["", "tosco", "s\xF3lido", "fino", "magistral", "legendario"];
+function maxQualityForStars(stars) {
+  return Math.max(1, Math.min(5, stars));
+}
+function unlockedSlots(level) {
+  const slots = ["mainHand"];
+  if (level >= 5) slots.push("offHand");
+  if (level >= 10) slots.push("trinket");
+  return slots;
+}
+function affinityFor(archetypeId) {
+  return ARCHETYPE_AFFINITY[archetypeId] ?? ALL_TYPES;
+}
+function equippableBy(item, npc) {
+  return item.quality <= maxQualityForStars(npc.stars) && unlockedSlots(npc.level).includes(item.slot);
+}
+function statModsFor(type, quality) {
+  const q = quality;
+  switch (type) {
+    case "weapon-heavy":
+      return { atk: 4 * q, spd: -q };
+    case "weapon-light":
+      return { atk: 2 * q, spd: 2 * q };
+    case "staff":
+      return { atk: 3 * q, maxHp: 2 * q };
+    case "shield":
+      return { def: 4 * q, spd: -q };
+    case "trinket":
+      return { maxHp: 5 * q, def: q };
+  }
+}
+function generateEquipment(townSeed, floor, difficulty) {
+  const s = createSeeder(`town:${townSeed}:floor:${floor}:loot`);
+  const type = s.branch("type").nextChoice(ALL_TYPES);
+  const diffNorm = Math.max(0, Math.min(1, (difficulty - 1) / 999));
+  const base = 1 + floor / 12 + diffNorm * 2;
+  const jitter = s.branch("q").nextInt(-1, 1);
+  const quality = Math.max(1, Math.min(5, Math.round(base) + jitter));
+  const name = s.branch("name").nextChoice(TYPE_NAMES[type]);
+  const observation = `${name} ${QUALITY_WORD[quality]}.`;
+  return {
+    id: `eq-${townSeed}-${floor}-${type}-${quality}`,
+    name,
+    type,
+    slot: TYPE_SLOT[type],
+    quality,
+    mods: statModsFor(type, quality),
+    observation
+  };
+}
+function applyLoadout(base, npc, items) {
+  const out = { ...base };
+  const usedSlots = /* @__PURE__ */ new Set();
+  for (const item of items) {
+    if (!equippableBy(item, npc)) continue;
+    if (usedSlots.has(item.slot)) continue;
+    usedSlots.add(item.slot);
+    out.maxHp += item.mods.maxHp ?? 0;
+    out.atk += item.mods.atk ?? 0;
+    out.def += item.mods.def ?? 0;
+    out.spd += item.mods.spd ?? 0;
+  }
+  out.maxHp = Math.max(1, out.maxHp);
+  out.atk = Math.max(0, out.atk);
+  out.def = Math.max(0, out.def);
+  out.spd = Math.max(1, out.spd);
+  out.hp = out.maxHp;
+  return out;
+}
+
+// src/engine/monsters.ts
+var PREFIX = ["Acechador", "Devorador", "Centinela", "Carro\xF1ero", "Heraldo", "Resto", "Aullido", "Sombra"];
+var OF = ["del Foso", "de Ceniza", "sin Nombre", "de la Grieta", "Hueco", "de Sal", "del Umbral", "Marchito"];
+var TRAITS = [
+  { id: "feroz", observation: "Carga sin medir el riesgo, todo dientes y avance." },
+  { id: "acorazado", observation: "Avanza despacio, como si nada pudiera atravesarlo." },
+  { id: "veloz", observation: "Se mueve a tirones, demasiado r\xE1pido para seguirlo." },
+  { id: "tenaz", observation: "No cae cuando deber\xEDa; se levanta una vez m\xE1s." }
+];
+function scaledStats(s, difficulty, floor, rosterFloor, trait) {
+  const diffNorm = Math.max(0, Math.min(1, (difficulty - 1) / 999));
+  const power = 1 + diffNorm * 1.5 + floor * 0.12 + Math.floor(rosterFloor / 10) * 0.05;
+  const roll = (min, max) => s.branch("hp").nextFloat(min, max);
+  let maxHp = Math.round((30 + roll(0, 30)) * power);
+  let atk = Math.round((8 + s.branch("atk").nextFloat(0, 8)) * power);
+  let def = Math.round((4 + s.branch("def").nextFloat(0, 6)) * power);
+  let spd = Math.round((9 + s.branch("spd").nextFloat(0, 10)) * power);
+  if (trait === "feroz") {
+    atk = Math.round(atk * 1.35);
+    def = Math.round(def * 0.8);
+  }
+  if (trait === "acorazado") {
+    def = Math.round(def * 1.6);
+    spd = Math.round(spd * 0.7);
+  }
+  if (trait === "veloz") {
+    spd = Math.round(spd * 1.5);
+    maxHp = Math.round(maxHp * 0.8);
+  }
+  if (trait === "tenaz") {
+    maxHp = Math.round(maxHp * 1.4);
+    atk = Math.round(atk * 0.9);
+  }
+  return { maxHp: Math.max(1, maxHp), hp: Math.max(1, maxHp), atk: Math.max(1, atk), def: Math.max(0, def), spd: Math.max(1, spd) };
+}
+function monsterCountForFloor(floor) {
+  return Math.min(5, 1 + Math.floor(floor / 4));
+}
+function generateFloorMonsters(town, floor) {
+  const root = createSeeder(`town:${town.seed}:floor:${floor}:monsters`);
+  const count = monsterCountForFloor(floor);
+  const monsters = [];
+  for (let i = 0; i < count; i++) {
+    const s = root.branch(String(i));
+    const trait = s.branch("trait").nextChoice(TRAITS);
+    const name = `${s.branch("p").nextChoice(PREFIX)} ${s.branch("o").nextChoice(OF)}`;
+    monsters.push({
+      id: `mon-${town.seed}-${floor}-${i}`,
+      name,
+      stats: scaledStats(s, town.difficulty, floor, town.rosterFloor, trait.id),
+      trait: trait.id,
+      observation: trait.observation
+    });
+  }
+  return monsters;
+}
+
+// src/engine/combat.ts
+var MAX_ROUNDS = 60;
+function clone(c) {
+  return { ...c, stats: { ...c.stats }, hp: c.stats.hp, guarding: false };
+}
+function damage(s, atk, def, skillMul, defenderGuarding) {
+  const effDef = defenderGuarding ? def * 2 : def;
+  const jitter = 0.9 + s.nextFloat() * 0.2;
+  return Math.max(1, Math.round((atk * skillMul - effDef * 0.6) * jitter));
+}
+function chooseNpcAction(f) {
+  const a = f.axes;
+  const lowHp = f.hp < f.stats.maxHp * 0.3;
+  const off = bestOffensive(f.skills);
+  const def = bestDefensive(f.skills);
+  if (lowHp && a.caution > 0.55) return { kind: "guard" };
+  if (!lowHp && a.passivity > 0.7 && a.confidence < 0.45) return { kind: "guard" };
+  if (lowHp && def && (a.loyalty > 0.7 || a.altruism > 0.7)) return { kind: "guard" };
+  const useSkill = off && (a.confidence > 0.6 || a.forgiveness < 0.25);
+  return { kind: "attack", skill: useSkill ? off : null };
+}
+function chooseMonsterAction(f) {
+  if (f.trait === "acorazado" && f.hp < f.stats.maxHp * 0.4) return { kind: "guard" };
+  return { kind: "attack", skill: null };
+}
+function pickTarget(attacker, foes) {
+  const alive = foes.filter((f) => f.hp > 0);
+  if (alive.length === 0) return null;
+  if (attacker.isNpc) {
+    const a = attacker.axes;
+    if (a.discipline > 0.6) return alive.reduce((w, f) => f.hp < w.hp ? f : w);
+    if (a.passivity < 0.4) return alive.reduce((w, f) => f.stats.atk > w.stats.atk ? f : w);
+    return alive[0];
+  }
+  return alive.reduce((w, f) => f.hp < w.hp ? f : w);
+}
+function resolveCombat(seed, party, monsters) {
+  const root = createSeeder(`combat:${seed}`);
+  const npcs = party.map(clone);
+  const mobs = monsters.map(clone);
+  const narration = [];
+  const fallenNpcIds = [];
+  const order = [...npcs, ...mobs].sort((x, y) => {
+    if (y.stats.spd !== x.stats.spd) return y.stats.spd - x.stats.spd;
+    return root.branch("tie").branch(x.id + y.id).next() < 0.5 ? -1 : 1;
+  });
+  const npcStart = npcs.length;
+  let round2 = 0;
+  const alive = (arr) => arr.some((f) => f.hp > 0);
+  while (alive(npcs) && alive(mobs) && round2 < MAX_ROUNDS) {
+    round2++;
+    const rs = root.branch("round").branch(String(round2));
+    for (const actor of order) {
+      if (actor.hp <= 0) continue;
+      if (!alive(npcs) || !alive(mobs)) break;
+      actor.guarding = false;
+      const foes = actor.isNpc ? mobs : npcs;
+      const action = actor.isNpc ? chooseNpcAction(actor) : chooseMonsterAction(actor);
+      if (action.kind === "guard") {
+        actor.guarding = true;
+        continue;
+      }
+      const target = pickTarget(actor, foes);
+      if (!target) continue;
+      const skillMul = action.skill ? 1 + action.skill.power : 1;
+      const dmg = damage(rs.branch(actor.id), actor.stats.atk, target.stats.def, skillMul, target.guarding);
+      target.hp = Math.max(0, target.hp - dmg);
+      if (target.hp === 0 && !target.isNpc) {
+        narration.push(`${target.name} se desploma y no vuelve a moverse.`);
+      }
+      if (target.hp === 0 && target.isNpc) {
+        fallenNpcIds.push(target.id);
+        narration.push(`${target.name} cae. Esta vez no se levanta.`);
+      }
+    }
+  }
+  const npcsAlive = alive(npcs);
+  const outcome = npcsAlive ? "victory" : "defeat";
+  if (outcome === "victory") {
+    const standing = npcs.filter((f) => f.hp > 0).map((f) => f.name);
+    narration.unshift(`El piso queda en silencio. Vuelven ${listNames(standing)}.`);
+  } else {
+    narration.unshift("El piso se los traga a todos. No vuelve nadie.");
+  }
+  const intensity = Math.min(1, 0.4 + round2 / MAX_ROUNDS);
+  const npcEvents = {};
+  const survivorHp = {};
+  for (const f of npcs) {
+    const fell = f.hp <= 0;
+    npcEvents[f.id] = {
+      kind: "combat",
+      intensity,
+      outcome: fell ? "failure" : outcome === "victory" ? "success" : "partial"
+    };
+    if (!fell) survivorHp[f.id] = f.hp;
+  }
+  return { outcome, rounds: round2, narration, fallenNpcIds, npcEvents, survivorHp };
+}
+function listNames(names) {
+  if (names.length === 0) return "nadie";
+  if (names.length === 1) return names[0];
+  return names.slice(0, -1).join(", ") + " y " + names[names.length - 1];
+}
+
+// src/engine/progression.ts
+function levelUp(npc) {
+  return { ...npc, level: npc.level + 1 };
+}
+function levelCap(floorReached) {
+  return floorReached + 1;
+}
+function applyFloorCleared(npc, floor) {
+  const floorReached = Math.max(npc.floorReached, floor);
+  let next = { ...npc, floorReached };
+  if (next.level < levelCap(floorReached)) {
+    next = levelUp(next);
+  }
+  return next;
+}
+
+// src/engine/expedition.ts
+function toCombatant(npc, loadout) {
+  const base = fullHeal(deriveStats(npc));
+  const stats = applyLoadout(base, npc, loadout);
+  return {
+    id: npc.id,
+    name: npc.name,
+    stats,
+    skills: deriveSkills(npc),
+    isNpc: true,
+    axes: npc.axes
+  };
+}
+function runExpedition(town, floor, party, loadouts = {}) {
+  const living = party.filter((n) => n.isAlive);
+  const npcCombatants = living.map((n) => toCombatant(n, loadouts[n.id] ?? []));
+  const monsterCombatants = generateFloorMonsters(town, floor).map((m) => ({
+    id: m.id,
+    name: m.name,
+    stats: m.stats,
+    skills: [],
+    isNpc: false,
+    trait: m.trait
+  }));
+  const result = resolveCombat(`${town.seed}:f${floor}`, npcCombatants, monsterCombatants);
+  const fallen = new Set(result.fallenNpcIds);
+  const updated = party.map((npc) => {
+    if (!npc.isAlive) return npc;
+    if (fallen.has(npc.id)) return { ...npc, isAlive: false };
+    const ev = result.npcEvents[npc.id];
+    const es = createSeeder(`expedition:${town.seed}:f${floor}:${npc.id}`);
+    const { axes, newStamps } = applyExperience(es, npc.axes, npc.stamps, ev, npc.stars);
+    let evolved = { ...npc, axes, stamps: [...npc.stamps, ...newStamps] };
+    if (result.outcome === "victory") {
+      evolved = applyFloorCleared(evolved, floor);
+    }
+    return evolved;
+  });
+  const drops = result.outcome === "victory" ? [generateEquipment(town.seed, floor, town.difficulty)] : [];
+  return { floor, result, party: updated, drops };
+}
+
 // src/runtime/liveWorld.ts
 function createLiveWorld(seed, poolSize = 8, initialRoster = 0) {
   const town = createTown(seed);
@@ -1427,7 +1906,8 @@ function serializeSave(world, lastSeen = Date.now()) {
       bornAxes: h.bornAxes,
       inRoster: h.inRoster,
       alive: h.alive
-    }))
+    })),
+    expedition: world.expedition ? { partyIds: world.expedition.partyIds, floor: world.expedition.floor, returnAt: world.expedition.returnAt } : void 0
   };
 }
 function restoreSave(save) {
@@ -1444,7 +1924,7 @@ function restoreSave(save) {
     });
     return { npc, bornAxes: sh.bornAxes, needs: sh.needs, inRoster: sh.inRoster, alive: sh.alive };
   });
-  return { town, heroes, tick: save.tick };
+  return { town, heroes, tick: save.tick, expedition: save.expedition };
 }
 export {
   ARCHETYPES,
@@ -1453,10 +1933,15 @@ export {
   CONVERSATION_COOLDOWN,
   DEV_MODE,
   SAVE_VERSION,
+  affinityFor,
   applyConversation,
   applyConversationNudges,
   applyExperience,
+  applyFloorCleared,
+  applyLoadout,
   bandOf,
+  bestDefensive,
+  bestOffensive,
   briefRoster,
   conversationAffinity,
   conversationChance,
@@ -1465,12 +1950,18 @@ export {
   createSeeder,
   createTown,
   criticalNeed,
+  deriveSkills,
+  deriveStats,
   describeNPC,
   dreamChance,
+  equippableBy,
   explainRule,
   firstImpression,
+  fullHeal,
   generateAxes,
   generateCulture,
+  generateEquipment,
+  generateFloorMonsters,
   generateHeroLore,
   generateHistory,
   generateNPC,
@@ -1478,6 +1969,11 @@ export {
   generatePastLife,
   generateWorld,
   inspectNPC,
+  levelCap,
+  levelStatFactor,
+  levelUp,
+  maxQualityForStars,
+  monsterCountForFloor,
   nameNamespaceSize,
   nearestBand,
   needsStatus,
@@ -1489,11 +1985,13 @@ export {
   regenerateNPC,
   relay,
   reportActivity,
+  resolveCombat,
   restoreSave,
   revealExchange,
   rollConversation,
   rollDifficulty,
   rollStars,
+  runExpedition,
   sealBirthStamp,
   sealIfBandCrossed,
   serializeSave,
@@ -1502,9 +2000,11 @@ export {
   softCeiling,
   starProbabilities,
   starProgressionMultiplier,
+  starStatFactor,
   summonInTown,
   surfaceDream,
   tickHeroNeeds,
   tickNeeds,
-  tryDream
+  tryDream,
+  unlockedSlots
 };
