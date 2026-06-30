@@ -42,6 +42,17 @@ static func _imul32(a: int, b: int) -> int:
 # GDScript as a `float` (also an IEEE-754 double) multiply, never as exact
 # integer math. GDScript's `float` and JS's `number` are both binary64, so
 # the same multiply produces the same rounded result in both languages.
+#
+# KNOWN LIMITATION: this loop iterates Unicode codepoints via `unicode_at()`,
+# not UTF-16 code units like JS's `charCodeAt()`. They agree for every
+# codepoint in the Basic Multilingual Plane (U+0000-U+FFFF, which covers all
+# ASCII/Latin/accented text and most everyday scripts), but a codepoint
+# outside the BMP (>= U+10000, e.g. emoji) is one `unicode_at()` step here
+# vs. two `charCodeAt()` steps (a UTF-16 surrogate pair) in JS — so seed
+# strings containing such characters will NOT hash bit-identically to the
+# TS engine. Not fixed here as it's narrow and untriggered by any current
+# seed data; revisit with a surrogate-pair-aware loop if non-BMP seeds are
+# ever needed.
 static func _hash_string(s: String) -> int:
 	var h: int = 0x811c9dc5
 	for i in s.length():
