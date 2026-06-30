@@ -217,6 +217,25 @@
   .hero-card.held-back .hero-name{text-decoration:line-through;color:var(--txt-dim);}
   .hero-card.held-back .hero-volunteer-label{color:var(--danger-soft);}
 
+  /* ── Torre: equipos de la expedición ── */
+  .torre-party{margin-bottom:14px;}
+  .party-count{font-size:10.5px;letter-spacing:1px;color:var(--violet-soft);margin-bottom:8px;}
+  .team-tabs{display:flex;flex-wrap:wrap;gap:8px;}
+  .team-tab{background:var(--panel2);border:1px solid var(--line);border-radius:18px;color:var(--txt-dim);
+       font-family:inherit;font-size:11px;letter-spacing:.5px;padding:7px 12px;cursor:pointer;transition:.15s;}
+  .team-tab.active{border-color:var(--violet);color:var(--violet-soft);background:#1a1230;}
+  .team-tab.done{color:#7cc88c;}
+  .team-tab.done.active{color:#9fe0ac;}
+  .torre-volunteers .hero-card{position:relative;}
+  .torre-volunteers .hero-card.in-party{border-color:var(--violet);background:#1a1230;
+       box-shadow:0 0 14px rgba(120,70,200,.35);}
+  .torre-volunteers .hero-card.refuses{opacity:.5;cursor:not-allowed;}
+  .team-badge{position:absolute;top:6px;right:6px;background:var(--violet);color:#fff;font-size:9px;
+       letter-spacing:.5px;border-radius:10px;padding:1px 6px;z-index:2;}
+  .hero-volunteer-label.disp-listo{color:#7cc88c;}
+  .hero-volunteer-label.disp-dudoso{color:var(--gold);}
+  .hero-volunteer-label.disp-niega{color:var(--danger-soft);}
+
   /* ── Profundidad + disposición en tarjetas del Roster ── */
   .depth-blocks{font-size:11px;color:var(--violet-soft);letter-spacing:3px;display:block;
        text-align:center;margin:3px 0 2px;}

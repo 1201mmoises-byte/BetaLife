@@ -79,11 +79,16 @@ if(BL){
     }
     // enlazar cada héroe horneado con su NPC vivo (mismo orden/semilla)
     DATA.heroes.forEach((d,i)=>{ if(LIVE.heroes[i]) bindLive(d, LIVE.heroes[i]); });
-    // If a page reload happened mid-expedition, recompute the result
-    if(LIVE.expedition && !LIVE.expedition.resolvedResult){
+    // If a page reload happened mid-expedition, recompute the result(s).
+    // `teams` no se persiste en el guardado: tras recargar cae a una resolución
+    // combinada (un solo equipo = todos los partyIds). Aceptable como respaldo.
+    if(LIVE.expedition && !LIVE.expedition.resolvedResults && !LIVE.expedition.resolvedResult){
       try{
-        const expParty = LIVE.heroes.filter(h=>LIVE.expedition.partyIds.includes(h.npc.id)).map(h=>h.npc);
-        LIVE.expedition.resolvedResult = BL.runExpedition(LIVE.town, LIVE.expedition.floor, expParty);
+        const groups = (LIVE.expedition.teams && LIVE.expedition.teams.length)
+          ? LIVE.expedition.teams : [LIVE.expedition.partyIds];
+        LIVE.expedition.resolvedResults = groups.map(ids=>
+          BL.runExpedition(LIVE.town, LIVE.expedition.floor,
+            LIVE.heroes.filter(h=>ids.includes(h.npc.id)).map(h=>h.npc)));
         // Heroes are hidden (they're inside); hide their 3D groups after spawn
         window.__pendingHiddenIds = LIVE.expedition.partyIds.slice();
       }catch(e){ console.warn('expedition restore failed', e); LIVE.expedition=undefined; }
@@ -891,17 +896,26 @@ function heroReading(h){
   if(!hadaOpened) hadaOpened=true;
 }
 
-// ── Torre: voluntarios ────────────────────────────────────────────────────────
+// ── Torre: forma la expedición por EQUIPOS (el Master elige; el alma manda) ────
+// Fiel al manga/novela: se sube por EQUIPOS de 2 a 5. Según la misión (el piso),
+// la Torre puede pedir VARIOS equipos. El jugador arma cada equipo eligiendo del
+// roster vivo; el que se NIEGA no puede ir (su alma manda); cada héroe va en un
+// solo equipo. El reto (piso) lo marca el progreso del roster, no a quién metas.
+const PARTY_MIN = 2, PARTY_MAX = 5;
+const DISP_LABEL = { listo:'listo', dudoso:'dudoso', niega:'se niega' };
+
 function volunteerAxes(h){
   return (h.data._live && h.data._live.npc.axes) || h.data.axesNow || {};
 }
-function isVolunteer(h){
+// Disposición del alma ante la Torre: 'listo' | 'dudoso' | 'niega'.
+function disposition(h){
   const ax = volunteerAxes(h);
-  return (ax.confidence||0.5) > 0.45 && (ax.passivity||0.5) < 0.70;
-}
-function isStrongVolunteer(h){
-  const ax = volunteerAxes(h);
-  return (ax.confidence||0.5) > 0.65 && (ax.optimism||0.5) > 0.55;
+  const conf = (ax.confidence==null?0.5:ax.confidence);
+  const pass = (ax.passivity==null?0.5:ax.passivity);
+  const opt  = (ax.optimism==null?0.5:ax.optimism);
+  if(conf < 0.30 || pass > 0.80) return 'niega';
+  if(conf > 0.60 && pass < 0.55 && opt > 0.45) return 'listo';
+  return 'dudoso';
 }
 
 function torreTypeLine(text){
@@ -911,72 +925,116 @@ function torreTypeLine(text){
   const iv = setInterval(()=>{ el.textContent += text[i++]; if(i>=text.length) clearInterval(iv); }, 18);
 }
 
-function updateSendButton(volunteers){
-  const btn = document.getElementById('btn-send-tower');
-  const confirmed = volunteers.filter(h=>!torreHeld.has(h.data.id));
-  if(!confirmed.length){
-    btn.classList.remove('ready'); btn.disabled=true; btn.textContent='Enviarlos →';
-  } else {
-    btn.classList.add('ready'); btn.disabled=false;
-    btn.textContent = confirmed.length===1 ? 'Enviar a '+confirmed[0].data.name+' →' : 'Enviarlos →';
-  }
+// El reto de la Torre va por el progreso del roster (su altura no cambia según a
+// quién subas). Piso de la misión = piso más profundo alcanzado + 1.
+function missionFloor(){
+  const living = heroes.filter(h=>h.alive);
+  const deepest = living.reduce((m,h)=>{
+    const f = (h.data._live ? h.data._live.npc.floorReached : (h.data.floorReached||0)) || 0;
+    return f>m?f:m;
+  }, 0);
+  return Math.max(1, deepest + 1);
+}
+// Cuántos equipos pide la misión: crece en pisos hito (cada 5 y cada 10).
+function missionTeams(floor){
+  let n = 1;
+  if(floor % 5 === 0) n++;
+  if(floor % 10 === 0) n++;
+  return n;
+}
+// Mínimo por equipo (2; pero si solo queda un alma viva, 1 con advertencia).
+function teamMin(){ return heroes.filter(h=>h.alive).length <= 1 ? 1 : PARTY_MIN; }
+
+function teamOf(id){ for(let i=0;i<torreTeams.length;i++){ if(torreTeams[i].has(id)) return i; } return -1; }
+function totalChosen(){ return torreTeams.reduce((s,t)=>s+t.size,0); }
+function teamsValid(){ const m=teamMin(); return torreTeams.length>0 && torreTeams.every(t=>t.size>=m && t.size<=PARTY_MAX); }
+
+function renderTeamTabs(){
+  const bar = document.getElementById('torre-party'); if(!bar) return;
+  const plural = torreTeams.length>1;
+  let html = '<div class="party-count">Piso '+torreFloor+' · la misión pide '+torreTeams.length+
+    ' equipo'+(plural?'s':'')+' · '+teamMin()+'–'+PARTY_MAX+' por equipo</div><div class="team-tabs">';
+  torreTeams.forEach((t,i)=>{
+    const ok = t.size>=teamMin() && t.size<=PARTY_MAX;
+    html += '<button class="team-tab'+(i===torreActive?' active':'')+(ok?' done':'')+'" data-team="'+i+'">'+
+      'Equipo '+(i+1)+' · '+t.size+'/'+PARTY_MAX+'</button>';
+  });
+  html += '</div>';
+  bar.innerHTML = html;
+  bar.querySelectorAll('.team-tab').forEach(b=>b.addEventListener('click',()=>{ torreActive = +b.dataset.team; refreshTorre(); }));
 }
 
-function toggleHeld(h, card){
-  const volunteers = heroes.filter(x=>x.alive && isVolunteer(x));
-  if(torreHeld.has(h.data.id)){
-    torreHeld.delete(h.data.id);
-    card.classList.remove('held-back');
-    document.getElementById('vlabel-'+h.data.id).textContent = isStrongVolunteer(h)?'listo':'dudoso';
-  } else {
-    torreHeld.add(h.data.id);
-    card.classList.add('held-back');
-    document.getElementById('vlabel-'+h.data.id).textContent = 'retenido';
-  }
-  updateSendButton(volunteers);
-}
-
-function renderTorreSheet(volunteers){
-  torreHeld = new Set();
-  // Fairy opening line
-  const strong = volunteers.filter(h=>isStrongVolunteer(h));
-  const reluctant = volunteers.filter(h=>!isStrongVolunteer(h));
-  let line;
-  if(strong.length===0){
-    line = reluctant.length===1
-      ? 'Solo '+reluctant[0].data.name+' da un paso, aunque con dudas.'
-      : reluctant.length+' dan un paso, sin mucha certeza. Es su decisión.';
-  } else if(strong.length===1 && reluctant.length===0){
-    line = strong[0].data.name+' da un paso adelante sin dudarlo. Nadie más siente el llamado ahora.';
-  } else if(strong.length===1){
-    line = strong[0].data.name+' da un paso sin dudar. '+(reluctant.length===1?reluctant[0].data.name+' lo sigue, aunque sin la misma certeza.':reluctant.length+' más lo siguen, con reservas.');
-  } else {
-    const strongNames = strong.map(h=>h.data.name).join(' y ');
-    line = strongNames+' dan un paso sin dudar.'+(reluctant.length?' Hay '+reluctant.length+' más que los siguen, con reservas.':'');
-  }
-  torreTypeLine(line);
-  // Volunteer cards
+function renderRosterCards(){
+  const living = heroes.filter(h=>h.alive);
   const grid = document.getElementById('torre-volunteers'); grid.innerHTML='';
-  volunteers.forEach(h=>{
-    const card = document.createElement('div'); card.className='hero-card';
-    const label = isStrongVolunteer(h)?'listo':'dudoso';
-    card.innerHTML = '<div class="portrait">'+bustHTML(h.data)+'</div>'+
+  living.forEach(h=>{
+    const disp = disposition(h);
+    const t = teamOf(h.data.id);
+    const card = document.createElement('div');
+    card.className = 'hero-card' + (disp==='niega'?' refuses':'') + (t>=0?' in-party':'');
+    const badge = t>=0 ? '<div class="team-badge">E'+(t+1)+'</div>' : '';
+    card.innerHTML = badge + '<div class="portrait">'+bustHTML(h.data)+'</div>'+
       '<div class="hero-name">'+h.data.name+'</div>'+
       '<div class="hero-stars">'+('★'.repeat(h.data.stars))+'</div>'+
-      '<div class="hero-volunteer-label" id="vlabel-'+h.data.id+'">'+label+'</div>';
-    card.addEventListener('click',()=>toggleHeld(h,card));
+      '<div class="hero-volunteer-label disp-'+disp+'">'+DISP_LABEL[disp]+'</div>';
+    if(disp!=='niega') card.addEventListener('click',()=>toggleHeroTeam(h));
     grid.appendChild(card);
   });
-  updateSendButton(volunteers);
+}
+
+function updateSendButton(){
+  const btn = document.getElementById('btn-send-tower');
+  if(teamsValid()){
+    btn.classList.add('ready'); btn.disabled = false;
+    btn.textContent = torreTeams.length>1
+      ? 'Enviar '+torreTeams.length+' equipos ('+totalChosen()+') →'
+      : (torreTeams[0].size===1 ? 'Enviar a uno solo →' : 'Enviar expedición ('+totalChosen()+') →');
+  } else {
+    btn.classList.remove('ready'); btn.disabled = true;
+    btn.textContent = 'Completa los equipos ('+teamMin()+'–'+PARTY_MAX+')';
+  }
+}
+
+function reactLine(){
+  const living = heroes.filter(h=>h.alive);
+  const chosen = living.filter(h=>teamOf(h.data.id)>=0);
+  if(chosen.length===0){ torreTypeLine('Arma '+(torreTeams.length>1?'los equipos':'el equipo')+'. La Torre devora a quien sube solo.'); return; }
+  if(chosen.length===1 && living.length<=1){
+    torreTypeLine('Solo queda un alma con vida. Si sube sola, puede que no baje. Es tu decisión.'); return;
+  }
+  const dud = chosen.filter(h=>disposition(h)==='dudoso').length;
+  if(dud===0){ torreTypeLine(chosen.length+' suben con paso firme. Se cuidarán entre ellos.'); return; }
+  if(dud===chosen.length){ torreTypeLine('Todos dudan. Suben con miedo — y el miedo pesa arriba.'); return; }
+  torreTypeLine(chosen.length+' suben; '+dud+' con reservas. Que los firmes cuiden a los que tiemblan.');
+}
+
+function refreshTorre(){ renderTeamTabs(); renderRosterCards(); updateSendButton(); reactLine(); }
+
+function toggleHeroTeam(h){
+  if(disposition(h)==='niega') return;        // su alma manda: no puede ir
+  const id = h.data.id, t = teamOf(id);
+  if(t>=0){ torreTeams[t].delete(id); }       // ya estaba en un equipo → lo saco
+  else {
+    if(torreTeams[torreActive].size >= PARTY_MAX) return;  // equipo activo lleno
+    torreTeams[torreActive].add(id);
+  }
+  refreshTorre();
 }
 
 function openTowerSheet(){
   if(TUTORIAL) return;
   // Block if expedition already running
   if(LIVE && LIVE.expedition){ toast('<b>La Torre</b> — ya hay almas dentro. Espera a que vuelvan.'); return; }
-  const volunteers = heroes.filter(h=>h.alive && isVolunteer(h));
-  if(!volunteers.length){ toast('<b>La Torre</b> — nadie siente el llamado todavía.'); return; }
-  renderTorreSheet(volunteers);
+  const living = heroes.filter(h=>h.alive);
+  if(!living.length){ toast('<b>La Torre</b> — no queda nadie con vida para subir.'); return; }
+  torreFloor = missionFloor();
+  let need = missionTeams(torreFloor);
+  // No pedir más equipos de los que el roster puede formar (mín. 2 por equipo).
+  const feasible = Math.max(1, Math.floor(living.length / PARTY_MIN));
+  need = Math.min(need, feasible);
+  torreTeams = []; for(let i=0;i<need;i++){ torreTeams.push(new Set()); }
+  torreActive = 0;
+  refreshTorre();
   openSheet('sheet-torre');
 }
 
@@ -990,22 +1048,35 @@ function walkHeroToTower(h, onArrival){
   },16);
 }
 
-function launchExpedition(confirmedHeroes){
+function launchExpedition(){
   if(!LIVE||!BL){ toast('El motor no está disponible.'); return; }
-  const party = confirmedHeroes.map(h=>h.data._live.npc);
-  const floor = Math.max(1, Math.round(party.reduce((s,n)=>s+n.level,0)/party.length));
-  const resolvedResult = BL.runExpedition(LIVE.town, floor, party);
+  const floor = torreFloor;
+  const teams = torreTeams.map(t=>[...t]).filter(ids=>ids.length>0);
+  const partyIds = teams.flat();
+  if(!partyIds.length) return;
+
+  // Misión 'standard': cada equipo libra su propia pelea contra el piso (su propia
+  // suerte/bajas). Gancho futuro: tipos como 'asedio' (todos sobreviviendo oleadas
+  // en coordinación) requerirán sistema de oleadas en el motor — aún no existe.
+  const resolvedResults = teams.map(ids=>{
+    const party = ids.map(id=>{ const lh=LIVE.heroes.find(h=>h.npc.id===id); return lh?lh.npc:null; }).filter(Boolean);
+    return BL.runExpedition(LIVE.town, floor, party);
+  });
+
   const duration = Math.min((floor + 1) * 90, 480);
   const returnAt = Math.floor(Date.now() / 1000) + duration;
-  LIVE.expedition = { partyIds: party.map(n=>n.id), floor, returnAt, resolvedResult };
+  // `partyIds` (plano) lo usan render/guardado; `teams`+`resolvedResults` viven en
+  // memoria (si recargas a mitad, cae a una resolución combinada — ver restauración).
+  LIVE.expedition = { teams, partyIds, floor, returnAt, resolvedResults };
   doSave();
 
-  // Departure speech by personality
+  // Salida: frase por personalidad + caminan a la Torre y desaparecen.
   const DEPART_LINES = {
     optimista:'Será rápido.', cauto:'No tengo otra opción.',
     inseguro:'Ojalá.', sombrío:'Así termina todo.',
     sereno:'Vuelvo.', cálido:'Cuidaos mientras.', curioso:'Quiero ver qué hay arriba.',
   };
+  const confirmedHeroes = heroes.filter(h=>partyIds.includes(h.data.id));
   confirmedHeroes.forEach((h,idx)=>{
     h.state = 'tower';
     setTimeout(()=>{ if(h.alive) say(h, DEPART_LINES[toneOf(h)]||'Vuelvo.'); }, idx*400);
@@ -1094,11 +1165,9 @@ function renderRoster(){
 }
 document.getElementById('btn-roster').addEventListener('click', ()=>{ renderRoster(); openSheet('sheet-roster'); });
 document.getElementById('btn-send-tower').addEventListener('click',()=>{
-  const volunteers = heroes.filter(h=>h.alive && isVolunteer(h));
-  const confirmed = volunteers.filter(h=>!torreHeld.has(h.data.id));
-  if(!confirmed.length) return;
+  if(!teamsValid()) return;
   closeSheets();
-  launchExpedition(confirmed);
+  launchExpedition();
 });
 
 // ── Merger / Cámara de Fusión ────────────────────────────────────────────────
@@ -1722,34 +1791,38 @@ function updateHero(h, dt){
 let lastTod = -1;
 let gameDay = 1, prevTod = START_TOD;
 let recentLoss = null;  // { name, timer } — testigos recuerdan al sacrificado ~3 min
-let torreHeld = new Set();   // data.id of heroes held back by player
+let torreTeams = [];   // array de Set<data.id>, un Set por equipo de la misión
+let torreActive = 0;   // índice del equipo que se está llenando en el menú
+let torreFloor = 1;    // piso de la misión activa en el menú
 let pendingReport = null;    // Fairy report text queued while sheets were open
 
-function composeTowerReport(expResult, towerHeroes, preLevels){
-  const { result, party:updatedParty, drops } = expResult;
-  const fallen = new Set(result.fallenNpcIds);
+function composeTowerReport(results, towerHeroes, preLevels){
+  const fallen = new Set(results.flatMap(r=>r.result.fallenNpcIds));
+  const allDefeat = results.every(r=>r.result.outcome==='defeat');
   const survivors = towerHeroes.filter(h=>!fallen.has(h.data.id));
   const dead      = towerHeroes.filter(h=> fallen.has(h.data.id));
   const lines = [];
-  if(result.outcome==='defeat'){
+  if(allDefeat && survivors.length===0){
     lines.push('No volvió nadie. El pueblo los recuerda.');
   } else if(dead.length===0){
     lines.push(survivors.length===1
       ? survivors[0].data.name+' vuelve. Solo, pero vuelve.'
-      : 'Volvieron. '+survivors[0].data.name+' marcó el camino; los demás lo siguieron.');
+      : (results.length>1
+          ? 'Volvieron todos. Subieron en '+results.length+' equipos y bajaron juntos.'
+          : 'Volvieron. '+survivors[0].data.name+' marcó el camino; los demás lo siguieron.'));
   } else {
     const survNames = survivors.map(h=>h.data.name).join(' y ');
     const deadNames = dead.map(h=>h.data.name).join(' y ');
     lines.push((survivors.length?'Volvió '+survNames+'. ':'')+deadNames+' no. La Torre se lo quedó.');
   }
-  // Level-up (qualitative: "salió distinto")
-  updatedParty.forEach(n=>{
+  // Level-up (qualitative: "salió distinto"), en cualquier equipo
+  results.forEach(r=> r.party.forEach(n=>{
     if(!fallen.has(n.id) && n.level>(preLevels[n.id]||1)){
       const h = towerHeroes.find(x=>x.data.id===n.id);
       if(h) lines.push(h.data.name+' salió distinto. No sé explicarlo bien, pero lo noto.');
     }
-  });
-  if(drops && drops.length) lines.push('Trajeron algo de allá dentro. No sé qué significa aún.');
+  }));
+  if(results.some(r=>r.drops && r.drops.length)) lines.push('Trajeron algo de allá dentro. No sé qué significa aún.');
   return lines.join(' ');
 }
 
@@ -1768,27 +1841,31 @@ function walkHeroFromTower(h){
 function resolveExpedition(){
   if(!LIVE||!LIVE.expedition) return;
   window.__pendingHiddenIds = null;   // defuse the reload-hide timeout if it hasn't fired yet
-  const { partyIds, floor, resolvedResult } = LIVE.expedition;
+  const { partyIds, floor, teams } = LIVE.expedition;
+  // Compat: una o varias resoluciones (multi-equipo). Si faltan, recomputa por equipo.
+  let results = LIVE.expedition.resolvedResults
+    || (LIVE.expedition.resolvedResult ? [LIVE.expedition.resolvedResult] : null);
   LIVE.expedition = undefined;
 
   // Save pre-levels for level-up detection
   const preLevels = {};
   LIVE.heroes.forEach(lh=>{ preLevels[lh.npc.id]=lh.npc.level; });
 
-  // Recompute if missing (edge case: resolved immediately after restore)
-  const expResult = resolvedResult ||
-    BL.runExpedition(LIVE.town, floor,
-      LIVE.heroes.filter(h=>partyIds.includes(h.npc.id)).map(h=>h.npc));
+  if(!results){
+    const groups = (teams && teams.length) ? teams : [partyIds];
+    results = groups.map(ids=>
+      BL.runExpedition(LIVE.town, floor, LIVE.heroes.filter(h=>ids.includes(h.npc.id)).map(h=>h.npc)));
+  }
 
-  // Apply updated NPCs back to the live world
-  expResult.party.forEach(updatedNpc=>{
+  // Apply updated NPCs back to the live world (de todos los equipos)
+  results.forEach(r=> r.party.forEach(updatedNpc=>{
     const lh = LIVE.heroes.find(h=>h.npc.id===updatedNpc.id);
     if(lh){ lh.npc=updatedNpc; lh.alive=updatedNpc.isAlive; }
-  });
+  }));
   doSave();
-  lastExpeditionResult = { ...expResult, floor };
+  lastExpeditionResult = { ...results[0], floor };
 
-  const fallen = new Set(expResult.result.fallenNpcIds);
+  const fallen = new Set(results.flatMap(r=>r.result.fallenNpcIds));
   const towerHeroes = heroes.filter(h=>partyIds.includes(h.data.id));
 
   towerHeroes.forEach(h=>{
@@ -1803,7 +1880,7 @@ function resolveExpedition(){
   });
 
   // Queue Fairy report
-  pendingReport = composeTowerReport(expResult, towerHeroes, preLevels);
+  pendingReport = composeTowerReport(results, towerHeroes, preLevels);
   const sub = document.getElementById('hud-sub');
   if(sub && !TUTORIAL) sub.textContent = heroes.some(h=>h.alive)?'el pueblo vive':'silencio';
 
