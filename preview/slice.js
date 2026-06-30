@@ -23,6 +23,15 @@ function freshSeed(){
 }
 let TOWN_SEED = (DATA.town && DATA.town.seed) || 'shrine-dev-town';   // se reasigna al pueblo activo
 
+// ── Reloj de doble tasa: pueblo 10× tiempo real, misión 1:1 ──────────────────
+// 1 día de juego (24h) a 10× = 2.4 h reales = 8640 s. El ciclo visual día/noche
+// usa este mismo valor, así "Día N" y el drenaje de necesidades quedan acoplados.
+const DAY_LENGTH = 8640;
+// Tick de necesidades: escala con DAY_LENGTH para que el hambre dure ~4 días de
+// juego siempre. HAMBRE_DECAY=0.012/tick, 83.3 ticks para vaciar →
+// NEEDS_TICK = DAY_LENGTH × 4 días × 0.012 ≈ 415 s.
+const NEEDS_TICK = DAY_LENGTH * 0.048;
+
 // ── Mundo VIVO + persistencia (device) ───────────────────────────────────────
 const SAVE_KEY = 'betalife_save_v1';
 let LIVE = null;
@@ -72,9 +81,10 @@ if(BL){
     LIVE = HAS_SAVE ? BL.restoreSave(saved) : BL.createLiveWorld(freshSeed(), DATA.heroes.length, 0);
     TOWN_SEED = LIVE.town.seed;   // semilla activa: la del save o la nueva aleatoria
     if(HAS_SAVE){
-      // catch-up offline: el mundo no paró mientras no estabas (determinista, acotado)
+      // catch-up offline: el mundo no paró mientras no estabas (determinista, acotado).
+      // 10× tiempo real → segs de juego = secs*10; ticks = segs_de_juego / NEEDS_TICK.
       const secs = Math.max(0, (Date.now() - (saved.lastSeen||Date.now()))/1000);
-      const ticks = Math.min(2000, Math.floor(secs/2));   // ~1 tick / 2s, tope sano
+      const ticks = Math.min(2000, Math.floor(secs*10/NEEDS_TICK));
       if(ticks>0){ BL.simulateOffline(LIVE, ticks); window.__catchupMins = Math.floor(secs/60); }
     }
     // enlazar cada héroe horneado con su NPC vivo (mismo orden/semilla)
@@ -648,17 +658,16 @@ function pickActivity(h){
 }
 
 // ── Catch-up offline: el mundo no para ───────────────────────────────────────
+// El catch-up real (ticks de necesidades + charlas) ya corre arriba vía
+// saved.lastSeen + BL.simulateOffline (10× tiempo real, NEEDS_TICK). Esto solo
+// mantiene LS_KEY como respaldo de timestamp para modo horneado (sin save).
 const LS_KEY = 'betalife_slice_lastSeen';
-let dayBase = 1;
 (function offline(){
   const now = Date.now();
   const last = parseInt(localStorage.getItem(LS_KEY)||'0', 10);
-  if(last){
+  if(last && !HAS_SAVE){
     const mins = Math.floor((now-last)/60000);
-    if(mins >= 1){
-      // 1 minuto real ≈ avanzar el "ánimo" del pueblo; resumen de la Hada al volver.
-      window.__catchupMins = mins;
-    }
+    if(mins >= 1) window.__catchupMins = mins;
   }
   localStorage.setItem(LS_KEY, String(now));
 })();
@@ -1833,7 +1842,6 @@ function tutDone(){
 // ─────────────────────────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
 let worldT = 0;
-const DAY_LENGTH = 400;     // segundos por ciclo (pueblo 10×: ~6.7 min reales = 1 día de juego)
 const START_TOD  = 0.18;    // arranca de mañana (no en lo oscuro)
 const SPOT_RADIUS = { campo:3.0, posada:1.8, plaza:2.2, shrine:1.6 };
 function spotPos(k){ const p=PLACES[k].pos; return p; }
@@ -2053,7 +2061,7 @@ let _engineAccum = 0;
 function liveTick(dt){
   if(!LIVE || !BL) return;
   _engineAccum += dt;
-  if(_engineAccum < 10) return;  // 1 tick cada 10s → hambre 0 en ~14 min ≈ 2 días de juego (a 400s/día)
+  if(_engineAccum < NEEDS_TICK) return;  // escala con DAY_LENGTH → hambre dura ~4 días de juego
   _engineAccum = 0; LIVE.tick++;
   for(const h of heroes){
     const lh = h.data && h.data._live; if(!lh || !lh.alive) continue;
