@@ -1,0 +1,1155 @@
+{
+  "seederDraws": {
+    "world-alpha:1001": {
+      "draws": [
+        0.1763135609216988,
+        0.4131442937068641,
+        0.3050100691616535,
+        0.19998470460996032,
+        0.35578240221366286,
+        0.4692753558047116,
+        0.8790675685741007,
+        0.5332576863002032,
+        0.22287032334133983,
+        0.6927232185844332
+      ],
+      "branchDraws": [
+        0.9401431740261614,
+        0.9076425172388554,
+        0.4844379164278507,
+        0.7096976973116398,
+        0.37964125256985426
+      ]
+    },
+    "world-alpha:1002": {
+      "draws": [
+        0.9953573073726147,
+        0.7265637668315321,
+        0.9110973351635039,
+        0.6474109310656786,
+        0.04361458169296384,
+        0.2817121730186045,
+        0.8436725996434689,
+        0.13455598521977663,
+        0.6359650471713394,
+        0.9749653611797839
+      ],
+      "branchDraws": [
+        0.2778755265753716,
+        0.37203804682940245,
+        0.5384931878652424,
+        0.2666464652866125,
+        0.3629644673783332
+      ]
+    },
+    "world-alpha:1003": {
+      "draws": [
+        0.49444308318197727,
+        0.0877790697850287,
+        0.30195884336717427,
+        0.08363956678658724,
+        0.39888298558071256,
+        0.3775659583043307,
+        0.05765444319695234,
+        0.707970874151215,
+        0.6438977536745369,
+        0.7776889968663454
+      ],
+      "branchDraws": [
+        0.3125884928740561,
+        0.35987335187382996,
+        0.0866743572987616,
+        0.9792994470335543,
+        0.2706165071576834
+      ]
+    },
+    "golden-seed-A": {
+      "draws": [
+        0.22053739591501653,
+        0.08738135965541005,
+        0.34542319597676396,
+        0.9519117292948067,
+        0.030697143403813243,
+        0.8213318288326263,
+        0.2488017489667982,
+        0.08021268318407238,
+        0.8691117116250098,
+        0.6646152951288968
+      ],
+      "branchDraws": [
+        0.1849885315168649,
+        0.8331669017206877,
+        0.9334037525113672,
+        0.24551297794096172,
+        0.4052426216658205
+      ]
+    },
+    "golden-seed-B": {
+      "draws": [
+        0.3063660163898021,
+        0.45529940421693027,
+        0.7517536024097353,
+        0.6356526766903698,
+        0.6639478830620646,
+        0.2215818976983428,
+        0.7384960050694644,
+        0.2800446809269488,
+        0.21324305841699243,
+        0.9831598903983831
+      ],
+      "branchDraws": [
+        0.9863057006150484,
+        0.34227960533462465,
+        0.1983403235208243,
+        0.8559232586994767,
+        0.3283331042621285
+      ]
+    },
+    "": {
+      "draws": [
+        0.6112444521859288,
+        0.4935242917854339,
+        0.7740248835179955,
+        0.4122861116193235,
+        0.8122657814528793,
+        0.05720820324495435,
+        0.9159039182122797,
+        0.19360002595931292,
+        0.8795722194481641,
+        0.5506070626433939
+      ],
+      "branchDraws": [
+        0.11843461077660322,
+        0.5226309502031654,
+        0.2573439599946141,
+        0.5754314705263823,
+        0.17852029856294394
+      ]
+    }
+  },
+  "seederHelpers": {
+    "world-alpha:1001": {
+      "nextFloatRange": 11.763135609216988,
+      "nextInt": 41,
+      "nextChoice": "b"
+    },
+    "world-alpha:1002": {
+      "nextFloatRange": 19.953573073726147,
+      "nextInt": 72,
+      "nextChoice": "e"
+    },
+    "world-alpha:1003": {
+      "nextFloatRange": 14.944430831819773,
+      "nextInt": 8,
+      "nextChoice": "b"
+    },
+    "golden-seed-A": {
+      "nextFloatRange": 12.205373959150165,
+      "nextInt": 8,
+      "nextChoice": "b"
+    },
+    "golden-seed-B": {
+      "nextFloatRange": 13.063660163898021,
+      "nextInt": 45,
+      "nextChoice": "d"
+    },
+    "": {
+      "nextFloatRange": 16.112444521859288,
+      "nextInt": 49,
+      "nextChoice": "d"
+    }
+  },
+  "axes": {
+    "world-alpha:1001": {
+      "noArchetype": {
+        "caution": 0.8336,
+        "passivity": 0.802,
+        "submission": 0.4902,
+        "warmth": 0.6412,
+        "trust": 0.4214,
+        "altruism": 0.2966,
+        "sociability": 0.5835,
+        "integrity": 0.389,
+        "loyalty": 0.1485,
+        "optimism": 0.6346,
+        "discipline": 0.7645,
+        "curiosity": 0.2602,
+        "confidence": 0.1541,
+        "forgiveness": 0.5593
+      },
+      "perArchetype": {
+        "honor": {
+          "caution": 0.8336,
+          "passivity": 0.802,
+          "submission": 0.4902,
+          "warmth": 0.6412,
+          "trust": 0.4214,
+          "altruism": 0.6741,
+          "sociability": 0.5835,
+          "integrity": 0.7898,
+          "loyalty": 0.7298,
+          "optimism": 0.6346,
+          "discipline": 0.7645,
+          "curiosity": 0.2602,
+          "confidence": 0.1541,
+          "forgiveness": 0.5593
+        },
+        "imprudente": {
+          "caution": 0.2662,
+          "passivity": 0.3223,
+          "submission": 0.4902,
+          "warmth": 0.6412,
+          "trust": 0.4214,
+          "altruism": 0.2966,
+          "sociability": 0.5835,
+          "integrity": 0.389,
+          "loyalty": 0.1485,
+          "optimism": 0.6346,
+          "discipline": 0.2925,
+          "curiosity": 0.2602,
+          "confidence": 0.1541,
+          "forgiveness": 0.5593
+        },
+        "calido": {
+          "caution": 0.8336,
+          "passivity": 0.802,
+          "submission": 0.4902,
+          "warmth": 0.9019,
+          "trust": 0.4214,
+          "altruism": 0.7099,
+          "sociability": 0.7696,
+          "integrity": 0.389,
+          "loyalty": 0.1485,
+          "optimism": 0.6346,
+          "discipline": 0.7645,
+          "curiosity": 0.2602,
+          "confidence": 0.1541,
+          "forgiveness": 0.5593
+        },
+        "rencoroso": {
+          "caution": 0.8336,
+          "passivity": 0.802,
+          "submission": 0.4902,
+          "warmth": 0.3484,
+          "trust": 0.1221,
+          "altruism": 0.2966,
+          "sociability": 0.5835,
+          "integrity": 0.389,
+          "loyalty": 0.1485,
+          "optimism": 0.6346,
+          "discipline": 0.7645,
+          "curiosity": 0.2602,
+          "confidence": 0.1541,
+          "forgiveness": 0.192
+        },
+        "erudito": {
+          "caution": 0.832,
+          "passivity": 0.802,
+          "submission": 0.4902,
+          "warmth": 0.6412,
+          "trust": 0.4214,
+          "altruism": 0.2966,
+          "sociability": 0.5835,
+          "integrity": 0.389,
+          "loyalty": 0.1485,
+          "optimism": 0.6346,
+          "discipline": 0.8625,
+          "curiosity": 0.7942,
+          "confidence": 0.1541,
+          "forgiveness": 0.5593
+        },
+        "difuso": {
+          "caution": 0.8336,
+          "passivity": 0.802,
+          "submission": 0.4902,
+          "warmth": 0.6412,
+          "trust": 0.4214,
+          "altruism": 0.2966,
+          "sociability": 0.5835,
+          "integrity": 0.389,
+          "loyalty": 0.1485,
+          "optimism": 0.6346,
+          "discipline": 0.7645,
+          "curiosity": 0.2602,
+          "confidence": 0.1541,
+          "forgiveness": 0.5593
+        }
+      },
+      "emergentTraits": []
+    },
+    "world-alpha:1002": {
+      "noArchetype": {
+        "caution": 0.3498,
+        "passivity": 0.4163,
+        "submission": 0.5245,
+        "warmth": 0.3415,
+        "trust": 0.4101,
+        "altruism": 0.3274,
+        "sociability": 0.3848,
+        "integrity": 0.5693,
+        "loyalty": 0.6312,
+        "optimism": 0.601,
+        "discipline": 0.3387,
+        "curiosity": 0.3092,
+        "confidence": 0.4143,
+        "forgiveness": 0.752
+      },
+      "perArchetype": {
+        "honor": {
+          "caution": 0.3498,
+          "passivity": 0.4163,
+          "submission": 0.5245,
+          "warmth": 0.3415,
+          "trust": 0.4101,
+          "altruism": 0.6844,
+          "sociability": 0.3848,
+          "integrity": 0.8474,
+          "loyalty": 0.88,
+          "optimism": 0.601,
+          "discipline": 0.3387,
+          "curiosity": 0.3092,
+          "confidence": 0.4143,
+          "forgiveness": 0.752
+        },
+        "imprudente": {
+          "caution": 0.1139,
+          "passivity": 0.1616,
+          "submission": 0.5245,
+          "warmth": 0.3415,
+          "trust": 0.4101,
+          "altruism": 0.3274,
+          "sociability": 0.3848,
+          "integrity": 0.5693,
+          "loyalty": 0.6312,
+          "optimism": 0.601,
+          "discipline": 0.1236,
+          "curiosity": 0.3092,
+          "confidence": 0.4143,
+          "forgiveness": 0.752
+        },
+        "calido": {
+          "caution": 0.3498,
+          "passivity": 0.4163,
+          "submission": 0.5245,
+          "warmth": 0.8133,
+          "trust": 0.4101,
+          "altruism": 0.7195,
+          "sociability": 0.6643,
+          "integrity": 0.5693,
+          "loyalty": 0.6312,
+          "optimism": 0.601,
+          "discipline": 0.3387,
+          "curiosity": 0.3092,
+          "confidence": 0.4143,
+          "forgiveness": 0.752
+        },
+        "rencoroso": {
+          "caution": 0.3498,
+          "passivity": 0.4163,
+          "submission": 0.5245,
+          "warmth": 0.1933,
+          "trust": 0.119,
+          "altruism": 0.3274,
+          "sociability": 0.3848,
+          "integrity": 0.5693,
+          "loyalty": 0.6312,
+          "optimism": 0.601,
+          "discipline": 0.3387,
+          "curiosity": 0.3092,
+          "confidence": 0.4143,
+          "forgiveness": 0.2544
+        },
+        "erudito": {
+          "caution": 0.6334,
+          "passivity": 0.4163,
+          "submission": 0.5245,
+          "warmth": 0.3415,
+          "trust": 0.4101,
+          "altruism": 0.3274,
+          "sociability": 0.3848,
+          "integrity": 0.5693,
+          "loyalty": 0.6312,
+          "optimism": 0.601,
+          "discipline": 0.6936,
+          "curiosity": 0.8071,
+          "confidence": 0.4143,
+          "forgiveness": 0.752
+        },
+        "difuso": {
+          "caution": 0.3498,
+          "passivity": 0.4163,
+          "submission": 0.5245,
+          "warmth": 0.3415,
+          "trust": 0.4101,
+          "altruism": 0.3274,
+          "sociability": 0.3848,
+          "integrity": 0.5693,
+          "loyalty": 0.6312,
+          "optimism": 0.601,
+          "discipline": 0.3387,
+          "curiosity": 0.3092,
+          "confidence": 0.4143,
+          "forgiveness": 0.752
+        }
+      },
+      "emergentTraits": []
+    },
+    "world-alpha:1003": {
+      "noArchetype": {
+        "caution": 0.3749,
+        "passivity": 0.408,
+        "submission": 0.1926,
+        "warmth": 0.8755,
+        "trust": 0.3444,
+        "altruism": 0.2183,
+        "sociability": 0.8826,
+        "integrity": 0.8633,
+        "loyalty": 0.7219,
+        "optimism": 0.3147,
+        "discipline": 0.496,
+        "curiosity": 0.7791,
+        "confidence": 0.732,
+        "forgiveness": 0.8054
+      },
+      "perArchetype": {
+        "honor": {
+          "caution": 0.3749,
+          "passivity": 0.408,
+          "submission": 0.1926,
+          "warmth": 0.8755,
+          "trust": 0.3444,
+          "altruism": 0.6498,
+          "sociability": 0.8826,
+          "integrity": 0.9234,
+          "loyalty": 0.9075,
+          "optimism": 0.3147,
+          "discipline": 0.496,
+          "curiosity": 0.7791,
+          "confidence": 0.732,
+          "forgiveness": 0.8054
+        },
+        "imprudente": {
+          "caution": 0.1219,
+          "passivity": 0.158,
+          "submission": 0.1926,
+          "warmth": 0.8755,
+          "trust": 0.3444,
+          "altruism": 0.2183,
+          "sociability": 0.8826,
+          "integrity": 0.8633,
+          "loyalty": 0.7219,
+          "optimism": 0.3147,
+          "discipline": 0.1882,
+          "curiosity": 0.7791,
+          "confidence": 0.732,
+          "forgiveness": 0.8054
+        },
+        "calido": {
+          "caution": 0.3749,
+          "passivity": 0.408,
+          "submission": 0.1926,
+          "warmth": 0.9559,
+          "trust": 0.3444,
+          "altruism": 0.6875,
+          "sociability": 0.8949,
+          "integrity": 0.8633,
+          "loyalty": 0.7219,
+          "optimism": 0.3147,
+          "discipline": 0.496,
+          "curiosity": 0.7791,
+          "confidence": 0.732,
+          "forgiveness": 0.8054
+        },
+        "rencoroso": {
+          "caution": 0.3749,
+          "passivity": 0.408,
+          "submission": 0.1926,
+          "warmth": 0.4428,
+          "trust": 0.1014,
+          "altruism": 0.2183,
+          "sociability": 0.8826,
+          "integrity": 0.8633,
+          "loyalty": 0.7219,
+          "optimism": 0.3147,
+          "discipline": 0.496,
+          "curiosity": 0.7791,
+          "confidence": 0.732,
+          "forgiveness": 0.2687
+        },
+        "erudito": {
+          "caution": 0.6438,
+          "passivity": 0.408,
+          "submission": 0.1926,
+          "warmth": 0.8755,
+          "trust": 0.3444,
+          "altruism": 0.2183,
+          "sociability": 0.8826,
+          "integrity": 0.8633,
+          "loyalty": 0.7219,
+          "optimism": 0.3147,
+          "discipline": 0.7582,
+          "curiosity": 0.9453,
+          "confidence": 0.732,
+          "forgiveness": 0.8054
+        },
+        "difuso": {
+          "caution": 0.3749,
+          "passivity": 0.408,
+          "submission": 0.1926,
+          "warmth": 0.8755,
+          "trust": 0.3444,
+          "altruism": 0.2183,
+          "sociability": 0.8826,
+          "integrity": 0.8633,
+          "loyalty": 0.7219,
+          "optimism": 0.3147,
+          "discipline": 0.496,
+          "curiosity": 0.7791,
+          "confidence": 0.732,
+          "forgiveness": 0.8054
+        }
+      },
+      "emergentTraits": []
+    },
+    "golden-seed-A": {
+      "noArchetype": {
+        "caution": 0.2783,
+        "passivity": 0.7366,
+        "submission": 0.8268,
+        "warmth": 0.3256,
+        "trust": 0.4387,
+        "altruism": 0.2497,
+        "sociability": 0.4154,
+        "integrity": 0.4914,
+        "loyalty": 0.122,
+        "optimism": 0.3058,
+        "discipline": 0.4094,
+        "curiosity": 0.3119,
+        "confidence": 0.6768,
+        "forgiveness": 0.474
+      },
+      "perArchetype": {
+        "honor": {
+          "caution": 0.2783,
+          "passivity": 0.7366,
+          "submission": 0.8268,
+          "warmth": 0.3256,
+          "trust": 0.4387,
+          "altruism": 0.6591,
+          "sociability": 0.4154,
+          "integrity": 0.8221,
+          "loyalty": 0.7243,
+          "optimism": 0.3058,
+          "discipline": 0.4094,
+          "curiosity": 0.3119,
+          "confidence": 0.6768,
+          "forgiveness": 0.474
+        },
+        "imprudente": {
+          "caution": 0.0925,
+          "passivity": 0.3,
+          "submission": 0.8268,
+          "warmth": 0.3256,
+          "trust": 0.4387,
+          "altruism": 0.2497,
+          "sociability": 0.4154,
+          "integrity": 0.4914,
+          "loyalty": 0.122,
+          "optimism": 0.3058,
+          "discipline": 0.1514,
+          "curiosity": 0.3119,
+          "confidence": 0.6768,
+          "forgiveness": 0.474
+        },
+        "calido": {
+          "caution": 0.2783,
+          "passivity": 0.7366,
+          "submission": 0.8268,
+          "warmth": 0.8091,
+          "trust": 0.4387,
+          "altruism": 0.6961,
+          "sociability": 0.6798,
+          "integrity": 0.4914,
+          "loyalty": 0.122,
+          "optimism": 0.3058,
+          "discipline": 0.4094,
+          "curiosity": 0.3119,
+          "confidence": 0.6768,
+          "forgiveness": 0.474
+        },
+        "rencoroso": {
+          "caution": 0.2783,
+          "passivity": 0.7366,
+          "submission": 0.8268,
+          "warmth": 0.1859,
+          "trust": 0.127,
+          "altruism": 0.2497,
+          "sociability": 0.4154,
+          "integrity": 0.4914,
+          "loyalty": 0.122,
+          "optimism": 0.3058,
+          "discipline": 0.4094,
+          "curiosity": 0.3119,
+          "confidence": 0.6768,
+          "forgiveness": 0.1602
+        },
+        "erudito": {
+          "caution": 0.6055,
+          "passivity": 0.7366,
+          "submission": 0.8268,
+          "warmth": 0.3256,
+          "trust": 0.4387,
+          "altruism": 0.2497,
+          "sociability": 0.4154,
+          "integrity": 0.4914,
+          "loyalty": 0.122,
+          "optimism": 0.3058,
+          "discipline": 0.7214,
+          "curiosity": 0.8078,
+          "confidence": 0.6768,
+          "forgiveness": 0.474
+        },
+        "difuso": {
+          "caution": 0.2783,
+          "passivity": 0.7366,
+          "submission": 0.8268,
+          "warmth": 0.3256,
+          "trust": 0.4387,
+          "altruism": 0.2497,
+          "sociability": 0.4154,
+          "integrity": 0.4914,
+          "loyalty": 0.122,
+          "optimism": 0.3058,
+          "discipline": 0.4094,
+          "curiosity": 0.3119,
+          "confidence": 0.6768,
+          "forgiveness": 0.474
+        }
+      },
+      "emergentTraits": []
+    },
+    "golden-seed-B": {
+      "noArchetype": {
+        "caution": 0.8836,
+        "passivity": 0.3958,
+        "submission": 0.289,
+        "warmth": 0.7558,
+        "trust": 0.386,
+        "altruism": 0.2784,
+        "sociability": 0.8956,
+        "integrity": 0.5351,
+        "loyalty": 0.6804,
+        "optimism": 0.1312,
+        "discipline": 0.2559,
+        "curiosity": 0.5909,
+        "confidence": 0.8699,
+        "forgiveness": 0.5178
+      },
+      "perArchetype": {
+        "honor": {
+          "caution": 0.8836,
+          "passivity": 0.3958,
+          "submission": 0.289,
+          "warmth": 0.7558,
+          "trust": 0.386,
+          "altruism": 0.6681,
+          "sociability": 0.8956,
+          "integrity": 0.8365,
+          "loyalty": 0.8953,
+          "optimism": 0.1312,
+          "discipline": 0.2559,
+          "curiosity": 0.5909,
+          "confidence": 0.8699,
+          "forgiveness": 0.5178
+        },
+        "imprudente": {
+          "caution": 0.2769,
+          "passivity": 0.1527,
+          "submission": 0.289,
+          "warmth": 0.7558,
+          "trust": 0.386,
+          "altruism": 0.2784,
+          "sociability": 0.8956,
+          "integrity": 0.5351,
+          "loyalty": 0.6804,
+          "optimism": 0.1312,
+          "discipline": 0.0942,
+          "curiosity": 0.5909,
+          "confidence": 0.8699,
+          "forgiveness": 0.5178
+        },
+        "calido": {
+          "caution": 0.8836,
+          "passivity": 0.3958,
+          "submission": 0.289,
+          "warmth": 0.9312,
+          "trust": 0.386,
+          "altruism": 0.7044,
+          "sociability": 0.8987,
+          "integrity": 0.5351,
+          "loyalty": 0.6804,
+          "optimism": 0.1312,
+          "discipline": 0.2559,
+          "curiosity": 0.5909,
+          "confidence": 0.8699,
+          "forgiveness": 0.5178
+        },
+        "rencoroso": {
+          "caution": 0.8836,
+          "passivity": 0.3958,
+          "submission": 0.289,
+          "warmth": 0.3996,
+          "trust": 0.1124,
+          "altruism": 0.2784,
+          "sociability": 0.8956,
+          "integrity": 0.5351,
+          "loyalty": 0.6804,
+          "optimism": 0.1312,
+          "discipline": 0.2559,
+          "curiosity": 0.5909,
+          "confidence": 0.8699,
+          "forgiveness": 0.1767
+        },
+        "erudito": {
+          "caution": 0.8459,
+          "passivity": 0.3958,
+          "submission": 0.289,
+          "warmth": 0.7558,
+          "trust": 0.386,
+          "altruism": 0.2784,
+          "sociability": 0.8956,
+          "integrity": 0.5351,
+          "loyalty": 0.6804,
+          "optimism": 0.1312,
+          "discipline": 0.6642,
+          "curiosity": 0.8941,
+          "confidence": 0.8699,
+          "forgiveness": 0.5178
+        },
+        "difuso": {
+          "caution": 0.8836,
+          "passivity": 0.3958,
+          "submission": 0.289,
+          "warmth": 0.7558,
+          "trust": 0.386,
+          "altruism": 0.2784,
+          "sociability": 0.8956,
+          "integrity": 0.5351,
+          "loyalty": 0.6804,
+          "optimism": 0.1312,
+          "discipline": 0.2559,
+          "curiosity": 0.5909,
+          "confidence": 0.8699,
+          "forgiveness": 0.5178
+        }
+      },
+      "emergentTraits": []
+    },
+    "": {
+      "noArchetype": {
+        "caution": 0.2218,
+        "passivity": 0.5143,
+        "submission": 0.3345,
+        "warmth": 0.5486,
+        "trust": 0.273,
+        "altruism": 0.4406,
+        "sociability": 0.1807,
+        "integrity": 0.4392,
+        "loyalty": 0.3422,
+        "optimism": 0.8238,
+        "discipline": 0.7742,
+        "curiosity": 0.515,
+        "confidence": 0.3778,
+        "forgiveness": 0.6165
+      },
+      "perArchetype": {
+        "honor": {
+          "caution": 0.2218,
+          "passivity": 0.5143,
+          "submission": 0.3345,
+          "warmth": 0.5486,
+          "trust": 0.273,
+          "altruism": 0.7261,
+          "sociability": 0.1807,
+          "integrity": 0.8053,
+          "loyalty": 0.7815,
+          "optimism": 0.8238,
+          "discipline": 0.7742,
+          "curiosity": 0.515,
+          "confidence": 0.3778,
+          "forgiveness": 0.6165
+        },
+        "imprudente": {
+          "caution": 0.0772,
+          "passivity": 0.2068,
+          "submission": 0.3345,
+          "warmth": 0.5486,
+          "trust": 0.273,
+          "altruism": 0.4406,
+          "sociability": 0.1807,
+          "integrity": 0.4392,
+          "loyalty": 0.3422,
+          "optimism": 0.8238,
+          "discipline": 0.2956,
+          "curiosity": 0.515,
+          "confidence": 0.3778,
+          "forgiveness": 0.6165
+        },
+        "calido": {
+          "caution": 0.2218,
+          "passivity": 0.5143,
+          "submission": 0.3345,
+          "warmth": 0.8751,
+          "trust": 0.273,
+          "altruism": 0.758,
+          "sociability": 0.576,
+          "integrity": 0.4392,
+          "loyalty": 0.3422,
+          "optimism": 0.8238,
+          "discipline": 0.7742,
+          "curiosity": 0.515,
+          "confidence": 0.3778,
+          "forgiveness": 0.6165
+        },
+        "rencoroso": {
+          "caution": 0.2218,
+          "passivity": 0.5143,
+          "submission": 0.3345,
+          "warmth": 0.3014,
+          "trust": 0.0839,
+          "altruism": 0.4406,
+          "sociability": 0.1807,
+          "integrity": 0.4392,
+          "loyalty": 0.3422,
+          "optimism": 0.8238,
+          "discipline": 0.7742,
+          "curiosity": 0.515,
+          "confidence": 0.3778,
+          "forgiveness": 0.2121
+        },
+        "erudito": {
+          "caution": 0.5855,
+          "passivity": 0.5143,
+          "submission": 0.3345,
+          "warmth": 0.5486,
+          "trust": 0.273,
+          "altruism": 0.4406,
+          "sociability": 0.1807,
+          "integrity": 0.4392,
+          "loyalty": 0.3422,
+          "optimism": 0.8238,
+          "discipline": 0.8656,
+          "curiosity": 0.87,
+          "confidence": 0.3778,
+          "forgiveness": 0.6165
+        },
+        "difuso": {
+          "caution": 0.2218,
+          "passivity": 0.5143,
+          "submission": 0.3345,
+          "warmth": 0.5486,
+          "trust": 0.273,
+          "altruism": 0.4406,
+          "sociability": 0.1807,
+          "integrity": 0.4392,
+          "loyalty": 0.3422,
+          "optimism": 0.8238,
+          "discipline": 0.7742,
+          "curiosity": 0.515,
+          "confidence": 0.3778,
+          "forgiveness": 0.6165
+        }
+      },
+      "emergentTraits": []
+    }
+  },
+  "archetypePicks": {
+    "world-alpha:1001": "erudito",
+    "world-alpha:1002": "difuso",
+    "world-alpha:1003": "erudito",
+    "golden-seed-A": "imprudente",
+    "golden-seed-B": "rencoroso",
+    "": "rencoroso"
+  },
+  "stamps": {
+    "bandOfSamples": [
+      {
+        "value": 0,
+        "band": 0
+      },
+      {
+        "value": 0.1,
+        "band": 0
+      },
+      {
+        "value": 0.124,
+        "band": 0
+      },
+      {
+        "value": 0.125,
+        "band": 1
+      },
+      {
+        "value": 0.2,
+        "band": 1
+      },
+      {
+        "value": 0.4,
+        "band": 2
+      },
+      {
+        "value": 0.6,
+        "band": 2
+      },
+      {
+        "value": 0.8,
+        "band": 3
+      },
+      {
+        "value": 0.9,
+        "band": 4
+      },
+      {
+        "value": 1,
+        "band": 4
+      }
+    ],
+    "nearestBandSamples": [
+      {
+        "value": 0,
+        "nearest": 0
+      },
+      {
+        "value": 0.05,
+        "nearest": 0
+      },
+      {
+        "value": 0.12,
+        "nearest": 0
+      },
+      {
+        "value": 0.13,
+        "nearest": 0.25
+      },
+      {
+        "value": 0.37,
+        "nearest": 0.25
+      },
+      {
+        "value": 0.5,
+        "nearest": 0.5
+      },
+      {
+        "value": 0.63,
+        "nearest": 0.75
+      },
+      {
+        "value": 0.88,
+        "nearest": 1
+      },
+      {
+        "value": 0.95,
+        "nearest": 1
+      },
+      {
+        "value": 1,
+        "nearest": 1
+      }
+    ],
+    "softCeilingSamples": [
+      {
+        "value": 0.5,
+        "delta": 0.1,
+        "result": 0.6
+      },
+      {
+        "value": 0.9,
+        "delta": 0.2,
+        "result": 0.908
+      },
+      {
+        "value": 0.1,
+        "delta": -0.2,
+        "result": 0.092
+      },
+      {
+        "value": 0.99,
+        "delta": 0.5,
+        "result": 0.9902
+      },
+      {
+        "value": 0.01,
+        "delta": -0.5,
+        "result": 0.0098
+      }
+    ],
+    "growthStamp": {
+      "kind": "growth",
+      "axisKey": "caution",
+      "bandValue": 0.5,
+      "sealedAt": 123
+    },
+    "growthStampNone": null
+  },
+  "birthStamps": {
+    "world-alpha:1001": {
+      "withArchetype": {
+        "kind": "birth",
+        "axisKey": "curiosity",
+        "bandValue": 0.25,
+        "sealedAt": 0
+      },
+      "withoutArchetype": {
+        "kind": "birth",
+        "axisKey": "loyalty",
+        "bandValue": 0.25,
+        "sealedAt": 0
+      }
+    },
+    "world-alpha:1002": {
+      "withArchetype": {
+        "kind": "birth",
+        "axisKey": "forgiveness",
+        "bandValue": 0.75,
+        "sealedAt": 0
+      },
+      "withoutArchetype": {
+        "kind": "birth",
+        "axisKey": "forgiveness",
+        "bandValue": 0.75,
+        "sealedAt": 0
+      }
+    },
+    "world-alpha:1003": {
+      "withArchetype": {
+        "kind": "birth",
+        "axisKey": "curiosity",
+        "bandValue": 0.75,
+        "sealedAt": 0
+      },
+      "withoutArchetype": {
+        "kind": "birth",
+        "axisKey": "sociability",
+        "bandValue": 1,
+        "sealedAt": 0
+      }
+    },
+    "golden-seed-A": {
+      "withArchetype": {
+        "kind": "birth",
+        "axisKey": "caution",
+        "bandValue": 0.25,
+        "sealedAt": 0
+      },
+      "withoutArchetype": {
+        "kind": "birth",
+        "axisKey": "loyalty",
+        "bandValue": 0,
+        "sealedAt": 0
+      }
+    },
+    "golden-seed-B": {
+      "withArchetype": {
+        "kind": "birth",
+        "axisKey": "trust",
+        "bandValue": 0.5,
+        "sealedAt": 0
+      },
+      "withoutArchetype": {
+        "kind": "birth",
+        "axisKey": "sociability",
+        "bandValue": 1,
+        "sealedAt": 0
+      }
+    },
+    "": {
+      "withArchetype": {
+        "kind": "birth",
+        "axisKey": "trust",
+        "bandValue": 0.25,
+        "sealedAt": 0
+      },
+      "withoutArchetype": {
+        "kind": "birth",
+        "axisKey": "optimism",
+        "bandValue": 0.75,
+        "sealedAt": 0
+      }
+    }
+  },
+  "names": {
+    "world-alpha:1001": {
+      "culture": "hispano",
+      "perCulture": {
+        "hispano": "Soluelmiius",
+        "nordico": "Gurthalkestad",
+        "celta": "Morarodmaed",
+        "eslavo": "Kazorynzeel",
+        "greco": "Phoagoraloros",
+        "africano": "Tauimbakoeke",
+        "asiatico": "Xiatiantowei"
+      }
+    },
+    "world-alpha:1002": {
+      "culture": "asiatico",
+      "perCulture": {
+        "hispano": "Arurras",
+        "nordico": "Bjorborsadr",
+        "celta": "Branhirdywyn",
+        "eslavo": "Drakansanko",
+        "greco": "Arexarosonides",
+        "africano": "Amakeyara",
+        "asiatico": "Renkazekoji"
+      }
+    },
+    "world-alpha:1003": {
+      "culture": "celta",
+      "perCulture": {
+        "hispano": "Meralmio",
+        "nordico": "Rurikulfkeson",
+        "celta": "Cawaelmaan",
+        "eslavo": "Rusadinzeov",
+        "greco": "Leoneteralos",
+        "africano": "Zolaolekowe",
+        "asiatico": "Harufangtoko"
+      }
+    },
+    "golden-seed-A": {
+      "culture": "eslavo",
+      "perCulture": {
+        "hispano": "Norandteon",
+        "nordico": "Skarsteintaur",
+        "celta": "Oranwenviith",
+        "eslavo": "Dmiomilseko",
+        "greco": "Aristekleroia",
+        "africano": "Obieshesae",
+        "asiatico": "Akiokawamato"
+      }
+    },
+    "golden-seed-B": {
+      "culture": "celta",
+      "perCulture": {
+        "hispano": "Braesdaez",
+        "nordico": "Svaldengan",
+        "celta": "Gwynennloin",
+        "eslavo": "Wojushaminov",
+        "greco": "Thairanoreos",
+        "africano": "Kofienudasi",
+        "asiatico": "Weimotokira"
+      }
+    },
+    "": {
+      "culture": "greco",
+      "perCulture": {
+        "hispano": "Casindloalo",
+        "nordico": "Ormhildlound",
+        "celta": "Lughfaelsays",
+        "eslavo": "Zoromashleosh",
+        "greco": "Xeneidesaripos",
+        "africano": "Mosiankenioro",
+        "asiatico": "Yizhaosaying"
+      }
+    }
+  },
+  "nameNamespaceSize": 1639792
+}
