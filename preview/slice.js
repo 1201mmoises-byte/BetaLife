@@ -608,12 +608,17 @@ function spawnHero(data, atIndex){
 // estado de actividad por héroe — derivado de necesidades reales + personalidad
 function pickActivity(h){
   const nd = h.data._live ? h.data._live.needs : h.data.needs;
-  // Necesidades críticas primero: comer o descansar van a la Posada
-  if(nd && nd.hambre < 0.38 && h.state !== 'eat'){
-    h.target = 'posada'; h._nextState = 'eat'; h.state = 'walking'; return;
-  }
-  if(nd && nd.descanso < 0.30 && h.state !== 'rest'){
-    h.target = 'posada'; h._nextState = 'rest'; h.state = 'walking'; return;
+  if(nd){
+    // Iniciativa graduada: probabilidad escala con la urgencia, no un umbral fijo.
+    // A hambre=0.65 ya se nota el apetito (~20%); a 0.38 casi siempre (~85%); a 0 = 100%.
+    const hUrg = Math.max(0, (0.70 - nd.hambre) / 0.70);
+    const dUrg = Math.max(0, (0.60 - nd.descanso) / 0.60);
+    if(nd.hambre < 0.70 && Math.random() < hUrg * 0.9 && h.state !== 'eat'){
+      h.target='posada'; h._nextState='eat'; h.state='walking'; return;
+    }
+    if(nd.descanso < 0.60 && Math.random() < dUrg * 0.8 && h.state !== 'rest'){
+      h.target='posada'; h._nextState='rest'; h.state='walking'; return;
+    }
   }
   // Procesar orden de la Hada si hay una activa
   if(h._order && h._orderT > 0){
@@ -1520,9 +1525,23 @@ const BANKS = {
   hunger: [
     ['Tengo un hambre… y solo hay {food}.','Otra vez {food}. Cómo extraño comer de verdad.','En {1p} al menos había de sobra.','No te tortures recordándolo.'],
     ['¿Comiste algo?','{food}, lo de siempre. Ya ni sabe a nada.','Hay que aguantar, no queda otra.','Aguantar. La palabra de este sitio.'],
+    ['Me está fallando el cuerpo. No comí bien.','Yo lo noto. Tienes cara de eso.','¿Se nota tanto?','Aquí todo se nota. Mejor come algo.'],
+    ['¿Cuánto llevas sin comer?','Demasiado. Con {food} lo que haya, ya.','Antes en {1p} había más opciones.','Menos mal que no recuerdas el sabor.'],
+  ],
+  hunger_invite: [
+    ['Oye, tengo mucha hambre. ¿Me acompañas?','Yo también. Vamos a la posada.','Menos mal. No me apetece ir solo.','Vamos.'],
+    ['¿No tienes hambre tú también?','Bastante. ¿Vamos?','Sí, anda. Ya no aguanto más.','Tampoco yo.'],
+    ['Voy a buscar algo de comer. ¿Vienes?','Ahora que lo dices… sí. Espérame.','No tardes, que me desmayo.','Ya voy, ya.'],
+    ['Hay {food} en la posada, creo.','Cualquier cosa. Acompáñame.','¿Tan hambriento estás?','Más de lo que aparento.'],
   ],
   tired: [
     ['Estoy molido y casi no hice nada.','Aquí cansa hasta el aire. Y los sueños no dejan dormir.','¿Tú también sueñas raro?','Mejor no hablemos de eso.'],
+    ['No doy más. Las piernas me fallan.','Descansa. Nadie te va a reprochar nada.','¿Y si se necesita algo?','Nada tan urgente como tu cuerpo ahora mismo.'],
+  ],
+  tired_invite: [
+    ['Oye, ¿tú también estás agotado? ¿Nos sentamos un rato?','Llevo horas con ganas de parar. Sí.','A la posada, anda.','Vamos.'],
+    ['¿Cuándo fue la última vez que dormiste bien?','No sé. Hace mucho.','Yo tampoco. Descansemos juntos, al menos no es tan solo.','Buena idea.'],
+    ['Me caigo de sueño. ¿Me acompañas a descansar?','Te acompaño. Yo también necesito parar.','Gracias. Aquí solo da más pereza.','Vamos antes de que se nos pasen las ganas.'],
   ],
   dream: [
     ['Anoche soñé… {frag}.','¿Otra vez con eso? Yo no quiero soñar nada.','No lo elijo. Llega y ya.','Tú descansa. Yo me quedo despierto un rato.'],
@@ -1564,13 +1583,21 @@ function fillTokens(t,s1,s2,food,frag){
 const TIER_W = { core:4, secondary:3, peripheral:2, mundane:1 };
 let lastBeat=null, lastTmpl='';
 function composeExchange(A,B){
-  const ns = h => h.data.needsStatus || [];
-  const hungry = h => ns(h).some(s=>/hambr|comer/i.test(s));
-  const tired  = h => ns(h).some(s=>/agotad|cansad|colapso/i.test(s));
+  // Lee necesidades VIVAS (no el snapshot horneado)
+  const getNd = h => h.data._live ? h.data._live.needs : h.data.needs;
+  const ndA = getNd(A), ndB = getNd(B);
+  const hungryVal = h => { const nd=getNd(h); return nd ? Math.max(0, 0.70-nd.hambre)/0.70 : 0; };
+  const tiredVal  = h => { const nd=getNd(h); return nd ? Math.max(0, 0.60-nd.descanso)/0.60 : 0; };
+  const hungry = h => hungryVal(h) > 0.15;  // hambre < ~0.59
+  const tired  = h => tiredVal(h)  > 0.20;  // descanso < ~0.48
   const disor  = h => (h.data.axesNow ? h.data.axesNow.confidence : 0.5) < 0.45;
   const dreamy = h => h.data.memories && h.data.memories.length;
   const tA = toneOf(A), tB = toneOf(B);
   const isTone = (t)=> tA===t || tB===t;
+
+  // urgencia máxima de hambre/descanso entre los dos
+  const hUrgMax = Math.max(hungryVal(A), hungryVal(B));
+  const dUrgMax = Math.max(tiredVal(A),  tiredVal(B));
 
   const cands=[]; const add=(b,w)=>{ if(w>0) cands.push([b,w]); };
   // sueño: un recuerdo REAL aflorado
@@ -1579,9 +1606,11 @@ function composeExchange(A,B){
     dreamer = !dreamy(A)?B : !dreamy(B)?A : ((TIER_W[A.data.tier]||1)>=(TIER_W[B.data.tier]||1)?A:B);
     add('dream', TIER_W[dreamer.data.tier]||1);
   }
-  // estado real
-  add('hunger', (hungry(A)||hungry(B))?4:0);
-  add('tired',  (tired(A)||tired(B))?2:0);
+  // estado real de necesidades — peso proporcional a la urgencia
+  add('hunger',        (hungry(A)||hungry(B)) ? Math.round(3 + hUrgMax*5) : 0);
+  add('hunger_invite', (hungry(A)||hungry(B)) ? Math.round(2 + hUrgMax*6) : 0);
+  add('tired',         (tired(A)||tired(B))   ? Math.round(2 + dUrgMax*4) : 0);
+  add('tired_invite',  (tired(A)||tired(B))   ? Math.round(1 + dUrgMax*4) : 0);
   // recién llegados: desorientación (sube con inseguros/curiosos)
   add('arrival', 3 + ((disor(A)||disor(B))?2:0) + (isTone('curioso')?1:0) + (isTone('inseguro')?1:0));
   // su propio pasado (sube con curiosos)
@@ -1648,7 +1677,18 @@ function startConversation(A,B){
   lines.forEach((l,idx)=>{
     setTimeout(()=>{ if(l.hero.alive && l.hero.state==='talk') say(l.hero, l.text); }, idx*STEP);
   });
-  setTimeout(()=>{ endConversation(A); endConversation(B); }, lines.length*STEP + 700);
+  const postDelay = lines.length*STEP + 700;
+  setTimeout(()=>{ endConversation(A); endConversation(B); }, postDelay);
+  // Si la charla fue sobre hambre o cansancio, los dos van juntos a la posada
+  if(beat==='hunger_invite' || beat==='hunger'){
+    setTimeout(()=>{
+      [A,B].forEach(h=>{ if(h.alive && h.state==='idle'){ h.target='posada'; h._nextState='eat'; h.state='walking'; } });
+    }, postDelay + 200);
+  } else if(beat==='tired_invite' || beat==='tired'){
+    setTimeout(()=>{
+      [A,B].forEach(h=>{ if(h.alive && h.state==='idle'){ h.target='posada'; h._nextState='rest'; h.state='walking'; } });
+    }, postDelay + 200);
+  }
 }
 function endConversation(h){
   if(h.state==='talk'){ h.state='idle'; h.timer=1.5+Math.random()*2.5; }
@@ -1793,7 +1833,7 @@ function tutDone(){
 // ─────────────────────────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
 let worldT = 0;
-const DAY_LENGTH = 120;     // segundos por ciclo (2 min reales = 1 día de juego; visible en sesión)
+const DAY_LENGTH = 400;     // segundos por ciclo (pueblo 10×: ~6.7 min reales = 1 día de juego)
 const START_TOD  = 0.18;    // arranca de mañana (no en lo oscuro)
 const SPOT_RADIUS = { campo:3.0, posada:1.8, plaza:2.2, shrine:1.6 };
 function spotPos(k){ const p=PLACES[k].pos; return p; }
@@ -2013,10 +2053,12 @@ let _engineAccum = 0;
 function liveTick(dt){
   if(!LIVE || !BL) return;
   _engineAccum += dt;
-  if(_engineAccum < 5) return;   // 1 tick cada 5s → hambre 0 en ~7 min (~3.5 días de juego)
+  if(_engineAccum < 10) return;  // 1 tick cada 10s → hambre 0 en ~14 min ≈ 2 días de juego (a 400s/día)
   _engineAccum = 0; LIVE.tick++;
   for(const h of heroes){
     const lh = h.data && h.data._live; if(!lh || !lh.alive) continue;
+    // Misiones: tiempo 1:1 (no 10×) → los héroes en la Torre no drenan necesidades
+    if(h.state === 'tower') continue;
     const act = h.state==='train' ? 'train' : h.state==='rest' ? 'rest' : h.state==='eat' ? 'eat' : 'idle';
     BL.tickHeroNeeds(lh, act, 1);
   }
