@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 1000" font-family="Georgia, 'Times New Roman', serif">
+  <defs>
+    <marker id="a2" markerWidth="12" markerHeight="12" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#f0c040"/></marker>
+    <radialGradient id="glow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#f0c040" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#f0c040" stop-opacity="0"/>
+    </radialGradient>
+    <style>
+      .gold{fill:#f0c040;} .dim{fill:#9a8fbe;} .warn{fill:#ff7090;}
+      .t{fill:#d8cdf0;} .keep{fill:#7cc88c;} .vio{fill:#b080ff;}
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1400" height="1000" fill="#05050d"/>
+
+  <text x="700" y="44" text-anchor="middle" font-size="27" class="gold" letter-spacing="1">Cómo deberían verse las construcciones — el pueblo es la BASE para subir la Torre</text>
+  <text x="700" y="74" text-anchor="middle" font-size="15.5" class="dim">La novela: “fortifica tu base y moviliza a tus héroes hacia la cima de la Torre · las mazmorras diarias dan materiales y niveles”.</text>
+  <text x="700" y="98" text-anchor="middle" font-size="14" class="dim"><tspan class="gold">★ NUEVO</tspan> = construcción a añadir    ·    <tspan class="warn">rojo</tspan> = quitar / reformar    ·    <tspan class="gold">dorado</tspan> = corazón del bucle</text>
+
+  <!-- ===================== LEFT: ACTUAL ===================== -->
+  <rect x="40" y="120" width="620" height="840" rx="16" fill="#0a0816" stroke="#2e2348"/>
+  <rect x="40" y="120" width="620" height="40" rx="16" fill="#2a1018" stroke="#c0506a"/>
+  <text x="350" y="147" text-anchor="middle" font-size="17" class="warn" letter-spacing="2">ACTUAL — las 5 de hoy</text>
+
+  <!-- Tower (decorative) -->
+  <rect x="300" y="195" width="60" height="150" fill="#231320" stroke="#7a3047" stroke-width="2"/>
+  <rect x="296" y="188" width="68" height="12" fill="#231320" stroke="#7a3047" stroke-width="2"/>
+  <rect x="300" y="178" width="10" height="12" fill="#231320" stroke="#7a3047"/>
+  <rect x="320" y="178" width="10" height="12" fill="#231320" stroke="#7a3047"/>
+  <rect x="340" y="178" width="10" height="12" fill="#231320" stroke="#7a3047"/>
+  <text x="330" y="372" text-anchor="middle" font-size="16" class="gold">TORRE</text>
+  <text x="330" y="394" text-anchor="middle" font-size="13.5" class="warn">decorado · NO se entra</text>
+
+  <!-- four buildings 2x2 -->
+  <!-- Shrine -->
+  <polygon points="120,470 165,438 210,470" fill="#1a1330" stroke="#2e2348" stroke-width="2"/>
+  <rect x="135" y="470" width="60" height="46" fill="#120e22" stroke="#2e2348" stroke-width="2"/>
+  <rect x="157" y="488" width="16" height="28" fill="#0a0816"/>
+  <text x="165" y="540" text-anchor="middle" font-size="15" class="t">Shrine</text>
+  <text x="165" y="560" text-anchor="middle" font-size="12.5" class="dim">Hada + invocar</text>
+
+  <!-- Posada -->
+  <polygon points="430,470 475,438 520,470" fill="#1a1330" stroke="#2e2348" stroke-width="2"/>
+  <rect x="445" y="470" width="60" height="46" fill="#120e22" stroke="#2e2348" stroke-width="2"/>
+  <rect x="467" y="488" width="16" height="28" fill="#0a0816"/>
+  <text x="475" y="540" text-anchor="middle" font-size="15" class="t">Posada</text>
+  <text x="475" y="560" text-anchor="middle" font-size="12.5" class="dim">descansar / charlar</text>
+
+  <!-- Campo -->
+  <polygon points="120,672 165,640 210,672" fill="#1a1330" stroke="#2e2348" stroke-width="2"/>
+  <rect x="135" y="672" width="60" height="46" fill="#120e22" stroke="#2e2348" stroke-width="2"/>
+  <rect x="157" y="690" width="16" height="28" fill="#0a0816"/>
+  <text x="165" y="742" text-anchor="middle" font-size="15" class="t">Campo de Entren.</text>
+  <text x="165" y="762" text-anchor="middle" font-size="12.5" class="dim">entrenar (solo observas)</text>
+
+  <!-- Camara de Fusion -->
+  <polygon points="430,672 475,640 520,672" fill="#231320" stroke="#7a3047" stroke-width="2"/>
+  <rect x="445" y="672" width="60" height="46" fill="#1a0e16" stroke="#7a3047" stroke-width="2"/>
+  <rect x="467" y="690" width="16" height="28" fill="#0a0816"/>
+  <text x="475" y="742" text-anchor="middle" font-size="15" class="warn">Cámara de Fusión</text>
+  <text x="475" y="762" text-anchor="middle" font-size="12.5" class="warn">Merger: sacrificio</text>
+
+  <text x="350" y="852" text-anchor="middle" font-size="14.5" class="dim" font-style="italic">Es un pueblo que MIRAS.</text>
+  <text x="350" y="876" text-anchor="middle" font-size="14.5" class="dim" font-style="italic">La Torre — el juego entero — no se usa.</text>
+
+  <!-- ===================== RIGHT: OBJETIVO ===================== -->
+  <rect x="740" y="120" width="620" height="840" rx="16" fill="#0a0816" stroke="#f0c040"/>
+  <rect x="740" y="120" width="620" height="40" rx="16" fill="#221b08" stroke="#f0c040"/>
+  <text x="1050" y="147" text-anchor="middle" font-size="17" class="gold" letter-spacing="2">OBJETIVO — base para subir la Torre</text>
+
+  <!-- TOWER dominant, enterable -->
+  <ellipse cx="1025" cy="300" rx="170" ry="150" fill="url(#glow)"/>
+  <rect x="985" y="195" width="80" height="210" fill="#171029" stroke="#f0c040" stroke-width="2.5"/>
+  <rect x="979" y="186" width="92" height="14" fill="#171029" stroke="#f0c040" stroke-width="2.5"/>
+  <rect x="985" y="174" width="12" height="14" fill="#171029" stroke="#f0c040"/>
+  <rect x="1009" y="174" width="12" height="14" fill="#171029" stroke="#f0c040"/>
+  <rect x="1033" y="174" width="12" height="14" fill="#171029" stroke="#f0c040"/>
+  <rect x="1053" y="174" width="12" height="14" fill="#171029" stroke="#f0c040"/>
+  <!-- windows -->
+  <rect x="1018" y="215" width="14" height="18" fill="#f0c040" opacity="0.5"/>
+  <rect x="1018" y="255" width="14" height="18" fill="#f0c040" opacity="0.5"/>
+  <rect x="1018" y="295" width="14" height="18" fill="#f0c040" opacity="0.5"/>
+  <!-- door -->
+  <path d="M1010,405 L1010,375 Q1025,360 1040,375 L1040,405 Z" fill="#0a0816" stroke="#f0c040" stroke-width="2"/>
+  <text x="1110" y="392" font-size="14" class="gold">Piso 1 →</text>
+  <text x="1025" y="430" text-anchor="middle" font-size="16" class="gold" letter-spacing="1">TORRE  ·  ENTERABLE</text>
+  <text x="1025" y="451" text-anchor="middle" font-size="13.5" class="keep">↑ 100 pisos = la meta · el corazón del juego</text>
+
+  <!-- Altar de Invocacion (Shrine + Hada) -->
+  <polygon points="800,540 845,508 890,540" fill="#1a1330" stroke="#b080ff" stroke-width="2"/>
+  <rect x="815" y="540" width="60" height="46" fill="#140e26" stroke="#b080ff" stroke-width="2"/>
+  <circle cx="845" cy="525" r="5" fill="#f0c040" opacity="0.8"/>
+  <text x="845" y="610" text-anchor="middle" font-size="14.5" class="t">Altar de Invocación</text>
+  <text x="845" y="629" text-anchor="middle" font-size="12.5" class="dim">gacha + Hada (asistente)</text>
+
+  <!-- Posada / Refugio -->
+  <polygon points="1210,540 1255,508 1300,540" fill="#1a1330" stroke="#2e2348" stroke-width="2"/>
+  <rect x="1225" y="540" width="60" height="46" fill="#120e22" stroke="#2e2348" stroke-width="2"/>
+  <rect x="1247" y="558" width="16" height="28" fill="#0a0816"/>
+  <text x="1255" y="610" text-anchor="middle" font-size="14.5" class="t">Posada / Refugio</text>
+  <text x="1255" y="629" text-anchor="middle" font-size="12.5" class="dim">recuperar fatiga tras runs</text>
+
+  <!-- Campo de Entrenamiento -->
+  <polygon points="800,712 845,680 890,712" fill="#1a1330" stroke="#2e2348" stroke-width="2"/>
+  <rect x="815" y="712" width="60" height="46" fill="#120e22" stroke="#2e2348" stroke-width="2"/>
+  <rect x="837" y="730" width="16" height="28" fill="#0a0816"/>
+  <text x="845" y="782" text-anchor="middle" font-size="14.5" class="t">Campo de Entren.</text>
+  <text x="845" y="801" text-anchor="middle" font-size="12.5" class="dim">REFINA skills (no sube nivel)</text>
+
+  <!-- Forja / Promocion NEW -->
+  <polygon points="1210,712 1255,680 1300,712" fill="#1f1808" stroke="#f0c040" stroke-width="2"/>
+  <rect x="1225" y="712" width="60" height="46" fill="#1a1608" stroke="#f0c040" stroke-width="2"/>
+  <rect x="1247" y="730" width="16" height="28" fill="#0a0816"/>
+  <text x="1255" y="782" text-anchor="middle" font-size="14.5" class="gold">Forja / Promoción ★</text>
+  <text x="1255" y="801" text-anchor="middle" font-size="12.5" class="dim">materiales → rango → skill</text>
+
+  <!-- Tablon de Expedicion NEW -->
+  <polygon points="800,872 845,840 890,872" fill="#1f1808" stroke="#f0c040" stroke-width="2"/>
+  <rect x="815" y="872" width="60" height="46" fill="#1a1608" stroke="#f0c040" stroke-width="2"/>
+  <rect x="837" y="890" width="16" height="28" fill="#0a0816"/>
+  <text x="845" y="942" text-anchor="middle" font-size="14.5" class="gold">Tablón de Expedición ★</text>
+
+  <!-- Mazmorra diaria NEW -->
+  <polygon points="1210,872 1255,840 1300,872" fill="#1f1808" stroke="#f0c040" stroke-width="2"/>
+  <rect x="1225" y="872" width="60" height="46" fill="#1a1608" stroke="#f0c040" stroke-width="2"/>
+  <rect x="1247" y="890" width="16" height="28" fill="#0a0816"/>
+  <text x="1255" y="942" text-anchor="middle" font-size="14.5" class="gold">Mazmorra diaria ★</text>
+
+  <!-- reform note -->
+  <text x="1050" y="905" text-anchor="middle" font-size="13" class="vio">Cámara de Fusión</text>
+  <text x="1050" y="924" text-anchor="middle" font-size="13" class="vio">↳ reconvertir en Forja / Promoción</text>
+
+  <!-- bottom caption -->
+  <text x="700" y="988" text-anchor="middle" font-size="12.5" class="dim">Misma estética (3D isométrico, violetas + dorado). Cambia el PROPÓSITO: cada edificio sirve a la subida de la Torre, no a “mirar el pueblo”.</text>
+</svg>
