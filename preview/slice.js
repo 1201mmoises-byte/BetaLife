@@ -1784,7 +1784,7 @@ function tutDone(){
 // ─────────────────────────────────────────────────────────────────────────────
 const clock = new THREE.Clock();
 let worldT = 0;
-const DAY_LENGTH = 1200;    // segundos por ciclo (20 min reales = 1 día de juego)
+const DAY_LENGTH = 120;     // segundos por ciclo (2 min reales = 1 día de juego; visible en sesión)
 const START_TOD  = 0.18;    // arranca de mañana (no en lo oscuro)
 const SPOT_RADIUS = { campo:3.0, posada:1.8, plaza:2.2, shrine:1.6 };
 function spotPos(k){ const p=PLACES[k].pos; return p; }
@@ -2004,7 +2004,7 @@ let _engineAccum = 0;
 function liveTick(dt){
   if(!LIVE || !BL) return;
   _engineAccum += dt;
-  if(_engineAccum < 0.2) return;
+  if(_engineAccum < 5) return;   // 1 tick cada 5s → hambre 0 en ~7 min (~3.5 días de juego)
   _engineAccum = 0; LIVE.tick++;
   for(const h of heroes){
     const lh = h.data && h.data._live; if(!lh || !lh.alive) continue;
