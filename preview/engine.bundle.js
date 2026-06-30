@@ -1941,7 +1941,9 @@ function serializeSave(world, lastSeen = Date.now()) {
       surfaced: h.npc.lore.memories.map((m, i) => m.surfaced ? i : -1).filter((i) => i >= 0),
       bornAxes: h.bornAxes,
       inRoster: h.inRoster,
-      alive: h.alive
+      alive: h.alive,
+      level: h.npc.level,
+      floorReached: h.npc.floorReached
     })),
     expedition: world.expedition ? { partyIds: world.expedition.partyIds, floor: world.expedition.floor, returnAt: world.expedition.returnAt } : void 0
   };
@@ -1953,7 +1955,10 @@ function restoreSave(save) {
       stamps: sh.stamps,
       difficulty: save.difficulty,
       rosterFloorAtSummon: save.rosterFloor,
-      worldSeed: save.townSeed
+      worldSeed: save.townSeed,
+      level: sh.level ?? 1,
+      floorReached: sh.floorReached ?? 0,
+      isAlive: sh.alive
     });
     sh.surfaced.forEach((i) => {
       if (npc.lore.memories[i]) npc.lore.memories[i].surfaced = true;

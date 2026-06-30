@@ -2060,6 +2060,8 @@ function animate(){
 let _engineAccum = 0;
 function liveTick(dt){
   if(!LIVE || !BL) return;
+  // Expedición: resolución a ritmo de frame (misión 1:1, tiempo real) — no acotada por NEEDS_TICK.
+  if(LIVE.expedition && Date.now()/1000 >= LIVE.expedition.returnAt) resolveExpedition();
   _engineAccum += dt;
   if(_engineAccum < NEEDS_TICK) return;  // escala con DAY_LENGTH → hambre dura ~4 días de juego
   _engineAccum = 0; LIVE.tick++;
@@ -2070,7 +2072,6 @@ function liveTick(dt){
     const act = h.state==='train' ? 'train' : h.state==='rest' ? 'rest' : h.state==='eat' ? 'eat' : 'idle';
     BL.tickHeroNeeds(lh, act, 1);
   }
-  if(LIVE.expedition && Date.now()/1000 >= LIVE.expedition.returnAt) resolveExpedition();
   saveThrottled();
 }
 
@@ -2079,7 +2080,12 @@ function start(){
   document.getElementById('hud-day').firstChild.textContent = 'Día 1';
   if(HAS_SAVE){
     // Partida guardada: el pueblo RECUERDA. Restaura el roster y omite el tutorial.
-    DATA.heroes.forEach((d,i)=>{ if(d.inRoster) spawnHero(d, heroes.length); });
+    // Los héroes caídos se incluyen en el array (para el roster/display) pero no en la escena 3D.
+    DATA.heroes.forEach((d,i)=>{
+      if(!d.inRoster) return;
+      const h = spawnHero(d, heroes.length);
+      if(d.alive === false){ h.alive=false; scene.remove(h.group); }
+    });
     // Hide heroes that were inside the Tower when the page reloaded
     if(window.__pendingHiddenIds && window.__pendingHiddenIds.length){
       setTimeout(()=>{

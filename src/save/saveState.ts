@@ -24,6 +24,8 @@ export interface SavedHero {
   bornAxes: SoulAxes;
   inRoster: boolean;
   alive: boolean;
+  level: number;
+  floorReached: number;
 }
 
 export interface ExpeditionSave {
@@ -63,6 +65,8 @@ export function serializeSave(world: LiveWorld, lastSeen = Date.now()): SaveStat
       bornAxes: h.bornAxes,
       inRoster: h.inRoster,
       alive: h.alive,
+      level: h.npc.level,
+      floorReached: h.npc.floorReached,
     })),
     expedition: world.expedition
       ? { partyIds: world.expedition.partyIds, floor: world.expedition.floor, returnAt: world.expedition.returnAt }
@@ -79,6 +83,9 @@ export function restoreSave(save: SaveState): LiveWorld {
       difficulty: save.difficulty,
       rosterFloorAtSummon: save.rosterFloor,
       worldSeed: save.townSeed,
+      level: sh.level ?? 1,
+      floorReached: sh.floorReached ?? 0,
+      isAlive: sh.alive,
     });
     // re-marcar los sueños que ya habían aflorado
     sh.surfaced.forEach((i) => { if (npc.lore.memories[i]) npc.lore.memories[i].surfaced = true; });
