@@ -1,0 +1,48 @@
+[gd_resource type="Theme" load_steps=6 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/ui/kenney_fantasy_ui_borders/panel-013.png" id="1"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel"]
+texture = ExtResource("1")
+texture_margin_left = 18.0
+texture_margin_top = 18.0
+texture_margin_right = 18.0
+texture_margin_bottom = 18.0
+modulate_color = Color(0.31, 0.24, 0.16, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button_normal"]
+texture = ExtResource("1")
+texture_margin_left = 18.0
+texture_margin_top = 18.0
+texture_margin_right = 18.0
+texture_margin_bottom = 18.0
+modulate_color = Color(0.84, 0.70, 0.43, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button_hover"]
+texture = ExtResource("1")
+texture_margin_left = 18.0
+texture_margin_top = 18.0
+texture_margin_right = 18.0
+texture_margin_bottom = 18.0
+modulate_color = Color(0.95, 0.80, 0.52, 1)
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button_pressed"]
+texture = ExtResource("1")
+texture_margin_left = 18.0
+texture_margin_top = 18.0
+texture_margin_right = 18.0
+texture_margin_bottom = 18.0
+modulate_color = Color(0.55, 0.42, 0.22, 1)
+
+[resource]
+default_font_size = 16
+Button/styles/normal = SubResource("StyleBoxTexture_button_normal")
+Button/styles/hover = SubResource("StyleBoxTexture_button_hover")
+Button/styles/pressed = SubResource("StyleBoxTexture_button_pressed")
+Button/styles/focus = SubResource("StyleBoxTexture_button_hover")
+Button/colors/font_color = Color(0.16, 0.11, 0.06, 1)
+Button/colors/font_hover_color = Color(0.16, 0.11, 0.06, 1)
+Button/colors/font_pressed_color = Color(0.95, 0.90, 0.80, 1)
+Button/colors/font_focus_color = Color(0.16, 0.11, 0.06, 1)
+Panel/styles/panel = SubResource("StyleBoxTexture_panel")
+Label/colors/font_color = Color(0.90, 0.85, 0.75, 1)
