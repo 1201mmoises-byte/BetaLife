@@ -1,7 +1,7 @@
 # Installed Tooling — MCP Servers, Plugins, and Skills
 
 Snapshot of everything wired into Claude Code for this project. Last audited
-2026-07-01 (see Maintenance notes below).
+2026-07-01, updated same day across three passes (see Maintenance notes below).
 Sources: `.mcp.json` (project), `~/.claude/settings.json` and
 `~/.claude/plugins/installed_plugins.json` (user), plugin cache at
 `~/.claude/plugins/cache/`, `~/.claude.json` (user-scoped MCP servers), and
@@ -32,8 +32,12 @@ Sources: `.mcp.json` (project), `~/.claude/settings.json` and
 | `superpowers` | 6.1.0 | `claude-plugins-official` | Core skills library: TDD, systematic debugging, brainstorming→plan→subagent-driven implementation workflow, code review, git worktrees. Reinstalled at **user** scope 2026-07-01 (was accidentally project-scoped — see Maintenance notes). |
 | `remember` | 0.8.3 | `claude-plugins-official` | Continuous memory — extracts/summarizes/compresses conversations into tiered daily logs (`.remember/`). |
 | `frontend-design` | (unversioned) | `claude-plugins-official` | UI/UX design guidance for distinctive, intentional visual work. |
-| `prompt-caching` | 1.0.0 | `ercan-ermis` | Automatic Anthropic prompt caching, zero-config; ships the `prompt-caching-mcp` server. |
+| `prompt-caching` | 1.0.0 | `ercan-ermis` | Automatic Anthropic prompt caching, zero-config; ships the `prompt-caching-mcp` server. Marketplace manifest claims 1.1.1 is available, but `claude plugin update` reports 1.0.0 as already latest even after refreshing the marketplace cache — an upstream metadata/release mismatch, not fixable from this repo. |
 | `godot` | 1.2.0 | `skills` | GDScript dev patterns, GdUnit4 testing, PlayGodot automation, web/desktop export, CI/CD guidance. |
+| `claude-code-setup` | 1.0.0 | `claude-plugins-official` | Analyzes the codebase and recommends tailored Claude Code automations (hooks, skills, MCP servers, subagents). Installed 2026-07-01, not yet run. |
+| `claude-md-management` | 1.0.0 | `claude-plugins-official` | Audits/improves `CLAUDE.md` quality and captures session learnings — keeps project memory lean (serves the token/context-saving goal). Installed 2026-07-01, not yet run. |
+| `agent-sdk-dev` | (unversioned) | `claude-plugins-official` | Claude Agent SDK dev kit (Python/TS scaffolding + verifier subagents). Installed 2026-07-01 as a hedge in case Hero cognition ends up calling the Claude API at runtime rather than pure classical/GOFAI decision-making — not yet used, no architecture decision made either way. |
+| `session-report` | (unversioned) | `claude-plugins-official` | Generates an explorable HTML report of Claude Code token usage, cache efficiency, subagents, and most-expensive prompts from local `~/.claude/projects` transcripts. Zero-config, no external account. Installed 2026-07-01 as the token profiler; not yet run. |
 
 ## Skills
 
@@ -48,7 +52,16 @@ Sources: `.mcp.json` (project), `~/.claude/settings.json` and
 ### From other plugins
 - `remember:remember` — save session state for clean continuation.
 - `frontend-design:frontend-design` — visual/aesthetic direction for UI work.
+  **Scope note (2026-07-01):** BetaLife's design tooling needs are
+  Godot-internal (Control-node UI, Theme resources, scene composition) —
+  this plugin's guidance is generically useful but its mechanics assume
+  web/HTML output; don't reach for Figma/Canva/Adobe-style plugins for this
+  project even though they exist in `claude-plugins-official`.
 - `godot:godot` — Godot 4.x develop/test/build/deploy.
+- `claude-code-setup:claude-automation-recommender` — recommends hooks/skills/MCP/subagent automations tailored to this repo.
+- `claude-md-management:claude-md-improver` (+ `/revise-claude-md` command) — audits and revises `CLAUDE.md` quality.
+- `agent-sdk-dev` — `/new-sdk-app` command, plus `agent-sdk-verifier-py`/`agent-sdk-verifier-ts` subagents for Claude Agent SDK work.
+- `session-report:session-report` — token/cache-usage HTML report from local session transcripts.
 
 ### Bundled with Claude Code (built-in, no plugin)
 `update-config`, `keybindings-help`, `verify`, `code-review`, `simplify`,
@@ -72,6 +85,9 @@ mirrored into both `.agents/skills/` and `.claude/skills/`:
 | `gdUnit4` | (see `addons/gdUnit4`) | GDScript editor plugin | Test runner used by every module's test suite. |
 | `limboai` | v1.8.0 (GDExtension build tagged 4.6, forward-compatible to 4.7) | GDExtension, no `plugin.cfg` (auto-registers) | Behavior Trees + State Machines — the intended foundation for autonomous Hero decision-making/cognitive architecture. Windows-only binaries checked in (~9 MB); other platform binaries deliberately stripped from the release download to keep repo size down — re-pull from [limbonaut/limboai releases](https://github.com/limbonaut/limboai/releases) (`gdextension-4.6.zip` asset) when exporting to a new platform. |
 | `gaea` | v2.0.0-beta6 | GDScript editor plugin | Procedural world/terrain generation (noise, WFC, cellular automata graph system). **Pre-release** — Gaea's 2.0 line has never cut a stable tag as of 2026-07-01; chosen anyway since it's the actively-maintained (1.6k★), GDScript-only (easy to swap) option and no world-gen work depends on it yet. |
+| `godot-sqlite` | v4.7 release tag (2shady4u/godot-sqlite, 1.4k★) | GDExtension editor plugin (class `SQLite`) | Persistent, queryable structured storage — intended for long-term Hero memory/save-file data once an in-memory dictionary/JSON blob stops scaling (hundreds of Heroes, thousands of memories). Windows-only binaries checked in; other platforms re-pulled from the release's `bin.zip` when needed. |
+
+Considered but **not installed**: `godot-utility-ai` (Pennycook) — utility-AI scoring addon, would have complemented `limboai`'s BT/FSM layer for weighted decision-making, but last commit is April 2024 (stale, only 83★) — fails the "actively maintained" bar. Revisit if a better-maintained utility-AI addon appears, or build scoring logic directly as `limboai` BT tasks instead.
 
 New GDExtension/editor-plugin addons need one `--headless --editor --quit-after 3`
 pass (which triggers a full filesystem scan/import) before their classes are
@@ -90,6 +106,28 @@ For generic "roll a random world-content layout" needs (terrain, dungeons),
 use the `gaea` addon above rather than hand-rolling — it doesn't touch
 `BLSeeder`'s determinism guarantees since it's used for spatial content
 generation, not gameplay-affecting rolls.
+
+### Mission/world generation — already designed in the TS engine, not yet ported
+
+"Randomize the mission's world/structure/objective by difficulty" is **not**
+a tooling gap — it's a fully-specified system in the TS engine, not yet
+ported, following the same pattern as `gacha.ts`:
+
+- `town.ts` — the mission/world container. Rolls **one** `difficulty`
+  (1-1000) per seed via `rollDifficulty()` (already ported, `BLGacha.roll_difficulty`).
+- `world.ts` — generates the "Lost World" cataclysm lore per seed (the
+  mission's narrative objective/mystery layer).
+- `monsters.ts` — generates each floor's encounter, scaled by
+  `difficulty × floor × rosterFloor` (the mission's structure layer).
+- `combat.ts`, `equipment.ts`, `experience.ts`/`progression.ts` — resolve a
+  floor, drop loot, feed results back into the Hero.
+- `expedition.ts` — orchestrates the above into one deterministic "run a
+  floor" call.
+
+Next milestone candidate: port `town`, `world`, `monsters`, `combat`,
+`equipment`, `progression`/`experience`, `expedition` (plus `stats.ts`/`skills.ts`
+as dependencies) — same TDD + golden-vector workflow as `gacha.gd`. Scope and
+plan properly before starting; this is roughly Milestone-1-sized or larger.
 
 ## Deliberately not installed
 
@@ -142,12 +180,24 @@ Fixed 2026-07-01 (second pass — AI-architecture tooling):
   verified — the engine's actual weighted-randomization system, in place of a
   generic ad-hoc utility.
 
+Fixed 2026-07-01 (third pass — Claude Code meta-tooling + persistence):
+- Installed `claude-code-setup`, `claude-md-management`, `agent-sdk-dev`,
+  `session-report` plugins (user scope) — see Plugins table above.
+- Installed `godot-sqlite` addon for persistent Hero memory/save storage.
+- Confirmed (via `gh` + web research) that `godot-utility-ai` is stale and
+  should not be installed; `feature-dev`/`code-review`/`code-modernization`
+  marketplace plugins were considered for "multi-agent" tooling and rejected
+  as duplicates of `superpowers` / the bundled `code-review` skill / not
+  applicable (no legacy code here).
+- Identified that mission/world/difficulty randomization is already designed
+  in the TS engine (`town.ts`/`world.ts`/`monsters.ts`/`expedition.ts` etc.)
+  — see the "Mission/world generation" note above. No new tooling needed;
+  it's a porting task for a future milestone.
+
 Still **not fixed** (needs a manual step, low risk either way):
-- `prompt-caching` plugin is one minor version behind its marketplace
-  (1.0.0 installed vs 1.1.1 available). This is a Claude Code plugin-cache
-  update, not a repo file — run `/plugin update prompt-caching` (or reinstall
-  via the marketplace) from an interactive session; not something this
-  session can safely hand-edit from `~/.claude/plugins/cache`.
+- `prompt-caching` plugin version mismatch — see note in the Plugins table
+  above (attempted twice via `claude plugin update` + marketplace refresh,
+  reports already-latest; likely an upstream metadata issue, not ours to fix).
 
 Future recommendation:
 - Before designing any further AI Hero cognitive architecture (memory,

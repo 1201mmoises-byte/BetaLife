@@ -95,7 +95,19 @@
       "Bash(\"/c/Users/Noobi/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_win64_console.exe\" --headless --path . --script \"C:\\\\Users\\\\Noobi\\\\.claude\\\\jobs\\\\70d1dfc5\\\\tmp\\\\verify_limboai.gd\")",
       "Bash(\"/c/Users/Noobi/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_win64_console.exe\" --headless --path . --verbose --script \"C:\\\\Users\\\\Noobi\\\\.claude\\\\jobs\\\\70d1dfc5\\\\tmp\\\\verify_limboai.gd\")",
       "Bash(\"/c/Users/Noobi/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_win64_console.exe\" --headless --path . --editor --quit-after 3)",
-      "Bash(/c/Program Files/GitHub CLI/gh.exe release *)"
+      "Bash(/c/Program Files/GitHub CLI/gh.exe release *)",
+      "Bash('/c/Program Files/GitHub CLI/gh.exe' repo view 2shady4u/godot-sqlite --json stargazerCount,pushedAt,isArchived,licenseInfo)",
+      "Bash('/c/Program Files/GitHub CLI/gh.exe' release list --repo 2shady4u/godot-sqlite --limit 3)",
+      "Bash('/c/Program Files/GitHub CLI/gh.exe' repo view Pennycook/godot-utility-ai --json stargazerCount,pushedAt,isArchived,licenseInfo)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\Noobi\\\\.claude\\\\jobs\\\\70d1dfc5\\\\tmp\\\\gdsqlite\")",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" release download v4.7 --repo 2shady4u/godot-sqlite --pattern \"bin.zip\")",
+      "Bash(unzip -q bin.zip -d extracted)",
+      "Bash(cp -r 'C:\\\\Users\\\\Noobi\\\\.claude\\\\jobs\\\\70d1dfc5\\\\tmp\\\\gdsqlite/src/demo/addons/godot-sqlite' addons/)",
+      "Bash(rm -rf addons/godot-sqlite/bin/libgdsqlite.macos.template_debug.framework addons/godot-sqlite/bin/libgdsqlite.macos.template_release.framework)",
+      "Bash(cp 'C:\\\\Users\\\\Noobi\\\\.claude\\\\jobs\\\\70d1dfc5\\\\tmp\\\\gdsqlite/extracted/bin/libgdsqlite.windows.template_debug.x86_64.dll' addons/godot-sqlite/bin/)",
+      "Bash(cp 'C:\\\\Users\\\\Noobi\\\\.claude\\\\jobs\\\\70d1dfc5\\\\tmp\\\\gdsqlite/extracted/bin/libgdsqlite.windows.template_release.x86_64.dll' addons/godot-sqlite/bin/)",
+      "Bash(\"/c/Users/Noobi/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_win64_console.exe\" --headless --path . --script \"C:\\\\Users\\\\Noobi\\\\.claude\\\\jobs\\\\70d1dfc5\\\\tmp\\\\verify_sqlite.gd\")",
+      "Bash(\"/c/Users/Noobi/Downloads/Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_win64_console.exe\" --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --add res://tests --ignoreHeadlessMode --continue)"
     ]
   },
   "enabledMcpjsonServers": [
