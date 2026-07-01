@@ -6,10 +6,26 @@ tool-agnostic project conventions (folder layout, code style, testing).
 ## Engine
 
 - Godot **4.7** (standard/GDScript build, not Mono/.NET), installed at
-  `C:\Users\Noobi\Downloads\Godot_v4.7-stable_win64.exe\Godot_v4.7-stable_win64.exe`
+  `C:\Users\Noobi\OneDrive\Documents\GodotGame\Godot_v4.7-stable_win64.exe\Godot_v4.7-stable_win64.exe`
   (note: the zip extracted into a folder of the same name as the exe — the
-  binaries are one level deeper than the top-level path suggests).
+  binaries are one level deeper than the top-level path suggests; the folder
+  lives inside the repo root for convenience but is gitignored, never committed).
+  Also available as the `GODOT_BIN` user environment variable.
 - Headless/CLI runs: `Godot_v4.7-stable_win64_console.exe --headless --path .`
+  — `run/main_scene` is set (`scenes/dev/dev_panel.tscn`), so this now launches
+  rather than erroring. For tests, still use the GdUnit4 runner (see
+  `docs/superpowers/plans/2026-06-30-engine-port-milestone-1.md` and the
+  `gdUnit4` addon entry below) — it runs headlessly via `-s` script mode
+  independent of the main scene.
+- First visible scene: `scenes/dev/dev_panel.tscn` + `scripts/dev/dev_panel.gd`
+  — a dev-only "Hero Generator" panel exercising the ported engine (seeder →
+  archetypes → axes → name_generator → gacha), styled with
+  `assets/ui/betalife_theme.tres` (CC0 Kenney Fantasy UI Borders, tinted via
+  `StyleBoxTexture.modulate_color`). Set as the project's global GUI theme
+  (`[gui] theme/custom` in `project.godot`), so future scenes inherit it
+  automatically. Supports `BL_DEV_SCREENSHOT=<path>` env var to self-capture
+  a PNG and quit — useful for headless/background-session visual verification
+  where OS-level screen capture isn't available.
 - Editor plugins (LimboAI, Gaea) need at least one `--headless --editor --quit-after 3`
   pass after being added before their classes/UIDs are picked up by other
   headless invocations (test runner, scripts) — see `docs/TOOLING.md`.

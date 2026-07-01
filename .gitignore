@@ -22,6 +22,13 @@ mono_crash.*.json
 # Local git worktrees (scratch isolation for agent-driven implementation work)
 .worktrees/
 
+# Godot engine binary (not project source — lives in the repo root for convenience,
+# never committed; see CLAUDE.md for the canonical path)
+/Godot_v4.7-stable_win64.exe/
+
+# Office lock files
+~$*
+
 # GdUnit4 generated test reports
 reports/
 
