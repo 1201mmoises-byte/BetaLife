@@ -65,6 +65,32 @@ mirrored into both `.agents/skills/` and `.claude/skills/`:
 `firebase-remote-config-basics`, `firebase-security-rules-auditor`,
 `xcode-project-setup`
 
+## Godot addons (`addons/`, project-scoped, checked into the repo)
+
+| Addon | Version | Type | Purpose |
+|---|---|---|---|
+| `gdUnit4` | (see `addons/gdUnit4`) | GDScript editor plugin | Test runner used by every module's test suite. |
+| `limboai` | v1.8.0 (GDExtension build tagged 4.6, forward-compatible to 4.7) | GDExtension, no `plugin.cfg` (auto-registers) | Behavior Trees + State Machines — the intended foundation for autonomous Hero decision-making/cognitive architecture. Windows-only binaries checked in (~9 MB); other platform binaries deliberately stripped from the release download to keep repo size down — re-pull from [limbonaut/limboai releases](https://github.com/limbonaut/limboai/releases) (`gdextension-4.6.zip` asset) when exporting to a new platform. |
+| `gaea` | v2.0.0-beta6 | GDScript editor plugin | Procedural world/terrain generation (noise, WFC, cellular automata graph system). **Pre-release** — Gaea's 2.0 line has never cut a stable tag as of 2026-07-01; chosen anyway since it's the actively-maintained (1.6k★), GDScript-only (easy to swap) option and no world-gen work depends on it yet. |
+
+New GDExtension/editor-plugin addons need one `--headless --editor --quit-after 3`
+pass (which triggers a full filesystem scan/import) before their classes are
+visible to other headless invocations (test runner, `--script` runs) — a bare
+`--headless --script foo.gd` run will silently fail to see newly-added
+GDExtension classes or new `.gd` files (missing `.uid` sidecar) otherwise.
+
+## Randomization / procedural systems (`scripts/engine/`, ported from the TS engine)
+
+| Module | Status | Purpose |
+|---|---|---|
+| `seeder.gd` (`BLSeeder`) | Ported, Milestone 1 | Bit-identical mulberry32 PRNG + FNV-1a seed hash. |
+| `gacha.gd` (`BLGacha`) | Ported 2026-07-01 | Weighted star-rating (1★-5★) rolls for Hero summoning — difficulty-scaled probability curve with a roster-progress bonus that lerps between "hard world, suppressed high tiers" and "easy world, boosted high tiers, 25% 5★ ceiling." Golden-vector-verified against `src/engine/gacha.ts` (see `scripts/exportGoldenVectors.ts`'s `gacha` section in the TS repo). |
+
+For generic "roll a random world-content layout" needs (terrain, dungeons),
+use the `gaea` addon above rather than hand-rolling — it doesn't touch
+`BLSeeder`'s determinism guarantees since it's used for spatial content
+generation, not gameplay-affecting rolls.
+
 ## Deliberately not installed
 
 Per `CLAUDE.md`:
@@ -99,26 +125,35 @@ Per `CLAUDE.md`:
 - No CI (`.github/workflows`) and no `export_presets.cfg` yet — appropriate
   for now, since no scenes/exports exist in this repo yet either.
 
-## Maintenance notes (from 2026-07-01 audit)
+## Maintenance notes (from 2026-07-01 audit, updated same day)
 
-Fixed this session:
+Fixed 2026-07-01 (first pass):
 - `superpowers` plugin scope corrected from project-only to user-scoped.
 - GitHub remote configured; project pushed to `godot-port` branch.
 - `gh` CLI installed and authenticated.
 
-Flagged but **not yet fixed** (needs a decision, low risk either way):
-- `CLAUDE.md`'s "No Firebase project is assigned yet" line is stale
-  (`betalife-223a1` is assigned) — not corrected this session.
-- `.gitignore` has no secrets guard-rail (`.env`, `*.pem`,
-  `*serviceaccount*.json`) — nothing sensitive is tracked yet, but there's
-  no proactive protection before Firebase Auth/Firestore work begins.
+Fixed 2026-07-01 (second pass — AI-architecture tooling):
+- `CLAUDE.md`'s stale Firebase line and stale Godot install path both corrected.
+- `.gitignore` secrets guard-rail added (`.env`, `*.pem`, `*.key`,
+  `*serviceaccount*.json`, `firebase-debug.log`).
+- `limboai` and `gaea` addons installed (see table above) as the Godot-native
+  foundation for Hero decision-making and world-content generation.
+- `gacha.ts` ported to `scripts/engine/gacha.gd` (`BLGacha`) via TDD, golden-vector
+  verified — the engine's actual weighted-randomization system, in place of a
+  generic ad-hoc utility.
+
+Still **not fixed** (needs a manual step, low risk either way):
 - `prompt-caching` plugin is one minor version behind its marketplace
-  (1.0.0 installed vs 1.1.1 available).
+  (1.0.0 installed vs 1.1.1 available). This is a Claude Code plugin-cache
+  update, not a repo file — run `/plugin update prompt-caching` (or reinstall
+  via the marketplace) from an interactive session; not something this
+  session can safely hand-edit from `~/.claude/plugins/cache`.
 
 Future recommendation:
-- Before designing any AI Hero cognitive architecture (memory, perception,
-  planning, decision-making) for this Godot project, read the TS engine's
-  own design docs (`docs/`, `CLAUDE.md`, `.superpowers/` in the
-  `BetaLife-main` repo/`main` branch) — that design likely already exists
-  and should be ported/adapted rather than reinvented. This was in progress
-  as of this audit; see the project's own session history for the outcome.
+- Before designing any further AI Hero cognitive architecture (memory,
+  perception, planning, social/emergent behavior) for this Godot project,
+  read the TS engine's own design docs (`docs/`, `CLAUDE.md`, `.superpowers/`
+  in the `BetaLife-main` repo/`main` branch) and continue porting its engine
+  modules (following the `gacha.ts` example above) rather than inventing new
+  systems from scratch — `limboai`'s Behavior Trees/State Machines are the
+  Godot-side execution layer once that design is ported.

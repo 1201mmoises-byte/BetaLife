@@ -6,8 +6,26 @@ tool-agnostic project conventions (folder layout, code style, testing).
 ## Engine
 
 - Godot **4.7** (standard/GDScript build, not Mono/.NET), installed at
-  `C:\Users\Noobi\Godot\Godot_v4.7-stable_win64.exe`.
+  `C:\Users\Noobi\Downloads\Godot_v4.7-stable_win64.exe\Godot_v4.7-stable_win64.exe`
+  (note: the zip extracted into a folder of the same name as the exe — the
+  binaries are one level deeper than the top-level path suggests).
 - Headless/CLI runs: `Godot_v4.7-stable_win64_console.exe --headless --path .`
+- Editor plugins (LimboAI, Gaea) need at least one `--headless --editor --quit-after 3`
+  pass after being added before their classes/UIDs are picked up by other
+  headless invocations (test runner, scripts) — see `docs/TOOLING.md`.
+
+## Godot addons (`addons/`, project-scoped)
+
+- **`gdUnit4`** — test runner (see `docs/superpowers/plans/2026-06-30-engine-port-milestone-1.md`
+  for the exact headless invocation).
+- **`limboai`** — Behavior Trees + State Machines (GDExtension), the intended
+  foundation for Hero decision-making/cognitive architecture. Windows-only
+  binaries checked in for now (`compatibility_minimum = "4.2"`, forward-compatible
+  with 4.7); re-pull other platform binaries from the release when exporting
+  to a new target.
+- **`gaea`** (v2.0.0-beta6, pre-release — no stable 2.0 cut exists yet as of
+  2026-07-01) — procedural world/terrain generation. GDScript-only, low risk
+  to swap out later if the beta proves unstable.
 
 ## MCP servers (project-scoped, `.mcp.json`)
 
@@ -25,9 +43,8 @@ tool-agnostic project conventions (folder layout, code style, testing).
   Hosting, Cloud Messaging. **No Analytics support** — the official server doesn't
   expose Analytics tools (no MCP alternative does either, as of this setup).
   Already authenticated via the Firebase CLI login on this machine
-  (`1201m.moises@gmail.com`). **No Firebase project is assigned to this game
-  yet** — run `firebase use --add` from this directory once you've created/chosen
-  a project.
+  (`1201m.moises@gmail.com`). Project assigned: `betalife-223a1` (`.firebaserc`);
+  only Hosting is configured so far.
 
 ## MCP servers (user-scoped, available in every project)
 

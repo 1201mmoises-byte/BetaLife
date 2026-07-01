@@ -24,3 +24,12 @@ mono_crash.*.json
 
 # GdUnit4 generated test reports
 reports/
+
+# Secrets — never commit these
+.env
+.env.*
+*.pem
+*.key
+*serviceaccount*.json
+*service-account*.json
+firebase-debug.log
