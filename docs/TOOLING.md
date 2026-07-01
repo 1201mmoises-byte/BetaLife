@@ -78,6 +78,40 @@ mirrored into both `.agents/skills/` and `.claude/skills/`:
 `firebase-remote-config-basics`, `firebase-security-rules-auditor`,
 `xcode-project-setup`
 
+### Project-authored (this repo only) — the multi-skill dev-team architecture
+
+Authored 2026-07-01, mirrored into both `.claude/skills/` and `.agents/skills/`
+(same pattern as the vendored Firebase skills above). Designed to cover
+BetaLife's actual gaps rather than a generic org chart — see
+`docs/superpowers/plans/` for the design rationale if a plan doc was saved,
+or the conversation that produced them. Deliberately **4 skills, not 8**:
+skills can't enforce authority over each other at runtime (they're all just
+context injected into one agent), so "collaboration" below means documented
+consultation order, not enforced hierarchy. Rejected candidates (Godot/Game
+Design/Performance/Backend/QA specialists) were redundant with the `godot`
+plugin skill, the vendored `firebase-*` skills, or had no BetaLife-specific
+content yet to encode — see the conversation for the full reasoning per
+candidate.
+
+| Skill | Purpose | Owns | Defers to |
+|---|---|---|---|
+| `betalife-architect` | Roadmap router — not a decision-maker. | Sub-project dependency order (both tracks), two-repo relationship, doc routing map. | `betalife-ai-architecture` / `betalife-engine-port` for domain specifics. |
+| `betalife-ai-architecture` | Living AI Architecture constraints. | Three-tier simulation fidelity, 1:3 time dilation, engine-agnostic-core pattern, Perception→Memory→Cognition→Social→Communication→Daily-life sequencing. Flags the undecided classical-vs-LLM cognition question rather than presuming an answer. | `betalife-engine-port` for anything that's actually a TS port; `limboai` addon for BT/FSM execution once a design is ready. |
+| `betalife-engine-port` | TS→GDScript porting methodology (proven across 6 modules, 31/31 tests). | Determinism rules (`seeder.gd`, 32-bit wraparound, RNG call-order), golden-vector workflow, 1:1 module mapping, TDD ordering. | `godot:godot` for generic GdUnit4 mechanics; `betalife-ai-architecture` for logic with no TS precedent. |
+| `betalife-docs` | Doc-drift checkpoint (routing only). | Which file gets a given change (`TOOLING.md`/specs/`AGENTS.md`/`CLAUDE.md`). | `claude-md-management` plugin for actual CLAUDE.md quality auditing — not duplicated here. |
+
+Why skills instead of expanding `CLAUDE.md`/`AGENTS.md`: those load in full
+on every turn; skills load conditionally when their description matches the
+task, which matters given how much BetaLife-specific architecture detail
+exists (token-optimization goal from the original environment audit).
+
+Verification note: these are **Reference-type** skills (project facts and
+routing, not discipline rules), so they were checked with a lighter
+retrieval self-check (can a realistic question be answered correctly from
+the skill alone?) rather than the full adversarial pressure-testing
+`superpowers:writing-skills` prescribes for discipline-enforcing skills like
+TDD — that apparatus doesn't fit static reference content.
+
 ## Godot addons (`addons/`, project-scoped, checked into the repo)
 
 | Addon | Version | Type | Purpose |
