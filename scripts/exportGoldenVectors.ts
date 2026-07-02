@@ -142,7 +142,10 @@ const CENTER_AXES: SoulAxes = AXIS_KEYS.reduce((acc, key) => {
 }, {} as SoulAxes);
 
 // A few mild axes (|v-0.5| in [0.15, 0.30)) — exercises the "mild" cue tier.
-const MILD_AXES: SoulAxes = { ...CENTER_AXES, caution: 0.35, warmth: 0.62, optimism: 0.38 };
+// Distances 0.17/0.18/0.20 sit clearly inside the band (review fix: the earlier
+// 0.35/0.62/0.38 left warmth+optimism at dist 0.12, below T_MILD=0.15, so only
+// caution produced a cue and the multi-cue mild path went untested).
+const MILD_AXES: SoulAxes = { ...CENTER_AXES, caution: 0.33, warmth: 0.68, optimism: 0.30 };
 
 // Strong extremes on both poles (|v-0.5| >= 0.30) — exercises the "strong" tier,
 // with some axes pinned below 0.5 (low pole) and others above (high pole).
