@@ -1279,5 +1279,1588 @@
         "1000:100": 1
       }
     }
+  },
+  "needs": {
+    "initial": {
+      "world-alpha:1001": {
+        "hambre": 0.7851,
+        "descanso": 0.9013,
+        "energia": 0.7825,
+        "health": 0.9039
+      },
+      "world-alpha:1002": {
+        "hambre": 0.8309,
+        "descanso": 0.8559,
+        "energia": 0.8092,
+        "health": 0.8502
+      },
+      "world-alpha:1003": {
+        "hambre": 0.8542,
+        "descanso": 0.8805,
+        "energia": 0.8405,
+        "health": 0.9139
+      },
+      "golden-seed-A": {
+        "hambre": 0.798,
+        "descanso": 0.7773,
+        "energia": 0.8862,
+        "health": 0.9405
+      },
+      "golden-seed-B": {
+        "hambre": 0.825,
+        "descanso": 0.8032,
+        "energia": 0.8675,
+        "health": 0.8509
+      },
+      "": {
+        "hambre": 0.841,
+        "descanso": 0.9074,
+        "energia": 0.7985,
+        "health": 0.9985
+      }
+    },
+    "ticks": {
+      "world-alpha:1001": {
+        "initial": {
+          "hambre": 0.7851,
+          "descanso": 0.9013,
+          "energia": 0.7825,
+          "health": 0.9039
+        },
+        "sequence": {
+          "idle": [
+            {
+              "ticks": 1,
+              "needs": {
+                "hambre": 0.7744,
+                "descanso": 0.8924,
+                "energia": 0.7753,
+                "health": 0.9072
+              }
+            },
+            {
+              "ticks": 20,
+              "needs": {
+                "hambre": 0.5705,
+                "descanso": 0.7225,
+                "energia": 0.6394,
+                "health": 0.9702
+              }
+            },
+            {
+              "ticks": 60,
+              "needs": {
+                "hambre": 0.1413,
+                "descanso": 0.3648,
+                "energia": 0.3533,
+                "health": 0.9601
+              }
+            },
+            {
+              "ticks": 120,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -0.0759,
+                "health": 0.2427
+              }
+            },
+            {
+              "ticks": 200,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -0.6482,
+                "health": 0
+              }
+            }
+          ],
+          "rest": [
+            {
+              "ticks": 1,
+              "needs": {
+                "hambre": 0.7744,
+                "descanso": 0.9566,
+                "energia": 0.8488,
+                "health": 0.9072
+              }
+            },
+            {
+              "ticks": 20,
+              "needs": {
+                "hambre": 0.5705,
+                "descanso": 1,
+                "energia": 1,
+                "health": 0.9702
+              }
+            },
+            {
+              "ticks": 60,
+              "needs": {
+                "hambre": 0.1413,
+                "descanso": 1,
+                "energia": 1,
+                "health": 0.9601
+              }
+            },
+            {
+              "ticks": 120,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": 1,
+                "energia": 1,
+                "health": 0.4315
+              }
+            },
+            {
+              "ticks": 200,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": 1,
+                "energia": 1,
+                "health": 0
+              }
+            }
+          ],
+          "eat": [
+            {
+              "ticks": 1,
+              "needs": {
+                "hambre": 0.9399,
+                "descanso": 0.8924,
+                "energia": 0.7753,
+                "health": 0.9072
+              }
+            },
+            {
+              "ticks": 20,
+              "needs": {
+                "hambre": 1,
+                "descanso": 0.7225,
+                "energia": 0.6394,
+                "health": 0.9702
+              }
+            },
+            {
+              "ticks": 60,
+              "needs": {
+                "hambre": 1,
+                "descanso": 0.3648,
+                "energia": 0.3533,
+                "health": 1
+              }
+            },
+            {
+              "ticks": 120,
+              "needs": {
+                "hambre": 1,
+                "descanso": -0.3,
+                "energia": -0.0759,
+                "health": 0.5636
+              }
+            },
+            {
+              "ticks": 200,
+              "needs": {
+                "hambre": 1,
+                "descanso": -0.3,
+                "energia": -0.6482,
+                "health": 0
+              }
+            }
+          ],
+          "work": [
+            {
+              "ticks": 1,
+              "needs": {
+                "hambre": 0.7722,
+                "descanso": 0.8888,
+                "energia": 0.7725,
+                "health": 0.9072
+              }
+            },
+            {
+              "ticks": 20,
+              "needs": {
+                "hambre": 0.5275,
+                "descanso": 0.6509,
+                "energia": 0.5822,
+                "health": 0.9702
+              }
+            },
+            {
+              "ticks": 60,
+              "needs": {
+                "hambre": -0.1421,
+                "descanso": -0.0001,
+                "energia": 0.1816,
+                "health": 0.8908
+              }
+            },
+            {
+              "ticks": 120,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -0.4193,
+                "health": 0
+              }
+            },
+            {
+              "ticks": 200,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -1,
+                "health": 0
+              }
+            }
+          ],
+          "train": [
+            {
+              "ticks": 1,
+              "needs": {
+                "hambre": 0.7701,
+                "descanso": 0.8834,
+                "energia": 0.7682,
+                "health": 0.9072
+              }
+            },
+            {
+              "ticks": 20,
+              "needs": {
+                "hambre": 0.4847,
+                "descanso": 0.5436,
+                "energia": 0.4964,
+                "health": 0.9636
+              }
+            },
+            {
+              "ticks": 60,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -0.0759,
+                "health": 0.6794
+              }
+            },
+            {
+              "ticks": 120,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -0.9343,
+                "health": 0
+              }
+            },
+            {
+              "ticks": 200,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -1,
+                "health": 0
+              }
+            }
+          ],
+          "fight": [
+            {
+              "ticks": 1,
+              "needs": {
+                "hambre": 0.7701,
+                "descanso": 0.8781,
+                "energia": 0.7639,
+                "health": 0.9072
+              }
+            },
+            {
+              "ticks": 20,
+              "needs": {
+                "hambre": 0.4847,
+                "descanso": 0.4364,
+                "energia": 0.4105,
+                "health": 0.9603
+              }
+            },
+            {
+              "ticks": 60,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -0.3335,
+                "health": 0.5404
+              }
+            },
+            {
+              "ticks": 120,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -1,
+                "health": 0
+              }
+            },
+            {
+              "ticks": 200,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -1,
+                "health": 0
+              }
+            }
+          ]
+        }
+      },
+      "golden-seed-A": {
+        "initial": {
+          "hambre": 0.798,
+          "descanso": 0.7773,
+          "energia": 0.8862,
+          "health": 0.9405
+        },
+        "sequence": {
+          "idle": [
+            {
+              "ticks": 1,
+              "needs": {
+                "hambre": 0.7856,
+                "descanso": 0.7669,
+                "energia": 0.8779,
+                "health": 0.9434
+              }
+            },
+            {
+              "ticks": 20,
+              "needs": {
+                "hambre": 0.5493,
+                "descanso": 0.57,
+                "energia": 0.7204,
+                "health": 0.9983
+              }
+            },
+            {
+              "ticks": 60,
+              "needs": {
+                "hambre": 0.0519,
+                "descanso": 0.1555,
+                "energia": 0.3888,
+                "health": 0.96
+              }
+            },
+            {
+              "ticks": 120,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -0.1086,
+                "health": 0.1338
+              }
+            },
+            {
+              "ticks": 200,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -0.7718,
+                "health": 0
+              }
+            }
+          ],
+          "rest": [
+            {
+              "ticks": 1,
+              "needs": {
+                "hambre": 0.7856,
+                "descanso": 0.8255,
+                "energia": 0.944,
+                "health": 0.9434
+              }
+            },
+            {
+              "ticks": 20,
+              "needs": {
+                "hambre": 0.5493,
+                "descanso": 1,
+                "energia": 1,
+                "health": 0.9983
+              }
+            },
+            {
+              "ticks": 60,
+              "needs": {
+                "hambre": 0.0519,
+                "descanso": 1,
+                "energia": 1,
+                "health": 0.96
+              }
+            },
+            {
+              "ticks": 120,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": 1,
+                "energia": 1,
+                "health": 0.3328
+              }
+            },
+            {
+              "ticks": 200,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": 1,
+                "energia": 1,
+                "health": 0
+              }
+            }
+          ],
+          "eat": [
+            {
+              "ticks": 1,
+              "needs": {
+                "hambre": 0.9329,
+                "descanso": 0.7669,
+                "energia": 0.8779,
+                "health": 0.9434
+              }
+            },
+            {
+              "ticks": 20,
+              "needs": {
+                "hambre": 1,
+                "descanso": 0.57,
+                "energia": 0.7204,
+                "health": 0.9983
+              }
+            },
+            {
+              "ticks": 60,
+              "needs": {
+                "hambre": 1,
+                "descanso": 0.1555,
+                "energia": 0.3888,
+                "health": 0.972
+              }
+            },
+            {
+              "ticks": 120,
+              "needs": {
+                "hambre": 1,
+                "descanso": -0.3,
+                "energia": -0.1086,
+                "health": 0.4045
+              }
+            },
+            {
+              "ticks": 200,
+              "needs": {
+                "hambre": 1,
+                "descanso": -0.3,
+                "energia": -0.7718,
+                "health": 0
+              }
+            }
+          ],
+          "work": [
+            {
+              "ticks": 1,
+              "needs": {
+                "hambre": 0.7831,
+                "descanso": 0.7628,
+                "energia": 0.8746,
+                "health": 0.9434
+              }
+            },
+            {
+              "ticks": 20,
+              "needs": {
+                "hambre": 0.4996,
+                "descanso": 0.4872,
+                "energia": 0.6541,
+                "health": 0.9954
+              }
+            },
+            {
+              "ticks": 60,
+              "needs": {
+                "hambre": -0.2465,
+                "descanso": -0.2382,
+                "energia": 0.1899,
+                "health": 0.8563
+              }
+            },
+            {
+              "ticks": 120,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -0.5065,
+                "health": 0
+              }
+            },
+            {
+              "ticks": 200,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -1,
+                "health": 0
+              }
+            }
+          ],
+          "train": [
+            {
+              "ticks": 1,
+              "needs": {
+                "hambre": 0.7806,
+                "descanso": 0.7566,
+                "energia": 0.8696,
+                "health": 0.9434
+              }
+            },
+            {
+              "ticks": 20,
+              "needs": {
+                "hambre": 0.4498,
+                "descanso": 0.3628,
+                "energia": 0.5546,
+                "health": 0.9781
+              }
+            },
+            {
+              "ticks": 60,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -0.1086,
+                "health": 0.6083
+              }
+            },
+            {
+              "ticks": 120,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -1,
+                "health": 0
+              }
+            },
+            {
+              "ticks": 200,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -1,
+                "health": 0
+              }
+            }
+          ],
+          "fight": [
+            {
+              "ticks": 1,
+              "needs": {
+                "hambre": 0.7806,
+                "descanso": 0.7504,
+                "energia": 0.8646,
+                "health": 0.9434
+              }
+            },
+            {
+              "ticks": 20,
+              "needs": {
+                "hambre": 0.4498,
+                "descanso": 0.2385,
+                "energia": 0.4551,
+                "health": 0.9634
+              }
+            },
+            {
+              "ticks": 60,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -0.4071,
+                "health": 0.4788
+              }
+            },
+            {
+              "ticks": 120,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -1,
+                "health": 0
+              }
+            },
+            {
+              "ticks": 200,
+              "needs": {
+                "hambre": -0.3,
+                "descanso": -0.3,
+                "energia": -1,
+                "health": 0
+              }
+            }
+          ]
+        }
+      }
+    },
+    "statusCases": [
+      {
+        "label": "full",
+        "needs": {
+          "hambre": 1,
+          "descanso": 1,
+          "energia": 1,
+          "health": 1
+        },
+        "status": [
+          "se le ve entero"
+        ],
+        "debilidad": {
+          "hambre": false,
+          "descanso": false,
+          "salud": false
+        },
+        "critical": null
+      },
+      {
+        "label": "mild_hunger_tired",
+        "needs": {
+          "hambre": 0.4,
+          "descanso": 0.45,
+          "energia": 0.5,
+          "health": 0.9
+        },
+        "status": [
+          "anda algo cansado",
+          "le vendría bien comer"
+        ],
+        "debilidad": {
+          "hambre": false,
+          "descanso": false,
+          "salud": false
+        },
+        "critical": null
+      },
+      {
+        "label": "debilidad_all",
+        "needs": {
+          "hambre": 0.2,
+          "descanso": 0.25,
+          "energia": 0.1,
+          "health": 0.25
+        },
+        "status": [
+          "se le ve agotado, arrastra los pies",
+          "está hambriento, le falla el cuerpo",
+          "sin energía",
+          "se le ve débil, como enfermo"
+        ],
+        "debilidad": {
+          "hambre": true,
+          "descanso": true,
+          "salud": true
+        },
+        "critical": null
+      },
+      {
+        "label": "critical_hambre_descanso",
+        "needs": {
+          "hambre": -0.1,
+          "descanso": -0.05,
+          "energia": -0.5,
+          "health": 0.05
+        },
+        "status": [
+          "al borde del colapso por agotamiento extremo",
+          "se muere de hambre, en estado crítico",
+          "agotado sin fuerza para nada",
+          "al límite — podría caer en cualquier momento"
+        ],
+        "debilidad": {
+          "hambre": true,
+          "descanso": true,
+          "salud": true
+        },
+        "critical": null
+      },
+      {
+        "label": "collapse",
+        "needs": {
+          "hambre": 0.5,
+          "descanso": 0.5,
+          "energia": 0.5,
+          "health": 0
+        },
+        "status": [
+          "al límite — podría caer en cualquier momento"
+        ],
+        "debilidad": {
+          "hambre": false,
+          "descanso": false,
+          "salud": true
+        },
+        "critical": "collapse"
+      }
+    ]
+  },
+  "behavior": {
+    "world-alpha:1001": {
+      "allCenter": {
+        "readBehavior": [],
+        "firstImpression": "No hay nada inmediatamente llamativo en cómo se mueve."
+      },
+      "mild": {
+        "readBehavior": [
+          "A veces cruza un umbral sin mirar lo que hay detrás."
+        ],
+        "firstImpression": "A veces cruza un umbral sin mirar lo que hay detrás."
+      },
+      "strongBothPoles": {
+        "readBehavior": [
+          "Cuenta las monedas dos veces aunque se las dé un amigo.",
+          "Espera a que la tormenta pase antes de moverse.",
+          "Pide perdón por ocupar espacio."
+        ],
+        "firstImpression": "Cuenta las monedas dos veces aunque se las dé un amigo. Espera a que la tormenta pase antes de moverse."
+      }
+    },
+    "world-alpha:1002": {
+      "allCenter": {
+        "readBehavior": [],
+        "firstImpression": "No hay nada inmediatamente llamativo en cómo se mueve."
+      },
+      "mild": {
+        "readBehavior": [
+          "A veces cruza un umbral sin mirar lo que hay detrás."
+        ],
+        "firstImpression": "A veces cruza un umbral sin mirar lo que hay detrás."
+      },
+      "strongBothPoles": {
+        "readBehavior": [
+          "Cuenta las monedas dos veces aunque se las dé un amigo.",
+          "Espera a que la tormenta pase antes de moverse.",
+          "Pide perdón por ocupar espacio."
+        ],
+        "firstImpression": "Cuenta las monedas dos veces aunque se las dé un amigo. Espera a que la tormenta pase antes de moverse."
+      }
+    },
+    "world-alpha:1003": {
+      "allCenter": {
+        "readBehavior": [],
+        "firstImpression": "No hay nada inmediatamente llamativo en cómo se mueve."
+      },
+      "mild": {
+        "readBehavior": [
+          "A veces cruza un umbral sin mirar lo que hay detrás."
+        ],
+        "firstImpression": "A veces cruza un umbral sin mirar lo que hay detrás."
+      },
+      "strongBothPoles": {
+        "readBehavior": [
+          "Busca el motivo oculto detrás de cada favor.",
+          "Cede el paso aunque tenga la razón.",
+          "Pide perdón por ocupar espacio."
+        ],
+        "firstImpression": "Busca el motivo oculto detrás de cada favor. Cede el paso aunque tenga la razón."
+      }
+    },
+    "golden-seed-A": {
+      "allCenter": {
+        "readBehavior": [],
+        "firstImpression": "No hay nada inmediatamente llamativo en cómo se mueve."
+      },
+      "mild": {
+        "readBehavior": [
+          "A veces cruza un umbral sin mirar lo que hay detrás."
+        ],
+        "firstImpression": "A veces cruza un umbral sin mirar lo que hay detrás."
+      },
+      "strongBothPoles": {
+        "readBehavior": [
+          "Busca el motivo oculto detrás de cada favor.",
+          "Espera a que la tormenta pase antes de moverse.",
+          "Pide perdón por ocupar espacio."
+        ],
+        "firstImpression": "Busca el motivo oculto detrás de cada favor. Espera a que la tormenta pase antes de moverse."
+      }
+    },
+    "golden-seed-B": {
+      "allCenter": {
+        "readBehavior": [],
+        "firstImpression": "No hay nada inmediatamente llamativo en cómo se mueve."
+      },
+      "mild": {
+        "readBehavior": [
+          "A veces cruza un umbral sin mirar lo que hay detrás."
+        ],
+        "firstImpression": "A veces cruza un umbral sin mirar lo que hay detrás."
+      },
+      "strongBothPoles": {
+        "readBehavior": [
+          "Cuenta las monedas dos veces aunque se las dé un amigo.",
+          "Cede el paso aunque tenga la razón.",
+          "Pide perdón por ocupar espacio."
+        ],
+        "firstImpression": "Cuenta las monedas dos veces aunque se las dé un amigo. Cede el paso aunque tenga la razón."
+      }
+    },
+    "": {
+      "allCenter": {
+        "readBehavior": [],
+        "firstImpression": "No hay nada inmediatamente llamativo en cómo se mueve."
+      },
+      "mild": {
+        "readBehavior": [
+          "A veces cruza un umbral sin mirar lo que hay detrás."
+        ],
+        "firstImpression": "A veces cruza un umbral sin mirar lo que hay detrás."
+      },
+      "strongBothPoles": {
+        "readBehavior": [
+          "Busca el motivo oculto detrás de cada favor.",
+          "Cede el paso aunque tenga la razón.",
+          "Pide perdón por ocupar espacio."
+        ],
+        "firstImpression": "Busca el motivo oculto detrás de cada favor. Cede el paso aunque tenga la razón."
+      }
+    }
+  },
+  "conversations": {
+    "affinity": {
+      "chatty:recluse": 0.061600000000000016,
+      "chatty:balanced": 0.4664000000000001,
+      "recluse:balanced": 0.03710000000000001
+    },
+    "chance": {
+      "chatty:recluse": {
+        "1": 0.003696000000000001,
+        "0.2": 0.0007392000000000002,
+        "0.6": 0.0022176000000000006
+      },
+      "chatty:balanced": {
+        "1": 0.027984000000000005,
+        "0.2": 0.005596800000000002,
+        "0.6": 0.016790400000000004
+      },
+      "recluse:balanced": {
+        "1": 0.0022260000000000005,
+        "0.2": 0.00044520000000000014,
+        "0.6": 0.0013356000000000004
+      }
+    },
+    "rollConversation": {
+      "cooldownBlocked": {
+        "seed": "golden-seed-A",
+        "pair": [
+          "chatty",
+          "recluse"
+        ],
+        "proximity": 1,
+        "cooldownRemaining": 5,
+        "result": null
+      },
+      "rollMiss": {
+        "seed": "rc-miss-chatty-recluse:0",
+        "pair": [
+          "chatty",
+          "recluse"
+        ],
+        "proximity": 0.3,
+        "cooldownRemaining": 0,
+        "result": null,
+        "swappedOrderResult": null
+      },
+      "rollHit": {
+        "seed": "rc-hit-chatty-chatty2:6",
+        "pair": [
+          "chatty",
+          "chatty2"
+        ],
+        "proximity": 1,
+        "cooldownRemaining": 0,
+        "result": {
+          "participants": [
+            "npc-chatty",
+            "npc-chatty2"
+          ],
+          "topic": "hobby",
+          "intensity": 0.463,
+          "nudges": {
+            "a": {
+              "curiosity": 0.0018520000000000001,
+              "optimism": 0.0018520000000000001
+            },
+            "b": {
+              "curiosity": 0.0018520000000000001,
+              "optimism": 0.0018520000000000001
+            }
+          },
+          "sealedAt": 0
+        },
+        "swappedOrderResult": {
+          "participants": [
+            "npc-chatty2",
+            "npc-chatty"
+          ],
+          "topic": "hobby",
+          "intensity": 0.463,
+          "nudges": {
+            "a": {
+              "curiosity": 0.0018520000000000001,
+              "optimism": 0.0018520000000000001
+            },
+            "b": {
+              "curiosity": 0.0018520000000000001,
+              "optimism": 0.0018520000000000001
+            }
+          },
+          "sealedAt": 0
+        }
+      }
+    }
+  },
+  "experience": {
+    "midRange": {
+      "world-alpha:1001": {
+        "combatSuccess": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4852,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5274,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "combatFailure": {
+          "axes": {
+            "caution": 0.5154,
+            "passivity": 0.5167,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.4691,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "scoutSuccess": {
+          "axes": {
+            "caution": 0.4928,
+            "passivity": 0.5,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.524,
+            "confidence": 0.5,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "restInterrupted": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.5,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5041,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5034,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        }
+      },
+      "golden-seed-A": {
+        "combatSuccess": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4817,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5339,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "combatFailure": {
+          "axes": {
+            "caution": 0.5191,
+            "passivity": 0.5206,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.4618,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "scoutSuccess": {
+          "axes": {
+            "caution": 0.4911,
+            "passivity": 0.5,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5297,
+            "confidence": 0.5,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "restInterrupted": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.5,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5051,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5042,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        }
+      },
+      "golden-seed-B": {
+        "combatSuccess": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4821,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5332,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "combatFailure": {
+          "axes": {
+            "caution": 0.5187,
+            "passivity": 0.5202,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.4626,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "scoutSuccess": {
+          "axes": {
+            "caution": 0.4913,
+            "passivity": 0.5,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5291,
+            "confidence": 0.5,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "restInterrupted": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.5,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.505,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5042,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        }
+      }
+    },
+    "starMultiplier": {
+      "world-alpha:1001": {
+        "noStars": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4852,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5274,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "fiveStars": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4763,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5439,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        }
+      },
+      "golden-seed-A": {
+        "noStars": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4817,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5339,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "fiveStars": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4707,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5543,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        }
+      },
+      "golden-seed-B": {
+        "noStars": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4821,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5332,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "fiveStars": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4713,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5532,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        }
+      }
+    },
+    "saturation": {
+      "world-alpha:1001": {
+        "combatSuccessNearCeiling": {
+          "axes": {
+            "caution": 0.9661,
+            "passivity": 0.02,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.98,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        }
+      },
+      "golden-seed-A": {
+        "combatSuccessNearCeiling": {
+          "axes": {
+            "caution": 0.9652,
+            "passivity": 0.02,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.98,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        }
+      },
+      "golden-seed-B": {
+        "combatSuccessNearCeiling": {
+          "axes": {
+            "caution": 0.9653,
+            "passivity": 0.02,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.98,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        }
+      }
+    },
+    "originResistance": {
+      "world-alpha:1001": {
+        "resisted": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4852,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5165,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "unresisted": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4852,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5274,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        }
+      },
+      "golden-seed-A": {
+        "resisted": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4817,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5204,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "unresisted": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4817,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5339,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        }
+      },
+      "golden-seed-B": {
+        "resisted": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4821,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5199,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        },
+        "unresisted": {
+          "axes": {
+            "caution": 0.5,
+            "passivity": 0.4821,
+            "submission": 0.5,
+            "warmth": 0.5,
+            "trust": 0.5,
+            "altruism": 0.5,
+            "sociability": 0.5,
+            "integrity": 0.5,
+            "loyalty": 0.5,
+            "optimism": 0.5,
+            "discipline": 0.5,
+            "curiosity": 0.5,
+            "confidence": 0.5332,
+            "forgiveness": 0.5
+          },
+          "newStamps": []
+        }
+      }
+    },
+    "conversationNudges": {
+      "plain": {
+        "axes": {
+          "caution": 0.5,
+          "passivity": 0.5,
+          "submission": 0.5,
+          "warmth": 0.52,
+          "trust": 0.515,
+          "altruism": 0.5,
+          "sociability": 0.5,
+          "integrity": 0.5,
+          "loyalty": 0.5,
+          "optimism": 0.5,
+          "discipline": 0.508,
+          "curiosity": 0.49,
+          "confidence": 0.5,
+          "forgiveness": 0.5
+        },
+        "newStamps": []
+      },
+      "resisted": {
+        "axes": {
+          "caution": 0.5,
+          "passivity": 0.5,
+          "submission": 0.5,
+          "warmth": 0.512,
+          "trust": 0.515,
+          "altruism": 0.5,
+          "sociability": 0.5,
+          "integrity": 0.5,
+          "loyalty": 0.5,
+          "optimism": 0.5,
+          "discipline": 0.508,
+          "curiosity": 0.49,
+          "confidence": 0.5,
+          "forgiveness": 0.5
+        },
+        "newStamps": []
+      },
+      "saturated": {
+        "axes": {
+          "caution": 0.9702,
+          "passivity": 0.0199,
+          "submission": 0.5,
+          "warmth": 0.5,
+          "trust": 0.5,
+          "altruism": 0.5,
+          "sociability": 0.5,
+          "integrity": 0.5,
+          "loyalty": 0.5,
+          "optimism": 0.5,
+          "discipline": 0.5,
+          "curiosity": 0.5,
+          "confidence": 0.9801,
+          "forgiveness": 0.5
+        },
+        "newStamps": []
+      }
+    }
+  },
+  "mediator": {
+    "briefRoster": {
+      "empty": "El roster está vacío. Invoca para empezar.",
+      "allAlive": "Roster: 2 vivos. el más alto en piso 7.",
+      "mixedAliveDead": "Roster: 2 vivos. 1 caído. el más alto en piso 9."
+    },
+    "describeNPC": {
+      "golden-seed-A": {
+        "alive": "Gararo (1★, piso 4). Sostiene su postura sin buscar respaldo. Defiende a los suyos incluso ausentes.",
+        "fallen": "Tomadinsea (1★, caído). Baja la voz cuando alguien con más peso entra. Se queda junto al que cae aunque ardan los puentes."
+      },
+      "golden-seed-B": {
+        "alive": "Gararo (1★, piso 4). Sostiene su postura sin buscar respaldo. Defiende a los suyos incluso ausentes.",
+        "fallen": "Tomadinsea (1★, caído). Baja la voz cuando alguien con más peso entra. No traiciona ni cuando traicionarlo sería sensato."
+      }
+    },
+    "reportActivity": {
+      "empty": "Nada que reportar. El roster ha estado quieto.",
+      "populated": "Chatty NPC y Recluse NPC: entrenan juntos (2).\nRecluse NPC y Chatty NPC: entrenan juntos (1).\nChatty NPC y unknown-id: comparten un pasatiempo (1)."
+    },
+    "explainRule": {
+      "difficulty": "La dificultad no multiplica fuerza: obliga a desbloquear más para sobrevivir. No la verás; la intuirás.",
+      "promotion": "Promover tiene riesgo real: éxito, parcial, corrupción o muerte. Los recursos son escasos.",
+      "death": "La muerte es permanente. Quien cae no vuelve.",
+      "start": "Todos empiezan en el piso 1, sin importar la dificultad de su mundo.",
+      "growth": "Crecen por exposición, filtrada por quiénes son. La misma experiencia forja almas distintas.",
+      "unknown-rule": "No tengo esa regla registrada. Sé más específico."
+    },
+    "rareWhisper": {
+      "fear": "Hay miedo en el roster. No el tuyo — el de ellos. Pregunta si quieres saber más.",
+      "conflict": "Entre Tres y Cuatro hay algo que no se dice. Podría volverse problema.",
+      "isolation": "Cinco se ha apartado del grupo. Nadie lo notó todavía.",
+      "none": null,
+      "emptyRoster": null
+    }
   }
 }
