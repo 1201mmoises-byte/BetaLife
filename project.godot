@@ -24,4 +24,4 @@ theme/custom="res://assets/ui/betalife_theme.tres"
 
 [rendering]
 
-environment/defaults/default_clear_color=Color(0.114, 0.098, 0.086, 1)
+environment/defaults/default_clear_color=Color(0.0196, 0.0196, 0.051, 1)

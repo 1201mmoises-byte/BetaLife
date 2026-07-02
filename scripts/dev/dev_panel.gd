@@ -33,7 +33,7 @@ func _ready() -> void:
 
 	var subtitle := Label.new()
 	subtitle.text = "Exercises the ported engine: seeder -> archetypes -> axes -> name_generator -> gacha"
-	subtitle.modulate = Color(0.7, 0.7, 0.7)
+	subtitle.add_theme_color_override("font_color", Color(0.745, 0.686, 0.902, 0.75))
 	vbox.add_child(subtitle)
 
 	var button := Button.new()
@@ -43,7 +43,7 @@ func _ready() -> void:
 	vbox.add_child(button)
 
 	_seed_label = Label.new()
-	_seed_label.modulate = Color(0.6, 0.6, 0.6)
+	_seed_label.add_theme_color_override("font_color", Color(0.745, 0.686, 0.902, 0.55))
 	vbox.add_child(_seed_label)
 
 	var panel := PanelContainer.new()
@@ -55,6 +55,7 @@ func _ready() -> void:
 
 	_name_label = _make_result_label(result_box)
 	_stars_label = _make_result_label(result_box)
+	_stars_label.add_theme_color_override("font_color", Color(0.9412, 0.7529, 0.251, 1))
 	_archetype_label = _make_result_label(result_box)
 
 	_backstory_label = RichTextLabel.new()

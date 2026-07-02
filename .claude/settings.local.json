@@ -124,7 +124,16 @@
       "Bash(powershell -Command \"\nAdd-Type -AssemblyName System.Drawing\n\\\\$img = New-Object System.Drawing.Bitmap 'C:\\\\Users\\\\Noobi\\\\OneDrive\\\\Documents\\\\GodotGame\\\\assets\\\\ui\\\\kenney_fantasy_ui_borders\\\\panel-border-013.png'\nWrite-Output 'Row y=24 \\(alpha across x\\):'\n\\\\$row = ''\nfor \\(\\\\$x=0; \\\\$x -lt 48; \\\\$x++\\) { \\\\$p = \\\\$img.GetPixel\\(\\\\$x,24\\); \\\\$row += \\\\\"\\\\$\\(\\\\$p.A\\) \\\\\" }\nWrite-Output \\\\$row\n\\\\$img.Dispose\\(\\)\n\")",
       "Bash(find . -iname \"logo.png\" -not -path \"./Godot_v4.7*\")",
       "Bash(find . -iname \"contact_sheet*\" -not -path \"./Godot_v4.7*\")",
-      "Bash(powershell -Command \"\nAdd-Type -AssemblyName System.Drawing\n\\\\$img = New-Object System.Drawing.Bitmap 'C:\\\\Users\\\\Noobi\\\\.claude\\\\jobs\\\\70d1dfc5\\\\tmp\\\\kenney\\\\extracted\\\\PNG\\\\Default\\\\Panel\\\\panel-015.png'\nWrite-Output 'panel-015 row y=24:'\n\\\\$row=''; for \\(\\\\$x=0;\\\\$x -lt 48;\\\\$x++\\){\\\\$p=\\\\$img.GetPixel\\(\\\\$x,24\\); \\\\$row+=\\\\\"\\\\$\\(\\\\$p.A\\) \\\\\"}; Write-Output \\\\$row\n\\\\$img.Dispose\\(\\)\n\\\\$img2 = New-Object System.Drawing.Bitmap 'C:\\\\Users\\\\Noobi\\\\.claude\\\\jobs\\\\70d1dfc5\\\\tmp\\\\kenney\\\\extracted\\\\PNG\\\\Default\\\\Panel\\\\panel-005.png'\nWrite-Output 'panel-005 row y=24:'\n\\\\$row2=''; for \\(\\\\$x=0;\\\\$x -lt 48;\\\\$x++\\){\\\\$p=\\\\$img2.GetPixel\\(\\\\$x,24\\); \\\\$row2+=\\\\\"\\\\$\\(\\\\$p.A\\) \\\\\"}; Write-Output \\\\$row2\n\\\\$img2.Dispose\\(\\)\n\")"
+      "Bash(powershell -Command \"\nAdd-Type -AssemblyName System.Drawing\n\\\\$img = New-Object System.Drawing.Bitmap 'C:\\\\Users\\\\Noobi\\\\.claude\\\\jobs\\\\70d1dfc5\\\\tmp\\\\kenney\\\\extracted\\\\PNG\\\\Default\\\\Panel\\\\panel-015.png'\nWrite-Output 'panel-015 row y=24:'\n\\\\$row=''; for \\(\\\\$x=0;\\\\$x -lt 48;\\\\$x++\\){\\\\$p=\\\\$img.GetPixel\\(\\\\$x,24\\); \\\\$row+=\\\\\"\\\\$\\(\\\\$p.A\\) \\\\\"}; Write-Output \\\\$row\n\\\\$img.Dispose\\(\\)\n\\\\$img2 = New-Object System.Drawing.Bitmap 'C:\\\\Users\\\\Noobi\\\\.claude\\\\jobs\\\\70d1dfc5\\\\tmp\\\\kenney\\\\extracted\\\\PNG\\\\Default\\\\Panel\\\\panel-005.png'\nWrite-Output 'panel-005 row y=24:'\n\\\\$row2=''; for \\(\\\\$x=0;\\\\$x -lt 48;\\\\$x++\\){\\\\$p=\\\\$img2.GetPixel\\(\\\\$x,24\\); \\\\$row2+=\\\\\"\\\\$\\(\\\\$p.A\\) \\\\\"}; Write-Output \\\\$row2\n\\\\$img2.Dispose\\(\\)\n\")",
+      "WebFetch(domain:raw.githack.com)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\Noobi\\\\.claude\\\\jobs\\\\70d1dfc5\\\\tmp\\\\fonts\")",
+      "Bash(curl -sL -o EBGaramond-Regular.ttf \"https://raw.githubusercontent.com/google/fonts/main/ofl/ebgaramond/static/EBGaramond-Regular.ttf\")",
+      "Bash(curl -sL -o EBGaramond-Bold.ttf \"https://raw.githubusercontent.com/google/fonts/main/ofl/ebgaramond/static/EBGaramond-Bold.ttf\")",
+      "Bash(xxd)",
+      "Bash(curl -sL -o \"EBGaramond-Variable.ttf\" \"https://raw.githubusercontent.com/google/fonts/main/ofl/ebgaramond/EBGaramond%5Bwght%5D.ttf\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/google/fonts/main/ofl/ebgaramond/OFL.txt\" -o assets/fonts/eb_garamond/OFL.txt)",
+      "Skill(fewer-permission-prompts)",
+      "Bash(/c/Users/Noobi/AppData/Local/Programs/Python/Python312/python *)"
     ]
   },
   "enabledMcpjsonServers": [

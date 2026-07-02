@@ -1,48 +1,83 @@
 [gd_resource type="Theme" load_steps=6 format=3]
 
-[ext_resource type="Texture2D" path="res://assets/ui/kenney_fantasy_ui_borders/panel-013.png" id="1"]
+[ext_resource type="FontFile" path="res://assets/fonts/eb_garamond/EBGaramond-Variable.ttf" id="1"]
 
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel"]
-texture = ExtResource("1")
-texture_margin_left = 18.0
-texture_margin_top = 18.0
-texture_margin_right = 18.0
-texture_margin_bottom = 18.0
-modulate_color = Color(0.31, 0.24, 0.16, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.0706, 0.0549, 0.1333, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.1804, 0.1373, 0.2824, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0.5647, 0.3765, 0.8784, 0.12)
+shadow_size = 14
+content_margin_left = 16.0
+content_margin_top = 14.0
+content_margin_right = 16.0
+content_margin_bottom = 14.0
 
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button_normal"]
-texture = ExtResource("1")
-texture_margin_left = 18.0
-texture_margin_top = 18.0
-texture_margin_right = 18.0
-texture_margin_bottom = 18.0
-modulate_color = Color(0.84, 0.70, 0.43, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_normal"]
+bg_color = Color(0.11, 0.078, 0.18, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.6902, 0.5020, 1.0, 0.5)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+content_margin_left = 15.0
+content_margin_top = 9.0
+content_margin_right = 15.0
+content_margin_bottom = 9.0
 
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button_hover"]
-texture = ExtResource("1")
-texture_margin_left = 18.0
-texture_margin_top = 18.0
-texture_margin_right = 18.0
-texture_margin_bottom = 18.0
-modulate_color = Color(0.95, 0.80, 0.52, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_hover"]
+bg_color = Color(0.11, 0.078, 0.18, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.5647, 0.3765, 0.8784, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+content_margin_left = 15.0
+content_margin_top = 9.0
+content_margin_right = 15.0
+content_margin_bottom = 9.0
 
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_button_pressed"]
-texture = ExtResource("1")
-texture_margin_left = 18.0
-texture_margin_top = 18.0
-texture_margin_right = 18.0
-texture_margin_bottom = 18.0
-modulate_color = Color(0.55, 0.42, 0.22, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_pressed"]
+bg_color = Color(0.141, 0.102, 0.235, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2275, 0.1686, 0.3529, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+content_margin_left = 15.0
+content_margin_top = 9.0
+content_margin_right = 15.0
+content_margin_bottom = 9.0
 
 [resource]
+default_font = ExtResource("1")
 default_font_size = 16
-Button/styles/normal = SubResource("StyleBoxTexture_button_normal")
-Button/styles/hover = SubResource("StyleBoxTexture_button_hover")
-Button/styles/pressed = SubResource("StyleBoxTexture_button_pressed")
-Button/styles/focus = SubResource("StyleBoxTexture_button_hover")
-Button/colors/font_color = Color(0.16, 0.11, 0.06, 1)
-Button/colors/font_hover_color = Color(0.16, 0.11, 0.06, 1)
-Button/colors/font_pressed_color = Color(0.95, 0.90, 0.80, 1)
-Button/colors/font_focus_color = Color(0.16, 0.11, 0.06, 1)
-Panel/styles/panel = SubResource("StyleBoxTexture_panel")
-Label/colors/font_color = Color(0.90, 0.85, 0.75, 1)
+Button/styles/normal = SubResource("StyleBoxFlat_button_normal")
+Button/styles/hover = SubResource("StyleBoxFlat_button_hover")
+Button/styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+Button/styles/focus = SubResource("StyleBoxFlat_button_hover")
+Button/colors/font_color = Color(0.8471, 0.8039, 0.9412, 1)
+Button/colors/font_hover_color = Color(0.8471, 0.8039, 0.9412, 1)
+Button/colors/font_pressed_color = Color(0.6902, 0.5020, 1.0, 1)
+Button/colors/font_focus_color = Color(0.8471, 0.8039, 0.9412, 1)
+Panel/styles/panel = SubResource("StyleBoxFlat_panel")
+Label/colors/font_color = Color(0.8471, 0.8039, 0.9412, 1)
