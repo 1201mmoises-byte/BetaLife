@@ -132,10 +132,17 @@ func _on_generate_pressed() -> void:
 	_backstory_label.text = _current_hero["fragment"]
 
 
+## Saves the currently-displayed hero to the Roster exactly once: the id
+## guard skips heroes already saved (hero ids are their seed strings, which
+## must stay unique in the roster — see hero_factory.gd), and the button is
+## re-disabled after a save so it can't even be re-clicked until the next
+## Generate produces a fresh hero (belt AND suspenders, per review).
 func _on_save_hero_pressed() -> void:
-	if _current_hero.is_empty():
+	if _current_hero.is_empty() or Roster.has_hero(String(_current_hero["id"])):
+		_save_hero_button.disabled = true
 		return
 	Roster.add_hero(_current_hero)
+	_save_hero_button.disabled = true
 
 
 func _on_enter_village_pressed() -> void:

@@ -433,7 +433,13 @@ func _build_heroes() -> void:
 
 
 func _on_hero_added(hero: Dictionary) -> void:
-	_spawn_hero_figure(hero, _spread_point("plaza", randi_range(0, 4), SELF_SEED_HERO_COUNT))
+	# Index by figures-already-spawned (not a random draw) so consecutive
+	# adds — including the SELF_SEED_HERO_COUNT-hero self-seed burst, which
+	# flows entirely through this handler on first launch — actually fan
+	# evenly around the plaza per _spread_point's contract, instead of
+	# independent random slots stacking two+ heroes on the same point.
+	var index: int = _heroes_root.get_child_count()
+	_spawn_hero_figure(hero, _spread_point("plaza", index, SELF_SEED_HERO_COUNT))
 
 
 func _spawn_hero_figure(hero: Dictionary, spawn_pos: Vector3) -> void:

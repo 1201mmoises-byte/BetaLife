@@ -32,6 +32,16 @@ func get_heroes() -> Array[Dictionary]:
 	return _heroes
 
 
+## True if a hero with this `id` is already in the roster. Lets callers
+## (e.g. the Dev Panel's save button) keep ids unique without this autoload
+## enforcing anything itself — still dumb storage, this is just a lookup.
+func has_hero(id: String) -> bool:
+	for hero in _heroes:
+		if String(hero.get("id", "")) == id:
+			return true
+	return false
+
+
 ## Empties the roster without emitting any signal (no hero_removed signal
 ## exists yet — nothing currently needs one).
 func clear() -> void:
