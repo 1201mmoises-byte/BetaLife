@@ -1,14 +1,16 @@
 class_name BLVillageBase
 extends Node3D
 
-## Village/Base 3D scene shell: ground discs, an orbit/pan/zoom camera, and a
-## time_of_day-driven day/night sky (sun + moon + stars).
+## Village/Base 3D scene shell: ground discs, an orbit/pan/zoom camera, a
+## time_of_day-driven day/night sky (sun + moon + stars), the 6 fixed
+## structures (Phase 2B), and role-colored hero figures + a fairy avatar
+## spawned from the Roster autoload (Phase 2C, see BLHeroFactory/roster.gd).
 ##
-## This is Phase 2A's shell ONLY — no structures, heroes, fairy, or sim tick
-## yet (those are Phase 2B/2C/4, per the village-base-3d-scene-design spec).
-## Kept organized in clearly separated `_build_*` / `_apply_*` sections so
-## those later phases can slot in (spawn structures/heroes into this same
-## root, hook village_sim.gd into _process) without restructuring this file.
+## No behavior sim tick yet (Phase 4 wires village_sim.gd's needs/activity
+## simulation into hero motion — see hero_figure.gd's set_destination() for
+## the seam that hooks into). Kept organized in clearly separated `_build_*`
+## / `_apply_*` sections so that phase can slot in without restructuring
+## this file.
 
 # ---------------------------------------------------------------------------
 # Tunables
@@ -51,6 +53,13 @@ const CAMERA_PITCH_DEG: float = 19.0
 const CAMERA_DISTANCE: float = 30.0
 const CAMERA_TARGET_HEIGHT: float = 2.0
 const CAMERA_INITIAL_ZOOM: float = 20.0
+## Phase 2B review carry-over fix: at azimuth 0 (the original default) the
+## shrine's floating crystal (-6,0,3) and the Fusion chamber's silhouette
+## (-7,0,-4) — both west of center, ~7 units apart in z — line up closely
+## enough from the default camera ray to overlap by a few pixels. Nudging
+## the initial azimuth separates them at default zoom/angle; verified via
+## the noon screenshot (see the Phase 2C report).
+const CAMERA_INITIAL_AZIMUTH_DEG: float = 35.0
 const ZOOM_MIN: float = 8.0
 # NOTE: widened from the brief's illustrative "~60" ceiling. With an
 # orthogonal camera at CAMERA_PITCH_DEG (19deg) looking at a GRASS_RADIUS
@@ -65,6 +74,16 @@ const ZOOM_STEP: float = 4.0
 const ZOOM_LERP_SPEED: float = 8.0
 const PAN_SPEED: float = 20.0
 const ORBIT_SENSITIVITY_DEG_PER_PX: float = 0.25
+
+## Phase 2C: heroes + fairy
+const HERO_FIGURE_SCENE: PackedScene = preload("res://scenes/village/hero_figure.tscn")
+const FAIRY_AVATAR_SCENE: PackedScene = preload("res://scenes/village/fairy_avatar.tscn")
+const SELF_SEED_HERO_COUNT: int = 5
+## Wide enough to clear the Plaza campfire's own footprint (logs radius
+## ~0.65) and keep spawned figures'/labels' from crowding each other at
+## default zoom — tightened from an initial 1.6 after the first noon
+## screenshot showed name labels overlapping right at the plaza campfire.
+const HERO_SPAWN_RADIUS: float = 2.6
 
 # ---------------------------------------------------------------------------
 # State
@@ -83,9 +102,9 @@ var _world_environment: WorldEnvironment
 var _sky_material: ProceduralSkyMaterial
 var _stars: MultiMeshInstance3D
 var _star_material: StandardMaterial3D
-var _debug_label: Label3D
+var _heroes_root: Node3D
 
-var _orbit_azimuth_deg: float = 0.0
+var _orbit_azimuth_deg: float = CAMERA_INITIAL_AZIMUTH_DEG
 var _camera_target: Vector3 = Vector3(0.0, CAMERA_TARGET_HEIGHT, 0.0)
 var _zoom_target: float = CAMERA_INITIAL_ZOOM
 var _is_orbiting: bool = false
@@ -121,8 +140,9 @@ func _ready() -> void:
 	_build_lights()
 	_build_stars()
 	_build_camera()
-	_build_debug_label()
 	_build_structures()
+	_build_heroes()
+	_build_fairy()
 
 	var forced_tod_str: String = OS.get_environment("BL_TOD")
 	_forced_time_of_day = forced_tod_str != ""
@@ -330,16 +350,6 @@ func _build_stars() -> void:
 	add_child(_stars)
 
 
-func _build_debug_label() -> void:
-	_debug_label = Label3D.new()
-	_debug_label.name = "DebugTimeLabel"
-	_debug_label.position = Vector3(0.0, 4.0, 0.0)
-	_debug_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_debug_label.font_size = 48
-	_debug_label.outline_size = 8
-	add_child(_debug_label)
-
-
 ## Applies time_of_day to sun/moon aim+energy, sky colors, ambient, and star
 ## opacity. Pure elevation math lives in the static funcs above; this just
 ## wires that math onto the scene's Nodes.
@@ -364,8 +374,6 @@ func _apply_sky(tod: float) -> void:
 	_world_environment.environment.ambient_light_energy = lerpf(NIGHT_AMBIENT_ENERGY, DAY_AMBIENT_ENERGY, day)
 
 	_star_material.albedo_color.a = night
-
-	_debug_label.text = "Village Base — time_of_day: %.3f  (night_amount: %.2f)" % [tod, night]
 
 
 func _aim_light(light: DirectionalLight3D, elevation_deg: float, azimuth_deg: float) -> void:
@@ -394,6 +402,59 @@ func _build_structures() -> void:
 	structures.add_child(BLStructures.build_campo())
 	structures.add_child(BLStructures.build_fusion())
 	structures.add_child(BLStructures.build_plaza())
+
+
+# ---------------------------------------------------------------------------
+# Heroes + fairy (Phase 2C)
+# ---------------------------------------------------------------------------
+
+## Spawns a hero_figure for every hero already in the Roster autoload (e.g.
+## carried over from the Dev Panel's "Guardar héroe" button), THEN connects
+## Roster.hero_added so any hero added afterward — including the self-seed
+## below — spawns through the exact same _spawn_hero_figure() path. If the
+## roster was empty, self-seeds SELF_SEED_HERO_COUNT deterministic heroes
+## (village-seed-0..4) via BLHeroFactory so the village is never empty on
+## first visit; those adds flow through Roster.add_hero() -> hero_added like
+## any other, so this is not a separate spawn path.
+func _build_heroes() -> void:
+	_heroes_root = Node3D.new()
+	_heroes_root.name = "Heroes"
+	add_child(_heroes_root)
+
+	var existing: Array[Dictionary] = Roster.get_heroes()
+	for i in existing.size():
+		_spawn_hero_figure(existing[i], _spread_point("plaza", i, existing.size()))
+
+	Roster.hero_added.connect(_on_hero_added)
+
+	if existing.is_empty():
+		for i in SELF_SEED_HERO_COUNT:
+			Roster.add_hero(BLHeroFactory.generate("village-seed-%d" % i))
+
+
+func _on_hero_added(hero: Dictionary) -> void:
+	_spawn_hero_figure(hero, _spread_point("plaza", randi_range(0, 4), SELF_SEED_HERO_COUNT))
+
+
+func _spawn_hero_figure(hero: Dictionary, spawn_pos: Vector3) -> void:
+	var figure: Node3D = HERO_FIGURE_SCENE.instantiate()
+	figure.position = spawn_pos
+	_heroes_root.add_child(figure)
+	figure.setup(hero)
+
+
+## Evenly fans `count` points in a ring of HERO_SPAWN_RADIUS around a named
+## BLSpots spot, so a spawned batch doesn't stack exactly on top of itself.
+func _spread_point(spot_name: String, index: int, count: int) -> Vector3:
+	var base: Vector3 = BLSpots.position_of(spot_name)
+	var slice: int = max(count, 1)
+	var angle: float = float(index) * TAU / float(slice)
+	return base + Vector3(cos(angle) * HERO_SPAWN_RADIUS, 0.0, sin(angle) * HERO_SPAWN_RADIUS)
+
+
+func _build_fairy() -> void:
+	var fairy: Node3D = FAIRY_AVATAR_SCENE.instantiate()
+	add_child(fairy)
 
 
 # ---------------------------------------------------------------------------
