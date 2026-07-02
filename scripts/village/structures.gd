@@ -346,19 +346,21 @@ static func build_plaza() -> Node3D:
 	var log_mat := _flat_material(WOOD_COLOR)
 	for i in PLAZA_LOG_COUNT:
 		var angle: float = i * TAU / PLAZA_LOG_COUNT
-		var log := MeshInstance3D.new()
+		# "fire_log", not "log" — a plain "log" local shadows GDScript's
+		# built-in log() math function.
+		var fire_log := MeshInstance3D.new()
 		var log_mesh := CylinderMesh.new()
 		log_mesh.top_radius = PLAZA_LOG_RADIUS
 		log_mesh.bottom_radius = PLAZA_LOG_RADIUS
 		log_mesh.height = PLAZA_LOG_LENGTH
-		log.mesh = log_mesh
-		log.material_override = log_mat
+		fire_log.mesh = log_mesh
+		fire_log.material_override = log_mat
 		# Lay the cylinder on its side (roll 90deg) then yaw so the logs
 		# radiate outward from the fire's center, crossing over each other
 		# like a real log pile.
-		log.rotation = Vector3(0.0, angle, PI * 0.5)
-		log.position = Vector3(0.0, PLAZA_LOG_RADIUS + 0.05, 0.0)
-		root.add_child(log)
+		fire_log.rotation = Vector3(0.0, angle, PI * 0.5)
+		fire_log.position = Vector3(0.0, PLAZA_LOG_RADIUS + 0.05, 0.0)
+		root.add_child(fire_log)
 
 	var flame_base := MeshInstance3D.new()
 	var flame_base_mesh := CylinderMesh.new()
