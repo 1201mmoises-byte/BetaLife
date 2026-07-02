@@ -122,6 +122,7 @@ func _ready() -> void:
 	_build_stars()
 	_build_camera()
 	_build_debug_label()
+	_build_structures()
 
 	var forced_tod_str: String = OS.get_environment("BL_TOD")
 	_forced_time_of_day = forced_tod_str != ""
@@ -373,6 +374,26 @@ func _aim_light(light: DirectionalLight3D, elevation_deg: float, azimuth_deg: fl
 	var dir_to_light := Vector3(cos(elev_rad) * sin(az_rad), sin(elev_rad), cos(elev_rad) * cos(az_rad))
 	light.global_position = dir_to_light * 50.0
 	light.look_at(Vector3.ZERO, Vector3.UP)
+
+
+# ---------------------------------------------------------------------------
+# Structures (Phase 2B)
+# ---------------------------------------------------------------------------
+
+## Spawns the village's 6 fixed structures (BLStructures, scripts/village/
+## structures.gd) under a single "Structures" grouping node. Each builder
+## positions itself via BLSpots — no coordinates live here.
+func _build_structures() -> void:
+	var structures := Node3D.new()
+	structures.name = "Structures"
+	add_child(structures)
+
+	structures.add_child(BLStructures.build_torre())
+	structures.add_child(BLStructures.build_shrine())
+	structures.add_child(BLStructures.build_posada())
+	structures.add_child(BLStructures.build_campo())
+	structures.add_child(BLStructures.build_fusion())
+	structures.add_child(BLStructures.build_plaza())
 
 
 # ---------------------------------------------------------------------------

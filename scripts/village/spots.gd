@@ -20,9 +20,12 @@ const POSITIONS: Dictionary = {
 
 ## Returns the ground-plane (y=0) position of a named spot. Unknown names
 ## return Vector3.ZERO (which is not itself a valid spot position, so it's
-## an unambiguous sentinel) rather than erroring.
+## an unambiguous sentinel) rather than erroring — but a push_warning fires
+## first so a typo'd spot name doesn't silently place a structure/hero at
+## the village center.
 static func position_of(spot_name: String) -> Vector3:
 	if not POSITIONS.has(spot_name):
+		push_warning("BLSpots.position_of: unknown spot name '%s', returning Vector3.ZERO" % spot_name)
 		return Vector3.ZERO
 	return POSITIONS[spot_name]
 
