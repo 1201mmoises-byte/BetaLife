@@ -15,9 +15,15 @@ decisions itself.
 
 - `GodotGame` (this repo) — the Godot 4.7 GDScript port. Target implementation.
 - `BetaLife-main` (`C:\Users\Noobi\OneDrive\Documents\MoisesGame\BetaLife-main\BetaLife-main`,
-  separate git history) — the TypeScript "soul engine" previz. Source of truth
-  for anything not yet ported. Same GitHub repo, different unrelated branches
-  (`main`/`gh-pages` = TS, `godot-port` = this repo).
+  separate git history) — the TypeScript "soul engine" + previz slice. Source
+  of truth for anything not yet ported. Same GitHub repo, different unrelated
+  branches (`main` = TS canonical, `gh-pages` = same content served via Pages,
+  `godot-port` = this repo). Consolidated 2026-07-02: older `main`/`gh-pages`
+  versions and the `claude/code-review-65yx3p` working branch were removed;
+  the working branch's content IS the new `main`. The authoritative previz is
+  `preview/slice.html` + `slice.js` on `main` — a full vertical slice (living
+  heroes, visible dialogue, hada, tutorial, expeditions, save), NOT a
+  decorative mock. See `docs/superpowers/specs/2026-07-02-living-slice-design.md`.
 
 ## The two tracks
 
