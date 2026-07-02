@@ -5,10 +5,13 @@ Tool-agnostic conventions for working in this repo. Claude Code users: see
 
 ## Project
 
-Godot 4.7 (GDScript, standard build — not Mono/.NET). Empty scaffold as of
-2026-06-30; structure below is the intended starting layout, not yet populated.
+Godot 4.7 (GDScript, standard build — not Mono/.NET). No longer an empty
+scaffold: as of 2026-07-01 the project has `scenes/dev/`, `scripts/engine/`
+(6 ported modules), `scripts/dev/`, `tests/` (8 suites, 31 test cases), and
+4 addons (`gdUnit4`, `limboai`, `gaea`, `godot-sqlite`). The structure below
+describes the layout as it's actually used today, not an aspiration.
 
-## Folder structure (convention, to be created as content is added)
+## Folder structure (in use, mirrored as content grows)
 
 ```
 scenes/      .tscn scene files, one subfolder per feature/area

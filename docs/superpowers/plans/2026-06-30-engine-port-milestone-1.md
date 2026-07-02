@@ -56,7 +56,7 @@ func test_smoke() -> void:
 
 - [ ] **Step 4: Run the test runner headlessly and confirm it passes**
 
-Ask the `godot` skill for the exact headless GdUnit4 CLI invocation for this project (it should resolve to something using `C:\Users\Noobi\Godot\Godot_v4.7-stable_win64_console.exe --headless --path .` plus GdUnit4's runner script/args). Run it against `tests/test_smoke.gd` and confirm `test_smoke` reports PASS. If it fails for a reason unrelated to our test (e.g. missing import, addon not detected), fix the addon installation before proceeding — every later task depends on this runner working.
+Ask the `godot` skill for the exact headless GdUnit4 CLI invocation for this project (it should resolve to something using `C:\Users\Noobi\Godot\Godot_v4.7-stable_win64_console.exe --headless --path .` plus GdUnit4's runner script/args — **path updated 2026-07-01 after binary relocation**: the binary now lives inside the repo root at `C:\Users\Noobi\OneDrive\Documents\GodotGame\Godot_v4.7-stable_win64.exe\Godot_v4.7-stable_win64_console.exe`, also available via the `GODOT_BIN` env var; this plan is left as originally written for historical accuracy, but the canonical headless test invocation that works today is: `"./Godot_v4.7-stable_win64.exe/Godot_v4.7-stable_win64_console.exe" --headless --path . -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd --add res://tests --ignoreHeadlessMode --continue`). Run it against `tests/test_smoke.gd` and confirm `test_smoke` reports PASS. If it fails for a reason unrelated to our test (e.g. missing import, addon not detected), fix the addon installation before proceeding — every later task depends on this runner working.
 
 - [ ] **Step 5: Commit**
 

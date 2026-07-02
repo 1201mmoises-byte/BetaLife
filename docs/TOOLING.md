@@ -191,9 +191,9 @@ Per `CLAUDE.md`:
 - Firebase project **is** assigned: `.firebaserc` → `betalife-223a1`.
   `firebase.json` currently only configures Hosting (static `public/` dir);
   no Firestore/Functions/Storage/Auth config exists yet even though the
-  `firebase` MCP server is scoped for all of those. (`CLAUDE.md` still says
-  "No Firebase project is assigned yet" as of this audit — that line is
-  stale and not yet corrected.)
+  `firebase` MCP server is scoped for all of those. `CLAUDE.md` already
+  reflects this correctly (see the second-pass Maintenance note below) —
+  no outstanding drift here.
 - No CI (`.github/workflows`) and no `export_presets.cfg` yet — appropriate
   for now, since no scenes/exports exist in this repo yet either.
 

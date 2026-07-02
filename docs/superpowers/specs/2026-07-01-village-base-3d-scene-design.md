@@ -49,6 +49,11 @@ project's standing "Godot-native visual tooling only" preference).
   slow wander between named spots) instead. Full AI-driven behavior is
   future Cognition/Perception work, already tracked separately
   (`betalife-ai-architecture` skill, LimboAI).
+  **SUPERSEDED — see "## Amendments (2026-07-01, approved)" below.** This
+  milestone now also ports the previz's classical behavior stack
+  (`needs.gd`/`behavior.gd`/`conversations.gd`/`experience.gd`/`mediator.gd`)
+  and a `village_sim.gd` pueblo tick; the full Living-AI cognition chain
+  (Perception→Memory→Cognition) is unaffected and still comes later.
 - **The Cámara de los Ecos / Forja reconversion.** The blueprint itself marks
   this structure "✗ a reconvertir (Merger ≠ novela)" — still undecided on the
   TS side. Build its exterior (matches previz's `chamber()`) but don't wire
@@ -89,7 +94,9 @@ scripts/village/
 - `Camera3D`, **orthogonal** projection, drag-to-orbit around a fixed target
   (`camTarget` in previz sits at half-structure-height, not ground level) —
   azimuth + pitch (~19° above horizon) + fixed distance (~30), matching
-  `placeCamera()`/`framedCamera()`.
+  `placeCamera()`/`framedCamera()`. **AMENDED — see "## Amendments
+  (2026-07-01, approved)" below**: zoom and pan are added on top of this
+  orbit so the player can move through the town.
 - Sky: `WorldEnvironment` + `ProceduralSkyMaterial` if its top/bottom
   gradient can match the previz's two-tone dome shader closely enough;
   otherwise a small custom sky shader reproducing `skyMat`'s vertex/fragment
@@ -98,12 +105,19 @@ scripts/village/
   cool, dimmer, no shadows) + ambient/fill, driven by a single
   `time_of_day: float` (0..1) using the same elevation/smoothstep math as
   previz's `updateSky(tod)`.
-- **Day length: 8640s (2.4 real hours/day, "reloj de doble tasa" 10× pueblo
-  rate).** This is the *current* previz value (already fixed from the older
-  buggy `DAY_LENGTH = 1200` the blueprint's §8 table still flags — that table
-  predates the fix). Ported as-is; not the offline-catchup 3× dilation
-  mentioned in project memory, which is a different mechanism (absent-player
-  simulation, not live day/night rate).
+- **Day length: OBSOLETE PREVIZ VALUE, corrected — see "## Amendments
+  (2026-07-01, approved)" below.** This section originally specified 8640s
+  (2.4 real hours/day, "reloj de doble tasa" 10× pueblo rate), the *then-
+  current* previz value (already fixed from the older buggy
+  `DAY_LENGTH = 1200` the blueprint's §8 table still flags — that table
+  predates the fix), ported as-is, and explicitly described as **not**
+  related to the offline-catchup 3× dilation mentioned in project memory
+  (treated at the time as a different mechanism — absent-player simulation,
+  not live day/night rate). The user corrected this same-day: under the
+  corrected model, the 3× IS the live town clock (Tower interior is 1:1),
+  and offline catch-up simply fast-forwards that same clock rather than
+  being a separate dilation mechanism. See the Amendments section for the
+  replacement value (`DAY_LENGTH = 28800.0`) and full corrected model.
 - Faint starfield (`MultiMeshInstance3D` or `GPUParticles3D`, static points),
   opacity driven by night-ness, matching previz's `stars()`.
 
@@ -133,8 +147,9 @@ reproduce the canvas-drawing technique itself.
   skin/armor/leg/accent colors + headgear kind), mirroring previz's
   `buildHero(role)`/`ROLE_VIS`.
 - Spawned using the **already-ported** pipeline: seed → `archetypes.gd` role
-  → (eventually) `gacha.gd` star roll. Real generated data, not hardcoded
-  placeholders.
+  → `gacha.gd` star roll (`gacha.gd` was ported and golden-verified
+  2026-07-01, after this spec's original draft — hero spawn uses it now,
+  not "eventually"). Real generated data, not hardcoded placeholders.
 - Motion: idle breathing bob (sine-wave y-offset, matches previz's `phase`
   bob) + slow position drift to a randomly-chosen named spot, pause, repeat.
   This is intentionally simpler than previz's full state machine (see
@@ -149,7 +164,10 @@ reproduce the canvas-drawing technique itself.
 New scene reachable from the existing Dev Panel (`scenes/dev/dev_panel.tscn`)
 via a button ("Enter Village" or similar) that changes scene to
 `village_base.tscn`. `run/main_scene` stays on the Dev Panel; this is an
-additional reachable scene, not a replacement.
+additional reachable scene, not a replacement. **AMENDED — see "##
+Amendments (2026-07-01, approved)" below** for the new `scripts/global/roster.gd`
+autoload that lets dev-panel-generated heroes carry over into the village,
+and for the new in-game UI panels (`scenes/village/village_ui.tscn`).
 
 ## Testing strategy
 
@@ -178,7 +196,153 @@ additional reachable scene, not a replacement.
 
 ## Out of scope / follow-up sub-projects
 
-Needs/behavior-driven hero AI (Cognition/Perception track), Forja
-reconversion, Torre mission-playback view, Roster, Hero Inspector, Shrine
-invocation flow — each remains its own future spec, per the engine-port
-design doc's existing "Out of scope" list.
+Needs/behavior-driven hero AI (Cognition/Perception track) **— PARTIALLY
+SUPERSEDED, see "## Amendments (2026-07-01, approved)" below**: this
+milestone now ports the previz's own classical needs/behavior/conversation
+layer (not the full Living-AI cognition chain, which remains future work
+and is unaffected). Forja reconversion, Torre mission-playback view,
+Roster, Hero Inspector, Shrine invocation flow — each remains its own
+future spec, per the engine-port design doc's existing "Out of scope" list.
+
+## Amendments (2026-07-01, approved)
+
+Everything above this heading is the **original scope**, as brainstormed and
+approved on 2026-07-01, and is left in place (with inline "SUPERSEDED" /
+"AMENDED" pointers added at the specific spots this section changes) rather
+than rewritten, per the project's spec-first, don't-rewrite-history
+convention. Everything below is an **amendment**, approved the same day
+after further review (including a direct user correction of the time
+model — see item 2, the most important change here).
+
+### 1. Camera: zoom + pan
+
+In addition to the original drag-to-orbit, the camera also supports:
+
+- **Zoom**: clamped orthographic `size` (mouse wheel and/or keys), lerped
+  toward the target value rather than snapping.
+- **Pan**: drag-pan bound to a second mouse button, AND WASD/edge-pan, so
+  the player can move the camera target through the town rather than only
+  orbiting a fixed point.
+
+New input-map actions are added to `project.godot` for these (orbit-drag,
+pan-drag, zoom-in/out, and the WASD pan directions) — exact action names
+and bindings are an implementation detail decided when the camera script is
+built, not fixed here.
+
+### 2. Canonical time model (user correction — supersedes the previz value)
+
+**This is the single most important correction in this amendment.** The
+original spec's `DAY_LENGTH = 8640s` ("10× pueblo rate," see the inline
+SUPERSEDED note above under Ground/camera/sky) was a faithfully-ported
+*previz* value and is now obsolete. It is replaced by the following
+canonical model, which also supersedes the "not the offline-catchup 3×
+dilation... a different mechanism" claim in the original text — under this
+corrected model, the 3× rate IS the same live clock, not a separate one:
+
+- The game clock is **dual-rate**:
+  - **Town/pueblo always runs at 3× real time** — 1 real day = 3 in-world
+    days, i.e. one in-world day = **28800 seconds of real time**
+    (`DAY_LENGTH = 28800.0`).
+  - **Tower interior runs 1:1 real time** (no dilation while inside a Tower
+    expedition).
+- **Offline catch-up fast-forwards the same town 3× clock.** It is NOT a
+  separate dilation mechanism layered on top — it is the identical
+  always-on town clock, simply advanced in a compressed burst while the
+  owner was away, exactly as already described in
+  `docs/superpowers/specs/2026-07-01-perception-system-design.md`'s
+  tier-3 catch-up architecture (see that spec's own phrasing fix, made
+  alongside this one).
+- `DAY_LENGTH = 28800.0` (seconds of real time per in-world day) is the
+  canonical constant for the town clock going forward. Any future
+  implementation of the day/night driver (`village_base.gd`'s
+  `time_of_day` tick) uses this value, not the previz's 8640s.
+
+### 3. Behavior-driven heroes (replaces "wander-only" scope + the non-goal)
+
+This milestone **also** ports the TS behavior stack to `scripts/engine/`,
+1:1 from `src/engine/*.ts` in the BetaLife-main repo, using the same
+golden-vector TDD methodology as the prior engine-port modules
+(`seeder`/`axes`/`archetypes`/`stamps`/`nameGenerator`/`gacha`):
+
+- `needs.gd`
+- `behavior.gd`
+- `conversations.gd`
+- `experience.gd`
+- `mediator.gd`
+
+A new `scripts/village/village_sim.gd` runs a **5 second pueblo tick**
+(scaled by a dev speed multiplier) that:
+
+1. Decays needs.
+2. Selects a utility-scored activity (reference implementation: the
+   previz's own `updateHero()`/`pickActivity()` in `preview/slice.js` —
+   this reference is view-layer inspiration only, not golden-vector
+   tested, unlike the ported `.ts` modules above).
+3. Moves the hero to the spot matching the chosen activity: `campo` = train,
+   `posada` = rest, `plaza` = eat/social.
+4. Runs proximity-based `roll_conversation` (40-tick cooldown, per-pair
+   seeder branch streams, matching the ported `conversations.gd`'s
+   determinism rules).
+5. Applies `apply_conversation_nudges` back into the roster's hero data.
+
+`village_sim.gd` emits `exchange_occurred` and `hero_state_changed` signals
+for the UI layer (see item 4).
+
+This supersedes the original spec's "lightweight placeholder motion (idle
+bob + slow wander between named spots)" hero behavior and the "Full
+needs/activity-driven hero behavior" non-goal — see the inline SUPERSEDED
+note under Non-goals above. It does **not** touch the full Living-AI
+cognition chain (Perception→Memory→Cognition, per
+`betalife-ai-architecture`) — that remains separate, future work, unchanged
+by this amendment. This is the previz's own classical/GOFAI behavior layer,
+not an early version of Living-AI cognition.
+
+### 4. In-game UI panels (new)
+
+A new Control overlay, `scenes/village/village_ui.tscn`, inheriting the
+project's global theme (`assets/ui/betalife_theme.tres`), with three parts:
+
+- **Dev overlay** (toggled by an F1 input action): hero generator (reuses
+  the existing dev-panel generation pipeline) with spawn-into-village,
+  a time-of-day slider, a tick-speed multiplier control, and a hero
+  inspector on click showing name/stars/archetype/needs bars/
+  `first_impression` behavior cues — observable information only, never
+  raw axis values (same "show, don't tell" rule the engine already follows
+  elsewhere).
+- **Fairy reports panel** (player-facing): recent conversation summaries
+  via `mediator.report_activity` (e.g. "entrenan juntos" style phrasing),
+  plus `brief_roster` / `describe_npc` output.
+- **Dev-only raw conversation log tab**: full `Exchange` records
+  (participants, topic, intensity, nudges) — a debug tool, not
+  player-facing.
+
+The silent-conversation design rule is unchanged and applies here: players
+only ever see the fairy's observable reports; the raw exchange log is a
+dev-only tool, never shown in the normal player-facing UI.
+
+### 5. Roster autoload
+
+`scripts/global/roster.gd` — the project's **first autoload** — holds
+generated heroes in memory so heroes created in the Dev Panel can enter the
+village and be simulated by `village_sim.gd`. No persistence/SQLite is in
+scope this milestone (the roster is memory-only and resets on restart);
+`godot-sqlite`-backed persistence remains future work.
+
+### 6. `gacha.gd` phrasing fix
+
+See the inline fix under Hero figures + fairy above: the original spec's
+"(eventually) `gacha.gd` star roll" phrasing is corrected — `gacha.gd` was
+already ported and golden-verified as of 2026-07-01 (after this spec's
+original draft), so hero spawn uses it now, not eventually.
+
+### 7. Mediator divergence note
+
+`mediator.gd` is ported **as-is** this milestone, including its "sin
+personalidad" (no-personality) design comment carried over verbatim from
+`mediator.ts`. This is a faithful port, not an endorsement of that neutral
+tone: project memory already records that a later sub-project will
+deliberately shift the fairy to a personality-driven voice (see the
+"Time dilation + fairy tone" memory entry). This note exists so the
+as-ported neutral `mediator.gd` isn't mistaken for a design decision to
+keep the fairy voiceless going forward — it is a known, planned future
+divergence, not an oversight.

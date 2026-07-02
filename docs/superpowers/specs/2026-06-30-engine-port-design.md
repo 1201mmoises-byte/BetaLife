@@ -32,6 +32,9 @@ engines.
 - Any scene/UI work: `VillageScene.tscn`, `ShrinePanel.tscn`,
   `RosterPanel.tscn`, `HeroInspector.tscn`, `TowerPanel.tscn`,
   `MissionView.tscn`, `FairyOverlay.tscn`, `DevPanel.tscn` (blueprint §3, §8)
+  — **superseded for `DevPanel.tscn` (built 2026-07-01 — see
+  `scenes/dev/dev_panel.tscn`)**; the rest of this list remains deferred as
+  originally scoped
 - `src/runtime/browser.ts` — DOM/bundle entrypoint, meaningless outside a
   browser, not ported
 - The four-meter survival rework, `GameClock`, and other items the blueprint

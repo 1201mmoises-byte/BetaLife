@@ -60,9 +60,20 @@ sub-project too:
    `mediator.ts`'s `reportActivity()` already uses for background
    conversations today.
 
-**Time dilation:** adopted from BetaLife's genre reference ("Pick Me Up!
-Infinite Gacha") — 1 real day = 3 in-world days. Catch-up burst math (tier 3)
-fast-forwards `3 × days_away` worth of in-world ticks.
+**Time model (corrected 2026-07-01 — see the village-base-3d-scene-design
+spec's Amendments section for the full correction):** adopted from
+BetaLife's genre reference ("Pick Me Up! Infinite Gacha") — the town/pueblo
+always runs at **3× real time** (1 real day = 3 in-world days, i.e. one
+in-world day = 28800 seconds real time; `DAY_LENGTH = 28800.0`), while
+Tower interiors run 1:1 real time. This 3× rate is the town's normal,
+always-on live clock, not a mechanism exclusive to offline catch-up. Tier-3
+catch-up burst math simply **fast-forwards that same town clock** across
+the elapsed real-world gap — it fast-forwards `3 × days_away` worth of
+in-world ticks because that's what the live clock would have produced,
+not because catch-up applies its own separate dilation factor. The tier-3
+catch-up architecture itself (coarse caretaker tier → full-pipeline
+reconciliation burst on reconnect) is unchanged by this correction — only
+the framing of *why* the multiplier is 3× changes.
 
 **Why this constrains Perception specifically:** tier 3 must run the *same*
 detection logic as tier 1, just compressed (potentially hundreds of thousands
