@@ -1,5 +1,15 @@
 # BetaLife Godot Port — Sub-project: Pueblo/Base 3D Scene
 
+> **SUPERSEDED (2026-07-02)** by
+> `docs/superpowers/specs/2026-07-02-living-slice-design.md`. This spec was
+> written from a stale understanding of the previz: it treated `slice.js` as a
+> decorative mock and scoped out the living layer (visible dialogue, hada,
+> tutorial, expeditions, save) that the real slice already implements. Its
+> scene-geometry content (positions, camera, structures) remains accurate and
+> was built (phases 2A–2C); its scope/non-goals and the "silent conversations,
+> fairy-reports-only UI" amendments are retired. Kept for history — do not
+> build from it.
+
 ## Context
 
 The engine-port sub-project (`2026-06-30-engine-port-design.md`) ported

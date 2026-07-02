@@ -1,5 +1,16 @@
 # Living Village milestone — remaining phases (paused 2026-07-02)
 
+> **RE-SCOPED (2026-07-02, same day):** the governing spec is now
+> `docs/superpowers/specs/2026-07-02-living-slice-design.md` (milestone A =
+> "Living core"), which replaces the phase list below. The engine-port phases
+> (3b-1..3b-3) survive unchanged; Phase 4/5 are superseded by the new spec's
+> L (living sim + visible dialogue via BANKS — the silent-conversation UI model
+> is retired), S (scene parity: wall/torches/bonfire/accessories/picking/HUD),
+> U (charlas panel + hada basics), plus new ports P4 (npc_generator, dreams,
+> history_generator) and P5 (live_world). GitHub was consolidated the same day:
+> TS source of truth is `main` (old main/gh-pages/claude-branch deleted);
+> GodotGame pushes to `godot-port`.
+
 Execution paused mid-milestone (monthly spend limit + upcoming user changes).
 Completed work: commits `7761150..d4ebf43` on `master` — re-skin, doc
 reconciliation + village spec amendment, village 3D shell (orbit/zoom/pan
